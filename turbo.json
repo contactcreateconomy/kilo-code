@@ -1,0 +1,79 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "remoteCache": {
+    "signature": true
+  },
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "CONVEX_*",
+        "STRIPE_*",
+        "NEXT_PUBLIC_*",
+        "NODE_ENV",
+        "AUTH_SECRET",
+        "RESEND_API_KEY",
+        "UPLOADTHING_*"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": [
+        "CONVEX_*",
+        "STRIPE_*",
+        "NEXT_PUBLIC_*",
+        "NODE_ENV",
+        "AUTH_SECRET"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": ["coverage/**"],
+      "env": ["CI", "NODE_ENV"]
+    },
+    "clean": {
+      "cache": false,
+      "outputs": []
+    },
+    "deploy": {
+      "dependsOn": ["build", "lint", "typecheck"],
+      "cache": false
+    }
+  },
+  "globalEnv": [
+    "CI",
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_URL",
+    "VERCEL_GIT_COMMIT_SHA",
+    "VERCEL_GIT_COMMIT_MESSAGE",
+    "VERCEL_GIT_COMMIT_AUTHOR_NAME",
+    "TURBO_TOKEN",
+    "TURBO_TEAM"
+  ],
+  "globalPassThroughEnv": [
+    "CONVEX_DEPLOYMENT",
+    "CONVEX_URL",
+    "NEXT_PUBLIC_CONVEX_URL"
+  ],
+  "globalDependencies": [
+    ".env",
+    ".env.local",
+    "tsconfig.json"
+  ]
+}

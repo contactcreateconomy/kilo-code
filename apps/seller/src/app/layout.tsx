@@ -1,0 +1,40 @@
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ConvexProvider } from "@/providers/convex-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+export const metadata: Metadata = {
+  title: {
+    default: "Seller Portal | Createconomy",
+    template: "%s | Seller Portal | Createconomy",
+  },
+  description: "Manage your store, products, and orders on Createconomy",
+  keywords: ["seller", "vendor", "e-commerce", "marketplace", "createconomy"],
+  authors: [{ name: "Createconomy" }],
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} antialiased`}>
+        <ThemeProvider>
+          <ConvexProvider>{children}</ConvexProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}

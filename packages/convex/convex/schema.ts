@@ -1,0 +1,595 @@
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
+
+/**
+ * Createconomy Database Schema
+ *
+ * This schema defines the complete data structure for the Createconomy e-commerce platform.
+ * It supports multi-tenant architecture with data isolation, four user roles,
+ * e-commerce functionality, forum features, and Stripe payment integration.
+ *
+ * @version 1.0.0
+ */
+
+// ============================================================================
+// Enums and Validators
+// ============================================================================
+
+/** User roles in the system */
+export const userRoleValidator = v.union(
+  v.literal("customer"),
+  v.literal("seller"),
+  v.literal("admin"),
+  v.literal("moderator")
+);
+
+/** Order status values */
+export const orderStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("confirmed"),
+  v.literal("processing"),
+  v.literal("shipped"),
+  v.literal("delivered"),
+  v.literal("cancelled"),
+  v.literal("refunded")
+);
+
+/** Product status values */
+export const productStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("active"),
+  v.literal("inactive"),
+  v.literal("archived")
+);
+
+/** Payment status values */
+export const paymentStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("processing"),
+  v.literal("succeeded"),
+  v.literal("failed"),
+  v.literal("refunded"),
+  v.literal("cancelled")
+);
+
+/** Forum post status values */
+export const forumPostStatusValidator = v.union(
+  v.literal("published"),
+  v.literal("draft"),
+  v.literal("hidden"),
+  v.literal("deleted")
+);
+
+// ============================================================================
+// Schema Definition
+// ============================================================================
+
+export default defineSchema({
+  // -------------------------------------------------------------------------
+  // Auth Tables (from @convex-dev/auth)
+  // -------------------------------------------------------------------------
+  ...authTables,
+
+  // -------------------------------------------------------------------------
+  // Multi-tenancy Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Tenants table for multi-tenant architecture
+   * Each tenant represents a separate marketplace/store
+   */
+  tenants: defineTable({
+    name: v.string(),
+    slug: v.string(),
+    domain: v.optional(v.string()),
+    subdomain: v.optional(v.string()),
+    settings: v.optional(
+      v.object({
+        theme: v.optional(v.string()),
+        logo: v.optional(v.string()),
+        primaryColor: v.optional(v.string()),
+        currency: v.optional(v.string()),
+        timezone: v.optional(v.string()),
+      })
+    ),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_domain", ["domain"])
+    .index("by_subdomain", ["subdomain"]),
+
+  /**
+   * User-Tenant relationships for multi-tenancy
+   * Links users to tenants with specific roles
+   */
+  userTenants: defineTable({
+    userId: v.id("users"),
+    tenantId: v.id("tenants"),
+    role: userRoleValidator,
+    isActive: v.boolean(),
+    joinedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_tenant", ["tenantId"])
+    .index("by_user_tenant", ["userId", "tenantId"]),
+
+  // -------------------------------------------------------------------------
+  // User Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Extended user profiles (extends auth tables)
+   * Contains additional profile data beyond authentication
+   */
+  userProfiles: defineTable({
+    userId: v.id("users"),
+    displayName: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(
+      v.object({
+        street: v.optional(v.string()),
+        city: v.optional(v.string()),
+        state: v.optional(v.string()),
+        postalCode: v.optional(v.string()),
+        country: v.optional(v.string()),
+      })
+    ),
+    preferences: v.optional(
+      v.object({
+        emailNotifications: v.optional(v.boolean()),
+        marketingEmails: v.optional(v.boolean()),
+        language: v.optional(v.string()),
+        currency: v.optional(v.string()),
+      })
+    ),
+    defaultRole: userRoleValidator,
+    isBanned: v.boolean(),
+    bannedAt: v.optional(v.number()),
+    bannedReason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_role", ["defaultRole"])
+    .index("by_banned", ["isBanned"]),
+
+  /**
+   * Sessions for cross-subdomain authentication
+   * Manages user sessions across different subdomains
+   */
+  sessions: defineTable({
+    userId: v.id("users"),
+    token: v.string(),
+    tenantId: v.optional(v.id("tenants")),
+    userAgent: v.optional(v.string()),
+    ipAddress: v.optional(v.string()),
+    expiresAt: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    lastAccessedAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_user", ["userId"])
+    .index("by_user_active", ["userId", "isActive"])
+    .index("by_expires", ["expiresAt"]),
+
+  // -------------------------------------------------------------------------
+  // Product Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Product categories
+   * Hierarchical category structure for products
+   */
+  productCategories: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    name: v.string(),
+    slug: v.string(),
+    description: v.optional(v.string()),
+    parentId: v.optional(v.id("productCategories")),
+    imageUrl: v.optional(v.string()),
+    sortOrder: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_slug", ["slug"])
+    .index("by_tenant_slug", ["tenantId", "slug"])
+    .index("by_parent", ["parentId"])
+    .index("by_active", ["isActive"]),
+
+  /**
+   * Products table
+   * Main product catalog
+   */
+  products: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    sellerId: v.id("users"),
+    categoryId: v.optional(v.id("productCategories")),
+    name: v.string(),
+    slug: v.string(),
+    description: v.string(),
+    shortDescription: v.optional(v.string()),
+    price: v.number(),
+    compareAtPrice: v.optional(v.number()),
+    currency: v.string(),
+    sku: v.optional(v.string()),
+    inventory: v.optional(v.number()),
+    trackInventory: v.boolean(),
+    status: productStatusValidator,
+    isDigital: v.boolean(),
+    digitalFileUrl: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    metadata: v.optional(v.any()),
+    averageRating: v.optional(v.number()),
+    reviewCount: v.number(),
+    salesCount: v.number(),
+    viewCount: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_seller", ["sellerId"])
+    .index("by_category", ["categoryId"])
+    .index("by_status", ["status"])
+    .index("by_tenant_status", ["tenantId", "status"])
+    .index("by_seller_status", ["sellerId", "status"])
+    .index("by_slug", ["slug"])
+    .index("by_tenant_slug", ["tenantId", "slug"])
+    .index("by_deleted", ["isDeleted"])
+    .searchIndex("search_products", {
+      searchField: "name",
+      filterFields: ["tenantId", "categoryId", "status", "isDeleted"],
+    }),
+
+  /**
+   * Product images
+   * Multiple images per product
+   */
+  productImages: defineTable({
+    productId: v.id("products"),
+    url: v.string(),
+    altText: v.optional(v.string()),
+    sortOrder: v.number(),
+    isPrimary: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_product", ["productId"])
+    .index("by_product_primary", ["productId", "isPrimary"]),
+
+  // -------------------------------------------------------------------------
+  // Order Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Orders table
+   * Customer orders
+   */
+  orders: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    userId: v.id("users"),
+    orderNumber: v.string(),
+    status: orderStatusValidator,
+    subtotal: v.number(),
+    tax: v.number(),
+    shipping: v.number(),
+    discount: v.number(),
+    total: v.number(),
+    currency: v.string(),
+    shippingAddress: v.optional(
+      v.object({
+        name: v.string(),
+        street: v.string(),
+        city: v.string(),
+        state: v.optional(v.string()),
+        postalCode: v.string(),
+        country: v.string(),
+        phone: v.optional(v.string()),
+      })
+    ),
+    billingAddress: v.optional(
+      v.object({
+        name: v.string(),
+        street: v.string(),
+        city: v.string(),
+        state: v.optional(v.string()),
+        postalCode: v.string(),
+        country: v.string(),
+      })
+    ),
+    notes: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    paidAt: v.optional(v.number()),
+    shippedAt: v.optional(v.number()),
+    deliveredAt: v.optional(v.number()),
+    cancelledAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_tenant_status", ["tenantId", "status"])
+    .index("by_user_status", ["userId", "status"])
+    .index("by_order_number", ["orderNumber"]),
+
+  /**
+   * Order items
+   * Individual items within an order
+   */
+  orderItems: defineTable({
+    orderId: v.id("orders"),
+    productId: v.id("products"),
+    sellerId: v.id("users"),
+    name: v.string(),
+    sku: v.optional(v.string()),
+    price: v.number(),
+    quantity: v.number(),
+    subtotal: v.number(),
+    status: orderStatusValidator,
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_order", ["orderId"])
+    .index("by_product", ["productId"])
+    .index("by_seller", ["sellerId"])
+    .index("by_seller_status", ["sellerId", "status"]),
+
+  // -------------------------------------------------------------------------
+  // Cart Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Shopping cart
+   * User's shopping cart
+   */
+  carts: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    userId: v.optional(v.id("users")),
+    sessionId: v.optional(v.string()),
+    currency: v.string(),
+    subtotal: v.number(),
+    itemCount: v.number(),
+    expiresAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_user", ["userId"])
+    .index("by_session", ["sessionId"])
+    .index("by_tenant_user", ["tenantId", "userId"]),
+
+  /**
+   * Cart items
+   * Items in a shopping cart
+   */
+  cartItems: defineTable({
+    cartId: v.id("carts"),
+    productId: v.id("products"),
+    quantity: v.number(),
+    price: v.number(),
+    subtotal: v.number(),
+    addedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_cart", ["cartId"])
+    .index("by_product", ["productId"])
+    .index("by_cart_product", ["cartId", "productId"]),
+
+  // -------------------------------------------------------------------------
+  // Review Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Product reviews
+   * Customer reviews and ratings for products
+   */
+  reviews: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    productId: v.id("products"),
+    userId: v.id("users"),
+    orderId: v.optional(v.id("orders")),
+    rating: v.number(),
+    title: v.optional(v.string()),
+    content: v.string(),
+    isVerifiedPurchase: v.boolean(),
+    helpfulCount: v.number(),
+    isApproved: v.boolean(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_product", ["productId"])
+    .index("by_user", ["userId"])
+    .index("by_product_approved", ["productId", "isApproved"])
+    .index("by_deleted", ["isDeleted"]),
+
+  // -------------------------------------------------------------------------
+  // Forum Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Forum categories
+   * Categories for organizing forum discussions
+   */
+  forumCategories: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    name: v.string(),
+    slug: v.string(),
+    description: v.optional(v.string()),
+    parentId: v.optional(v.id("forumCategories")),
+    sortOrder: v.number(),
+    isActive: v.boolean(),
+    threadCount: v.number(),
+    postCount: v.number(),
+    lastPostAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_slug", ["slug"])
+    .index("by_tenant_slug", ["tenantId", "slug"])
+    .index("by_parent", ["parentId"])
+    .index("by_active", ["isActive"]),
+
+  /**
+   * Forum threads
+   * Discussion threads within forum categories
+   */
+  forumThreads: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    categoryId: v.id("forumCategories"),
+    authorId: v.id("users"),
+    title: v.string(),
+    slug: v.string(),
+    isPinned: v.boolean(),
+    isLocked: v.boolean(),
+    viewCount: v.number(),
+    postCount: v.number(),
+    lastPostAt: v.optional(v.number()),
+    lastPostUserId: v.optional(v.id("users")),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_category", ["categoryId"])
+    .index("by_author", ["authorId"])
+    .index("by_slug", ["slug"])
+    .index("by_tenant_slug", ["tenantId", "slug"])
+    .index("by_pinned", ["isPinned"])
+    .index("by_deleted", ["isDeleted"])
+    .searchIndex("search_threads", {
+      searchField: "title",
+      filterFields: ["tenantId", "categoryId", "isDeleted"],
+    }),
+
+  /**
+   * Forum posts
+   * Individual posts within threads
+   */
+  forumPosts: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    threadId: v.id("forumThreads"),
+    authorId: v.id("users"),
+    content: v.string(),
+    status: forumPostStatusValidator,
+    isFirstPost: v.boolean(),
+    editedAt: v.optional(v.number()),
+    editedBy: v.optional(v.id("users")),
+    likeCount: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    deletedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_thread", ["threadId"])
+    .index("by_author", ["authorId"])
+    .index("by_status", ["status"])
+    .index("by_deleted", ["isDeleted"]),
+
+  /**
+   * Forum comments
+   * Comments on forum posts
+   */
+  forumComments: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    postId: v.id("forumPosts"),
+    authorId: v.id("users"),
+    parentId: v.optional(v.id("forumComments")),
+    content: v.string(),
+    likeCount: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_post", ["postId"])
+    .index("by_author", ["authorId"])
+    .index("by_parent", ["parentId"])
+    .index("by_deleted", ["isDeleted"]),
+
+  // -------------------------------------------------------------------------
+  // Stripe Integration Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Stripe customers
+   * Links users to Stripe customer records
+   */
+  stripeCustomers: defineTable({
+    userId: v.id("users"),
+    tenantId: v.optional(v.id("tenants")),
+    stripeCustomerId: v.string(),
+    email: v.optional(v.string()),
+    defaultPaymentMethodId: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_tenant", ["tenantId"])
+    .index("by_stripe_customer", ["stripeCustomerId"])
+    .index("by_user_tenant", ["userId", "tenantId"]),
+
+  /**
+   * Stripe payments
+   * Payment records from Stripe
+   */
+  stripePayments: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    userId: v.id("users"),
+    orderId: v.optional(v.id("orders")),
+    stripeCustomerId: v.string(),
+    stripePaymentIntentId: v.string(),
+    stripeChargeId: v.optional(v.string()),
+    amount: v.number(),
+    currency: v.string(),
+    status: paymentStatusValidator,
+    paymentMethod: v.optional(v.string()),
+    receiptUrl: v.optional(v.string()),
+    failureCode: v.optional(v.string()),
+    failureMessage: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_user", ["userId"])
+    .index("by_order", ["orderId"])
+    .index("by_stripe_payment_intent", ["stripePaymentIntentId"])
+    .index("by_status", ["status"]),
+
+  /**
+   * Stripe webhook events
+   * Log of processed Stripe webhook events
+   */
+  stripeWebhookEvents: defineTable({
+    stripeEventId: v.string(),
+    type: v.string(),
+    processed: v.boolean(),
+    processedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    payload: v.optional(v.any()),
+    createdAt: v.number(),
+  })
+    .index("by_stripe_event", ["stripeEventId"])
+    .index("by_type", ["type"])
+    .index("by_processed", ["processed"]),
+});

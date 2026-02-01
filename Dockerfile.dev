@@ -1,0 +1,71 @@
+# ===========================================
+# Createconomy Platform - Development Dockerfile
+# ===========================================
+# Multi-stage Dockerfile for local development
+# Usage: docker build -f Dockerfile.dev --build-arg APP_NAME=marketplace .
+
+# Base stage with Node.js and pnpm
+FROM node:20-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+# Install dependencies for native modules
+RUN apk add --no-cache libc6-compat curl
+
+WORKDIR /app
+
+# Dependencies stage
+FROM base AS deps
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY turbo.json ./
+
+# Copy all package.json files for workspace
+COPY apps/marketplace/package.json ./apps/marketplace/
+COPY apps/forum/package.json ./apps/forum/
+COPY apps/admin/package.json ./apps/admin/
+COPY apps/seller/package.json ./apps/seller/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/config/package.json ./packages/config/
+COPY packages/convex/package.json ./packages/convex/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Development stage
+FROM base AS development
+
+ARG APP_NAME=marketplace
+ENV APP_NAME=${APP_NAME}
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/${APP_NAME}/node_modules ./apps/${APP_NAME}/node_modules
+
+# Copy source code
+COPY . .
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Expose ports based on app
+# marketplace: 3000, forum: 3001, admin: 3002, seller: 3003
+EXPOSE 3000 3001 3002 3003
+
+# Create startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'cd /app' >> /app/start.sh && \
+    echo 'pnpm dev --filter=@createconomy/${APP_NAME}' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Start development server
+CMD ["/app/start.sh"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-3000}/api/health || exit 1

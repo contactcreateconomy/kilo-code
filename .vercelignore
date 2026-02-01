@@ -1,0 +1,89 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__/
+**/test/
+**/tests/
+coverage/
+.nyc_output/
+
+# Documentation
+docs/
+*.md
+!README.md
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+
+# Development configs
+.vscode/
+.idea/
+*.local
+.DS_Store
+Thumbs.db
+
+# Local environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build artifacts (handled by Vercel)
+.turbo/
+dist/
+.next/
+out/
+
+# Docker files (not needed for Vercel)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Git
+.git/
+.gitignore
+
+# CI/CD configs (not needed in deployment)
+.github/
+.gitlab-ci.yml
+.circleci/
+Jenkinsfile
+
+# Editor configs
+.editorconfig
+.prettierrc
+.prettierignore
+.eslintrc*
+eslint.config.*
+
+# Package manager files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Misc
+*.log
+*.tsbuildinfo
+.turbo
+plans/
+scripts/
+*.sh
+
+# Storybook
+.storybook/
+storybook-static/
+
+# Playwright
+playwright-report/
+playwright/.cache/
+
+# Cypress
+cypress/
+cypress.config.*

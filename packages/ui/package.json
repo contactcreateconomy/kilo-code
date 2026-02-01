@@ -1,0 +1,48 @@
+{
+  "name": "@createconomy/ui",
+  "version": "0.0.1",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "exports": {
+    "./globals.css": "./src/globals.css",
+    "./lib/utils": "./src/lib/utils.ts",
+    "./lib/auth-cookies": "./src/lib/auth-cookies.ts",
+    "./components/*": "./src/components/*.tsx",
+    "./components/auth": "./src/components/auth/index.ts",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./test-utils": "./src/test-utils.tsx"
+  },
+  "dependencies": {
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-slot": "^1.1.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0",
+    "lucide-react": "^0.474.0"
+  },
+  "devDependencies": {
+    "@createconomy/config": "workspace:*",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^26.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.3",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.4"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

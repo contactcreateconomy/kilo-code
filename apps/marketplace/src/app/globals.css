@@ -1,0 +1,20 @@
+@import "@createconomy/ui/globals.css";
+
+/* App-specific styles */
+@layer base {
+  :root {
+    --container-max-width: 1280px;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto w-full max-w-[var(--container-max-width)] px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

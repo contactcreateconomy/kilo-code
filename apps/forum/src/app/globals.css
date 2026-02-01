@@ -1,0 +1,83 @@
+@import "@createconomy/ui/globals.css";
+
+/* Forum-specific styles */
+@layer components {
+  /* Thread styling */
+  .thread-card {
+    @apply rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50;
+  }
+
+  /* Post styling */
+  .post-card {
+    @apply border-b py-4 last:border-b-0;
+  }
+
+  /* Category badge */
+  .category-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  /* User badge */
+  .user-badge {
+    @apply inline-flex items-center gap-2;
+  }
+
+  /* Reply form */
+  .reply-form {
+    @apply rounded-lg border bg-card p-4;
+  }
+
+  /* Markdown content */
+  .markdown-content {
+    @apply prose prose-sm dark:prose-invert max-w-none;
+  }
+
+  .markdown-content pre {
+    @apply rounded-lg bg-muted p-4;
+  }
+
+  .markdown-content code {
+    @apply rounded bg-muted px-1 py-0.5;
+  }
+
+  /* Forum sidebar */
+  .forum-sidebar {
+    @apply sticky top-20 space-y-4;
+  }
+
+  /* Search bar */
+  .search-bar {
+    @apply relative;
+  }
+
+  .search-bar input {
+    @apply w-full rounded-lg border bg-background px-4 py-2 pl-10;
+  }
+
+  /* Pinned thread indicator */
+  .pinned-indicator {
+    @apply text-primary;
+  }
+
+  /* Activity indicator */
+  .activity-dot {
+    @apply h-2 w-2 rounded-full bg-green-500;
+  }
+}
+
+@layer utilities {
+  /* Forum-specific utilities */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

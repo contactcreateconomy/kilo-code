@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Next.js Configuration",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    /* JSX */
+    "jsx": "preserve",
+
+    /* Next.js specific */
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+
+    /* Incremental builds */
+    "incremental": true,
+    "tsBuildInfoFile": ".next/cache/tsbuildinfo.json",
+
+    /* Module resolution for Next.js */
+    "moduleResolution": "bundler",
+    "allowJs": true,
+
+    /* Path aliases - override for Next.js apps */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@hooks/*": ["./src/hooks/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@types/*": ["./src/types/*"],
+      "@app/*": ["./src/app/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    ".turbo",
+    "coverage"
+  ]
+}

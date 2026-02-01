@@ -1,0 +1,20 @@
+{
+  "name": "@createconomy/convex",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy"
+  },
+  "dependencies": {
+    "convex": "^1.18.0",
+    "@convex-dev/auth": "^0.0.80",
+    "@auth/core": "^0.37.4",
+    "stripe": "^17.5.0"
+  },
+  "devDependencies": {
+    "@createconomy/config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
+  }
+}

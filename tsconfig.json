@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "incremental": true,
+    "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "@packages/ui": ["packages/ui/src"],
+      "@packages/ui/*": ["packages/ui/src/*"],
+      "@packages/config": ["packages/config"],
+      "@packages/config/*": ["packages/config/*"],
+      "@packages/convex": ["packages/convex/src"],
+      "@packages/convex/*": ["packages/convex/src/*"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    ".turbo",
+    "dist",
+    ".next",
+    "out",
+    "coverage"
+  ]
+}
