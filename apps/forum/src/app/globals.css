@@ -1,6 +1,36 @@
 @import "tailwindcss";
 @import "@createconomy/ui/globals.css";
 
+/* Premium Design System Variables */
+@layer base {
+  :root {
+    /* Override radius for premium feel */
+    --radius: 1.3rem;
+    
+    /* Primary - Indigo */
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Glow Effects */
+    --glow-color: rgba(99, 102, 241, 0.4);
+    --glow-color-strong: rgba(99, 102, 241, 0.6);
+    
+    /* Dot Grid Background */
+    --dot-color: rgba(0, 0, 0, 0.1);
+    --dot-size: 1px;
+    --dot-spacing: 24px;
+  }
+
+  .dark {
+    /* Dark Mode Glow */
+    --glow-color: rgba(99, 102, 241, 0.5);
+    --glow-color-strong: rgba(99, 102, 241, 0.7);
+    
+    /* Dark Mode Dots */
+    --dot-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
 /* Forum-specific styles */
 @layer components {
   /* Thread styling */

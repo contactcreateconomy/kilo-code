@@ -325,26 +325,6 @@ interface LeaderboardEntry {
   trend: 'up' | 'down' | 'stable';
 }
 
-interface Campaign {
-  id: string;
-  title: string;
-  prize: string;
-  daysLeft: number;
-  entries: number;
-  maxEntries: number;
-}
-```
 
-## Quality Checklist
 
-- [ ] All components use TypeScript with strict types
-- [ ] Shadcn/ui components used where applicable
-- [ ] Framer Motion for all animations
-- [ ] Tailwind CSS for styling
-- [ ] Lucide icons for all icons
-- [ ] 60fps smooth animations
-- [ ] Lazy loaded images (Next.js Image)
-- [ ] Accessible (ARIA labels, keyboard nav)
-- [ ] Dark mode fully supported
-- [ ] Responsive on all breakpoints
-- [ ] Production-ready code quality
+

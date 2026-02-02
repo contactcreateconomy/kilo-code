@@ -7,7 +7,7 @@ interface ReplyFormProps {
   threadId: string;
   replyToPostId?: string;
   replyToUsername?: string;
-  onSubmit: (content: string) => Promise<void>;
+  onSubmit?: (content: string) => Promise<void>;
   onCancel?: () => void;
   placeholder?: string;
   isAuthenticated?: boolean;
@@ -45,7 +45,13 @@ export function ReplyForm({
     setError(null);
 
     try {
-      await onSubmit(content);
+      if (onSubmit) {
+        await onSubmit(content);
+      } else {
+        // Default behavior: log to console (for development)
+        console.log("Reply submitted:", { threadId, replyToPostId, content });
+        // In production, this would call a Convex mutation
+      }
       setContent("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to post reply");

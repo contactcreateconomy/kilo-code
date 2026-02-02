@@ -3,8 +3,11 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConvexProvider } from "@/providers/convex-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { Header } from "@/components/layout/header";
+import { GlassmorphismNavbar } from "@/components/navbar/glassmorphism-navbar";
 import { Footer } from "@/components/layout/footer";
+import { DotGridBackground } from "@/components/ui/dot-grid-background";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,7 +35,7 @@ export const metadata: Metadata = {
   creator: "Createconomy",
   publisher: "Createconomy",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://discuss.createconomy.com"
+    process.env["NEXT_PUBLIC_SITE_URL"] || "https://discuss.createconomy.com"
   ),
   openGraph: {
     type: "website",
@@ -86,18 +89,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider defaultTheme="system">
           <ConvexProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
+            <ToastProvider>
+              <DotGridBackground>
+                <div className="relative flex min-h-screen flex-col">
+                  <GlassmorphismNavbar />
+                  <main className="flex-1 pb-20 md:pb-0">{children}</main>
+                  <Footer />
+                  <MobileBottomNav />
+                </div>
+              </DotGridBackground>
+            </ToastProvider>
           </ConvexProvider>
         </ThemeProvider>
       </body>
