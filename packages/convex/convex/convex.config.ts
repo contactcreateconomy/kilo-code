@@ -1,17 +1,15 @@
 import { defineApp } from "convex/server";
-import auth from "@convex-dev/auth/convex.config";
 
 /**
  * Convex application configuration for Createconomy
  *
- * This configuration sets up the Convex backend with:
- * - Authentication via @convex-dev/auth
+ * This configuration sets up the Convex backend.
+ * Authentication is configured separately via @convex-dev/auth in auth.ts
  *
- * Additional components can be added here as the application grows.
+ * Note: @convex-dev/auth v0.0.80 uses a different configuration approach
+ * where auth is set up directly in the auth.ts file using convexAuth()
+ * rather than as a component in convex.config.ts
  */
 const app = defineApp();
-
-// Install the auth component for authentication
-app.use(auth);
 
 export default app;

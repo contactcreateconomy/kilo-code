@@ -176,7 +176,7 @@ http.route({
         tenantId,
         userAgent: userAgent || request.headers.get("User-Agent") || undefined,
         ipAddress: ipAddress || request.headers.get("X-Forwarded-For") || undefined,
-        origin,
+        origin: origin || undefined,
       });
 
       return corsResponse(
@@ -448,7 +448,7 @@ function verifyStripeSignature(
 ): Stripe.Event | null {
   try {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: "2024-12-18.acacia",
+      apiVersion: "2025-02-24.acacia",
     });
     return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (err) {
@@ -618,7 +618,7 @@ http.route({
           }
 
           case "account.application.deauthorized": {
-            const account = event.data.object as Stripe.Account;
+            const account = event.data.object as unknown as Stripe.Account;
             await ctx.runMutation(internal.functions.webhooks.handleConnectAccountDeauthorized, {
               accountId: account.id,
             });

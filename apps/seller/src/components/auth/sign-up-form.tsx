@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 interface SignUpFormProps {
-  onSubmit: (data: SellerApplicationData) => Promise<void>;
+  onSubmit?: (data: SellerApplicationData) => Promise<void>;
   isLoading?: boolean;
   error?: string;
 }
@@ -39,7 +39,9 @@ export function SignUpForm({ onSubmit, isLoading, error }: SignUpFormProps) {
       setStep(step + 1);
       return;
     }
-    await onSubmit(formData);
+    if (onSubmit) {
+      await onSubmit(formData);
+    }
   };
 
   const handleChange = (

@@ -7,7 +7,7 @@ import {
   setRedirectUrl,
   clearRedirectUrl,
   getCookieDomain,
-} from "../lib/auth-cookies";
+} from "../../lib/auth-cookies";
 
 /**
  * Props for LoginRedirect component

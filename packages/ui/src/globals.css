@@ -1,8 +1,7 @@
-@import "tailwindcss";
-
 /*
  * Shadcn/ui CSS Variables for theming
  * These variables are used by the Tailwind config to create semantic color tokens
+ * Note: @import "tailwindcss" should be in the consuming app's globals.css
  */
 
 @layer base {
@@ -130,11 +129,12 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-feature-settings:
       "rlig" 1,
       "calt" 1;

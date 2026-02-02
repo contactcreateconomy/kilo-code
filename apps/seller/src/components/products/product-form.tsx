@@ -2,7 +2,25 @@
 
 import { useState } from "react";
 
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  compareAtPrice?: number;
+  stock: number;
+  sku: string;
+  category: string;
+  status: string;
+  images?: string[];
+  tags?: string[];
+  weight?: number;
+  dimensions?: { length: number; width: number; height: number };
+}
+
 interface ProductFormProps {
+  mode?: "create" | "edit";
+  product?: Product;
   initialData?: {
     name: string;
     description: string;
@@ -13,7 +31,7 @@ interface ProductFormProps {
     category: string;
     status: string;
   };
-  onSubmit: (data: ProductFormData) => void;
+  onSubmit?: (data: ProductFormData) => void;
   isLoading?: boolean;
 }
 
@@ -28,21 +46,35 @@ export interface ProductFormData {
   status: string;
 }
 
-export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormProps) {
+export function ProductForm({ mode, product, initialData, onSubmit, isLoading }: ProductFormProps) {
+  // Support both product and initialData props
+  const data = product ? {
+    name: product.name,
+    description: product.description,
+    price: String(product.price),
+    comparePrice: product.compareAtPrice ? String(product.compareAtPrice) : "",
+    sku: product.sku,
+    stock: product.stock,
+    category: product.category,
+    status: product.status,
+  } : initialData;
+  
   const [formData, setFormData] = useState<ProductFormData>({
-    name: initialData?.name || "",
-    description: initialData?.description || "",
-    price: initialData?.price || "",
-    comparePrice: initialData?.comparePrice || "",
-    sku: initialData?.sku || "",
-    stock: initialData?.stock || 0,
-    category: initialData?.category || "",
-    status: initialData?.status || "draft",
+    name: data?.name || "",
+    description: data?.description || "",
+    price: data?.price || "",
+    comparePrice: data?.comparePrice || "",
+    sku: data?.sku || "",
+    stock: data?.stock || 0,
+    category: data?.category || "",
+    status: data?.status || "draft",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (onSubmit) {
+      onSubmit(formData);
+    }
   };
 
   const handleChange = (

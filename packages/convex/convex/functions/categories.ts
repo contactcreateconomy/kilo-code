@@ -51,8 +51,8 @@ export const listCategories = query({
     const rootCategories = categories.filter((c) => !c.parentId);
     const childCategories = categories.filter((c) => c.parentId);
 
-    const buildTree = (parent: (typeof categories)[0]) => {
-      const children = childCategories
+    function buildTree(parent: (typeof categories)[0]): any {
+      const children: any[] = childCategories
         .filter((c) => c.parentId === parent._id)
         .map((child) => buildTree(child));
 
@@ -60,7 +60,7 @@ export const listCategories = query({
         ...parent,
         children: children.length > 0 ? children : undefined,
       };
-    };
+    }
 
     return rootCategories.map(buildTree);
   },
@@ -174,7 +174,7 @@ export const getCategoryBreadcrumbs = query({
     let currentId: Id<"productCategories"> | undefined = args.categoryId;
 
     while (currentId) {
-      const category = await ctx.db.get(currentId);
+      const category: any = await ctx.db.get(currentId);
       if (!category) break;
 
       breadcrumbs.unshift({
@@ -353,7 +353,7 @@ export const updateCategory = mutation({
       // Check if new parent is a descendant
       let checkId: Id<"productCategories"> | undefined = args.parentId;
       while (checkId) {
-        const checkCategory = await ctx.db.get(checkId);
+        const checkCategory: any = await ctx.db.get(checkId);
         if (!checkCategory) break;
         if (checkCategory.parentId === args.categoryId) {
           throw new Error("Cannot set a descendant as parent");

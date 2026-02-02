@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { ConvexProvider } from '@/providers/convex-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
-import { AdminLayout } from '@/components/layout/admin-layout';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -34,9 +33,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ConvexProvider>
-            <AdminLayout>{children}</AdminLayout>
-          </ConvexProvider>
+          <ConvexProvider>{children}</ConvexProvider>
         </ThemeProvider>
       </body>
     </html>

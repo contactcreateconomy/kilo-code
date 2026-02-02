@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { getMarketplaceCsp } from "@createconomy/config/csp/marketplace";
-import { buildCsp, baseSecurityHeaders } from "@createconomy/config/security-headers";
+import { buildCsp, toNextHeaders, baseSecurityHeaders } from "@createconomy/config/security-headers";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -52,12 +52,13 @@ const nextConfig: NextConfig = {
   async headers() {
     const cspDirectives = getMarketplaceCsp(isDev);
     const cspHeader = buildCsp(cspDirectives);
+    const securityHeaders = toNextHeaders(baseSecurityHeaders);
 
     return [
       {
         source: "/:path*",
         headers: [
-          ...baseSecurityHeaders,
+          ...securityHeaders,
           {
             key: "Content-Security-Policy",
             value: cspHeader,
@@ -99,9 +100,9 @@ const nextConfig: NextConfig = {
 
   // Environment variables exposed to the browser
   env: {
-    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || "Createconomy",
+    NEXT_PUBLIC_APP_NAME: process.env["NEXT_PUBLIC_APP_NAME"] || "Createconomy",
     NEXT_PUBLIC_SITE_URL:
-      process.env.NEXT_PUBLIC_SITE_URL || "https://createconomy.com",
+      process.env["NEXT_PUBLIC_SITE_URL"] || "https://createconomy.com",
   },
 
   // Experimental features

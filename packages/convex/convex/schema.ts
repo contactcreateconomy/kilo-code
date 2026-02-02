@@ -32,7 +32,9 @@ export const orderStatusValidator = v.union(
   v.literal("shipped"),
   v.literal("delivered"),
   v.literal("cancelled"),
-  v.literal("refunded")
+  v.literal("refunded"),
+  v.literal("partially_refunded"),
+  v.literal("disputed")
 );
 
 /** Product status values */
@@ -50,7 +52,9 @@ export const paymentStatusValidator = v.union(
   v.literal("succeeded"),
   v.literal("failed"),
   v.literal("refunded"),
-  v.literal("cancelled")
+  v.literal("cancelled"),
+  v.literal("partially_refunded"),
+  v.literal("disputed")
 );
 
 /** Forum post status values */
@@ -169,6 +173,7 @@ export default defineSchema({
     tenantId: v.optional(v.id("tenants")),
     userAgent: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
+    origin: v.optional(v.string()),
     expiresAt: v.number(),
     isActive: v.boolean(),
     createdAt: v.number(),
@@ -312,6 +317,7 @@ export default defineSchema({
     shippedAt: v.optional(v.number()),
     deliveredAt: v.optional(v.number()),
     cancelledAt: v.optional(v.number()),
+    refundedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -376,6 +382,7 @@ export default defineSchema({
   cartItems: defineTable({
     cartId: v.id("carts"),
     productId: v.id("products"),
+    userId: v.optional(v.id("users")),
     quantity: v.number(),
     price: v.number(),
     subtotal: v.number(),
@@ -384,7 +391,8 @@ export default defineSchema({
   })
     .index("by_cart", ["cartId"])
     .index("by_product", ["productId"])
-    .index("by_cart_product", ["cartId", "productId"]),
+    .index("by_cart_product", ["cartId", "productId"])
+    .index("by_user", ["userId"]),
 
   // -------------------------------------------------------------------------
   // Review Tables
@@ -559,6 +567,7 @@ export default defineSchema({
     stripeCustomerId: v.string(),
     stripePaymentIntentId: v.string(),
     stripeChargeId: v.optional(v.string()),
+    stripeCheckoutSessionId: v.optional(v.string()),
     amount: v.number(),
     currency: v.string(),
     status: paymentStatusValidator,
@@ -566,6 +575,7 @@ export default defineSchema({
     receiptUrl: v.optional(v.string()),
     failureCode: v.optional(v.string()),
     failureMessage: v.optional(v.string()),
+    refundedAmount: v.optional(v.number()),
     metadata: v.optional(v.any()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -574,6 +584,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_order", ["orderId"])
     .index("by_stripe_payment_intent", ["stripePaymentIntentId"])
+    .index("by_stripe_charge", ["stripeChargeId"])
+    .index("by_checkout_session", ["stripeCheckoutSessionId"])
     .index("by_status", ["status"]),
 
   /**
@@ -592,4 +604,96 @@ export default defineSchema({
     .index("by_stripe_event", ["stripeEventId"])
     .index("by_type", ["type"])
     .index("by_processed", ["processed"]),
+
+  // -------------------------------------------------------------------------
+  // Seller Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Sellers table
+   * Seller profiles and business information
+   */
+  sellers: defineTable({
+    userId: v.id("users"),
+    tenantId: v.optional(v.id("tenants")),
+    businessName: v.string(),
+    businessEmail: v.optional(v.string()),
+    businessPhone: v.optional(v.string()),
+    businessAddress: v.optional(
+      v.object({
+        street: v.optional(v.string()),
+        city: v.optional(v.string()),
+        state: v.optional(v.string()),
+        postalCode: v.optional(v.string()),
+        country: v.optional(v.string()),
+      })
+    ),
+    description: v.optional(v.string()),
+    logoUrl: v.optional(v.string()),
+    stripeAccountId: v.optional(v.string()),
+    stripeOnboarded: v.boolean(),
+    isApproved: v.boolean(),
+    approvedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_tenant", ["tenantId"])
+    .index("by_approved", ["isApproved"])
+    .index("by_active", ["isActive"])
+    .index("by_stripe_account", ["stripeAccountId"]),
+
+  /**
+   * Stripe Connect accounts
+   * Links sellers to Stripe Connect accounts
+   */
+  stripeConnectAccounts: defineTable({
+    sellerId: v.id("sellers"),
+    tenantId: v.optional(v.id("tenants")),
+    stripeAccountId: v.string(),
+    chargesEnabled: v.boolean(),
+    payoutsEnabled: v.boolean(),
+    detailsSubmitted: v.boolean(),
+    onboardingComplete: v.boolean(),
+    accountType: v.optional(v.string()),
+    businessType: v.optional(v.string()),
+    country: v.optional(v.string()),
+    defaultCurrency: v.optional(v.string()),
+    deauthorizedAt: v.optional(v.number()),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_seller", ["sellerId"])
+    .index("by_tenant", ["tenantId"])
+    .index("by_stripe_account", ["stripeAccountId"]),
+
+  /**
+   * Stripe disputes
+   * Records of payment disputes
+   */
+  stripeDisputes: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    paymentId: v.id("stripePayments"),
+    orderId: v.optional(v.id("orders")),
+    stripeDisputeId: v.string(),
+    stripeChargeId: v.optional(v.string()),
+    amount: v.number(),
+    currency: v.string(),
+    reason: v.optional(v.string()),
+    status: v.string(),
+    evidenceDueBy: v.optional(v.number()),
+    isChargeRefundable: v.optional(v.boolean()),
+    closedAt: v.optional(v.number()),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tenant", ["tenantId"])
+    .index("by_payment", ["paymentId"])
+    .index("by_order", ["orderId"])
+    .index("by_stripe_dispute", ["stripeDisputeId"])
+    .index("by_status", ["status"]),
 });

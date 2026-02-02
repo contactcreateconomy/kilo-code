@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 interface SignInFormProps {
-  onSubmit: (email: string, password: string) => Promise<void>;
+  onSubmit?: (email: string, password: string) => Promise<void>;
   isLoading?: boolean;
   error?: string;
 }
@@ -15,7 +15,9 @@ export function SignInForm({ onSubmit, isLoading, error }: SignInFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(email, password);
+    if (onSubmit) {
+      await onSubmit(email, password);
+    }
   };
 
   return (

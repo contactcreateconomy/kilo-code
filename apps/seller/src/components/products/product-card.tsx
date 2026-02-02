@@ -1,24 +1,49 @@
 import Link from "next/link";
 
-interface ProductCardProps {
+interface Product {
   id: string;
   name: string;
   price: number;
   image?: string;
   stock: number;
-  status: "active" | "draft" | "archived";
+  status: "active" | "draft" | "archived" | "out_of_stock" | string;
   sales?: number;
 }
 
+interface ProductCardProps {
+  product?: Product;
+  id?: string;
+  name?: string;
+  price?: number;
+  image?: string;
+  stock?: number;
+  status?: "active" | "draft" | "archived";
+  sales?: number;
+  isSelected?: boolean;
+  onSelect?: () => void;
+}
+
 export function ProductCard({
-  id,
-  name,
-  price,
-  image,
-  stock,
-  status,
-  sales = 0,
+  product,
+  id: idProp,
+  name: nameProp,
+  price: priceProp,
+  image: imageProp,
+  stock: stockProp,
+  status: statusProp,
+  sales: salesProp = 0,
+  isSelected,
+  onSelect,
 }: ProductCardProps) {
+  // Support both object prop and individual props
+  const id = product?.id ?? idProp ?? "";
+  const name = product?.name ?? nameProp ?? "";
+  const price = product?.price ?? priceProp ?? 0;
+  const image = product?.image ?? imageProp;
+  const stock = product?.stock ?? stockProp ?? 0;
+  const status = (product?.status ?? statusProp ?? "draft") as "active" | "draft" | "archived";
+  const sales = product?.sales ?? salesProp;
+  
   const statusColors = {
     active: "status-active",
     draft: "status-pending",

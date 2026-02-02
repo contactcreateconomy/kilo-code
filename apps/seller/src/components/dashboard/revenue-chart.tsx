@@ -11,13 +11,13 @@ import {
 } from "recharts";
 
 interface RevenueChartProps {
-  data: Array<{
+  data?: Array<{
     date: string;
     revenue: number;
   }>;
 }
 
-export function RevenueChart({ data }: RevenueChartProps) {
+export function RevenueChart({ data = [] }: RevenueChartProps) {
   return (
     <div className="seller-card">
       <h3 className="text-lg font-semibold mb-4">Revenue Overview</h3>

@@ -32,17 +32,25 @@ interface Thread {
 }
 
 interface ThreadListProps {
-  threads: Thread[];
+  threads?: Thread[];
+  filter?: "pinned" | "recent" | "popular";
+  limit?: number;
   emptyMessage?: string;
   showCategory?: boolean;
 }
 
 export function ThreadList({
-  threads,
+  threads = [],
+  filter,
+  limit,
   emptyMessage = "No threads found",
   showCategory = true,
 }: ThreadListProps) {
-  if (threads.length === 0) {
+  // TODO: When filter/limit are provided, fetch data from Convex
+  // For now, use the threads prop or empty array
+  const displayThreads = threads ?? [];
+  
+  if (displayThreads.length === 0) {
     return (
       <div className="text-center py-12 bg-card rounded-lg border">
         <div className="text-4xl mb-4">📭</div>
@@ -52,8 +60,8 @@ export function ThreadList({
   }
 
   // Separate pinned and regular threads
-  const pinnedThreads = threads.filter((t) => t.isPinned);
-  const regularThreads = threads.filter((t) => !t.isPinned);
+  const pinnedThreads = displayThreads.filter((t) => t.isPinned);
+  const regularThreads = displayThreads.filter((t) => !t.isPinned);
 
   return (
     <div className="space-y-4">

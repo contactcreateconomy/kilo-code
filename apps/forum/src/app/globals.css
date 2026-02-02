@@ -1,67 +1,108 @@
+@import "tailwindcss";
 @import "@createconomy/ui/globals.css";
 
 /* Forum-specific styles */
 @layer components {
   /* Thread styling */
   .thread-card {
-    @apply rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50;
+    border-radius: 0.5rem;
+    border: 1px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+    padding: 1rem;
+    transition: background-color 0.2s;
+  }
+
+  .thread-card:hover {
+    background-color: hsl(var(--accent) / 0.5);
   }
 
   /* Post styling */
   .post-card {
-    @apply border-b py-4 last:border-b-0;
+    border-bottom: 1px solid hsl(var(--border));
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .post-card:last-child {
+    border-bottom: none;
   }
 
   /* Category badge */
   .category-badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.125rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
   }
 
   /* User badge */
   .user-badge {
-    @apply inline-flex items-center gap-2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   /* Reply form */
   .reply-form {
-    @apply rounded-lg border bg-card p-4;
+    border-radius: 0.5rem;
+    border: 1px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+    padding: 1rem;
   }
 
   /* Markdown content */
   .markdown-content {
-    @apply prose prose-sm dark:prose-invert max-w-none;
+    max-width: none;
   }
 
   .markdown-content pre {
-    @apply rounded-lg bg-muted p-4;
+    border-radius: 0.5rem;
+    background-color: hsl(var(--muted));
+    padding: 1rem;
   }
 
   .markdown-content code {
-    @apply rounded bg-muted px-1 py-0.5;
+    border-radius: 0.25rem;
+    background-color: hsl(var(--muted));
+    padding: 0.125rem 0.25rem;
   }
 
   /* Forum sidebar */
   .forum-sidebar {
-    @apply sticky top-20 space-y-4;
+    position: sticky;
+    top: 5rem;
+  }
+
+  .forum-sidebar > * + * {
+    margin-top: 1rem;
   }
 
   /* Search bar */
   .search-bar {
-    @apply relative;
+    position: relative;
   }
 
   .search-bar input {
-    @apply w-full rounded-lg border bg-background px-4 py-2 pl-10;
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid hsl(var(--border));
+    background-color: hsl(var(--background));
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
   }
 
   /* Pinned thread indicator */
   .pinned-indicator {
-    @apply text-primary;
+    color: hsl(var(--primary));
   }
 
   /* Activity indicator */
   .activity-dot {
-    @apply h-2 w-2 rounded-full bg-green-500;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: #22c55e;
   }
 }
 

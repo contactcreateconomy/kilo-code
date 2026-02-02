@@ -102,7 +102,7 @@ export default function SignInPage() {
 
           <div className="mt-4 text-center text-sm">
             <Link
-              href={process.env.NEXT_PUBLIC_MARKETPLACE_URL || "/"}
+              href={process.env["NEXT_PUBLIC_MARKETPLACE_URL"] || "/"}
               className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
             >
               ← Back to Marketplace

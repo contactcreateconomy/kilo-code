@@ -238,7 +238,7 @@ function simpleHash(str: string): string {
  * @throws Error if not authenticated
  */
 export async function requireAuth(
-  ctx: GenericQueryCtx<unknown> | GenericMutationCtx<unknown>
+  ctx: GenericQueryCtx<any> | GenericMutationCtx<any>
 ): Promise<string> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {

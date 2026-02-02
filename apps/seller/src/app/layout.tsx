@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ConvexProvider } from "@/providers/convex-provider";
+import { ConvexClientProvider } from "@/providers/convex-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
 const inter = Inter({
@@ -32,7 +32,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`}>
         <ThemeProvider>
-          <ConvexProvider>{children}</ConvexProvider>
+          <ConvexClientProvider>{children}</ConvexClientProvider>
         </ThemeProvider>
       </body>
     </html>

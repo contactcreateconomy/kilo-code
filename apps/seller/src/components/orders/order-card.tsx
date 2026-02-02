@@ -1,24 +1,47 @@
 import Link from "next/link";
 
-interface OrderCardProps {
+interface Order {
   id: string;
-  orderNumber: string;
-  customerName: string;
+  orderNumber?: string;
+  customer?: string;
+  customerName?: string;
   date: string;
   total: number;
-  itemCount: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  items?: number;
+  itemCount?: number;
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | string;
+}
+
+interface OrderCardProps {
+  order?: Order;
+  id?: string;
+  orderNumber?: string;
+  customerName?: string;
+  date?: string;
+  total?: number;
+  itemCount?: number;
+  status?: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 }
 
 export function OrderCard({
-  id,
-  orderNumber,
-  customerName,
-  date,
-  total,
-  itemCount,
-  status,
+  order,
+  id: idProp,
+  orderNumber: orderNumberProp,
+  customerName: customerNameProp,
+  date: dateProp,
+  total: totalProp,
+  itemCount: itemCountProp,
+  status: statusProp,
 }: OrderCardProps) {
+  // Support both object prop and individual props
+  const id = order?.id ?? idProp ?? "";
+  const orderNumber = order?.orderNumber ?? order?.id ?? orderNumberProp ?? "";
+  const customerName = order?.customerName ?? order?.customer ?? customerNameProp ?? "";
+  const date = order?.date ?? dateProp ?? "";
+  const total = order?.total ?? totalProp ?? 0;
+  const itemCount = order?.itemCount ?? order?.items ?? itemCountProp ?? 0;
+  const status = (order?.status ?? statusProp ?? "pending") as "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  
   const statusConfig = {
     pending: { label: "Pending", class: "status-pending" },
     processing: { label: "Processing", class: "status-pending" },

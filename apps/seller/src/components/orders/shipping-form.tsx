@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 interface ShippingFormProps {
+  orderId?: string;
+  currentStatus?: string;
   initialData?: {
     carrier: string;
     trackingNumber: string;
@@ -10,7 +12,7 @@ interface ShippingFormProps {
     estimatedDelivery: string;
     notes: string;
   };
-  onSubmit: (data: ShippingFormData) => void;
+  onSubmit?: (data: ShippingFormData) => void;
   isLoading?: boolean;
 }
 
@@ -30,18 +32,20 @@ const carriers = [
   { value: "other", label: "Other" },
 ];
 
-export function ShippingForm({ initialData, onSubmit, isLoading }: ShippingFormProps) {
+export function ShippingForm({ orderId, currentStatus, initialData, onSubmit, isLoading }: ShippingFormProps) {
   const [formData, setFormData] = useState<ShippingFormData>({
     carrier: initialData?.carrier || "",
     trackingNumber: initialData?.trackingNumber || "",
-    shippingDate: initialData?.shippingDate || new Date().toISOString().split("T")[0],
+    shippingDate: initialData?.shippingDate || new Date().toISOString().split("T")[0] || "",
     estimatedDelivery: initialData?.estimatedDelivery || "",
     notes: initialData?.notes || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (onSubmit) {
+      onSubmit(formData);
+    }
   };
 
   const handleChange = (

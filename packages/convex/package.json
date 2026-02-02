@@ -2,6 +2,18 @@
   "name": "@createconomy/convex",
   "version": "0.0.1",
   "private": true,
+  "main": "./convex/_generated/api.js",
+  "types": "./convex/_generated/api.d.ts",
+  "exports": {
+    ".": {
+      "types": "./convex/_generated/api.d.ts",
+      "default": "./convex/_generated/api.js"
+    },
+    "./api": {
+      "types": "./convex/_generated/api.d.ts",
+      "default": "./convex/_generated/api.js"
+    }
+  },
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy"

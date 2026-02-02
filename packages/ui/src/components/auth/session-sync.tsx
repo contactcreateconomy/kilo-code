@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./auth-provider";
-import { getSessionToken, clearSessionToken } from "../lib/auth-cookies";
+import { getSessionToken, clearSessionToken } from "../../lib/auth-cookies";
 
 /**
  * Session sync message types

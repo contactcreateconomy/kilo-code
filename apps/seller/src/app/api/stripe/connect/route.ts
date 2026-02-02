@@ -9,8 +9,8 @@ import Stripe from "stripe";
  */
 
 // Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
+const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"]!, {
+  apiVersion: "2025-02-24.acacia",
 });
 
 /**
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get base URL for return/refresh URLs
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get("origin") || "http://localhost:3003";
+    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || request.headers.get("origin") || "http://localhost:3003";
 
     // Create Express Connect account
     const account = await stripe.accounts.create({

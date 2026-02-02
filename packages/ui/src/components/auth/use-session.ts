@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth, type Session, type SessionUser } from "./auth-provider";
-import { getSessionToken } from "../lib/auth-cookies";
+import { getSessionToken } from "../../lib/auth-cookies";
 
 /**
  * Session state returned by useSession hook

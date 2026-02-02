@@ -48,7 +48,8 @@ export function useSeller() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Placeholder data - replace with actual Convex queries
-  const seller: Seller | null = null;
+  // Using type assertion to avoid TypeScript narrowing to 'never'
+  const seller = null as Seller | null;
   const products: Product[] = [];
   const orders: Order[] = [];
   const stats: SellerStats = {

@@ -20,17 +20,23 @@ interface Category {
 }
 
 interface CategoryListProps {
-  categories: Category[];
+  categories?: Category[];
+  limit?: number;
   emptyMessage?: string;
   layout?: "grid" | "list";
 }
 
 export function CategoryList({
-  categories,
+  categories = [],
+  limit,
   emptyMessage = "No categories found",
   layout = "list",
 }: CategoryListProps) {
-  if (categories.length === 0) {
+  // TODO: When limit is provided, fetch data from Convex
+  // For now, use the categories prop or empty array
+  const displayCategories = categories ?? [];
+  
+  if (displayCategories.length === 0) {
     return (
       <div className="text-center py-12 bg-card rounded-lg border">
         <div className="text-4xl mb-4">📁</div>
@@ -42,7 +48,7 @@ export function CategoryList({
   if (layout === "grid") {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map((category) => (
+        {displayCategories.map((category) => (
           <CategoryCard key={category.id} {...category} />
         ))}
       </div>
@@ -51,7 +57,7 @@ export function CategoryList({
 
   return (
     <div className="space-y-3">
-      {categories.map((category) => (
+      {displayCategories.map((category) => (
         <CategoryCard key={category.id} {...category} />
       ))}
     </div>

@@ -1,4 +1,6 @@
 import { convexAuth, getAuthUserId } from "@convex-dev/auth/server";
+import Google from "@auth/core/providers/google";
+import GitHub from "@auth/core/providers/github";
 import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
@@ -17,7 +19,16 @@ import { SESSION_CONFIG } from "./auth.config";
  * Provides authentication methods and session management
  */
 export const { auth, signIn, signOut, store } = convexAuth({
-  providers: [],
+  providers: [
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+    }),
+    GitHub({
+      clientId: process.env.AUTH_GITHUB_ID,
+      clientSecret: process.env.AUTH_GITHUB_SECRET,
+    }),
+  ],
 });
 
 // ============================================================================

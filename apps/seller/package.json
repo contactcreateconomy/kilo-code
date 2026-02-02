@@ -18,8 +18,10 @@
     "@createconomy/ui": "workspace:*",
     "@createconomy/convex": "workspace:*",
     "recharts": "^2.15.0",
-    "@stripe/stripe-js": "^4.11.0",
-    "stripe": "^17.5.0"
+    "@stripe/stripe-js": "^8.7.0",
+    "stripe": "^17.5.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@createconomy/config": "workspace:*",

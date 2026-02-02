@@ -10,10 +10,10 @@ interface Order {
 }
 
 interface RecentOrdersProps {
-  orders: Order[];
+  orders?: Order[];
 }
 
-export function RecentOrders({ orders }: RecentOrdersProps) {
+export function RecentOrders({ orders = [] }: RecentOrdersProps) {
   const statusColors = {
     pending: "status-pending",
     processing: "status-pending",

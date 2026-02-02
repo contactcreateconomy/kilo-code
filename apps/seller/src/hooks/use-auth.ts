@@ -17,6 +17,7 @@ interface AuthState {
   isLoading: boolean;
   user: User | null;
   isSeller: boolean;
+  signOut: () => Promise<void>;
 }
 
 export function useAuth(): AuthState {
@@ -40,11 +41,19 @@ export function useAuth(): AuthState {
     }
   }, [authLoading, isAuthenticated]);
 
+  const signOut = async () => {
+    // TODO: Replace with actual sign out logic
+    // This would typically call a Convex mutation or auth provider's signOut
+    console.log("Signing out...");
+    setUser(null);
+  };
+
   return {
     isAuthenticated,
     isLoading: isLoading || authLoading,
     user,
     isSeller: user?.role === "seller" || user?.role === "admin",
+    signOut,
   };
 }
 

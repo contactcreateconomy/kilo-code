@@ -47,8 +47,8 @@ export const listForumCategories = query({
     const rootCategories = categories.filter((c) => !c.parentId);
     const childCategories = categories.filter((c) => c.parentId);
 
-    const buildTree = (parent: (typeof categories)[0]) => {
-      const children = childCategories
+    function buildTree(parent: (typeof categories)[0]): any {
+      const children: any[] = childCategories
         .filter((c) => c.parentId === parent._id)
         .map((child) => buildTree(child));
 
@@ -56,7 +56,7 @@ export const listForumCategories = query({
         ...parent,
         children: children.length > 0 ? children : undefined,
       };
-    };
+    }
 
     return rootCategories.map(buildTree);
   },

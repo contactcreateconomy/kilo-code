@@ -74,7 +74,7 @@ export default function PendingPage() {
               Contact Support
             </Link>
             <Link
-              href={process.env.NEXT_PUBLIC_MARKETPLACE_URL || "/"}
+              href={process.env["NEXT_PUBLIC_MARKETPLACE_URL"] || "/"}
               className="px-4 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
             >
               Back to Marketplace

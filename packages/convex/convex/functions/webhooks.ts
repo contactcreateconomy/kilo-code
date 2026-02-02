@@ -72,7 +72,7 @@ export const handleCheckoutCompleted = internalMutation({
     } else if (args.customerEmail) {
       const user = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", args.customerEmail))
+        .withIndex("email", (q) => q.eq("email", args.customerEmail))
         .first();
       userId = user?._id;
     }
@@ -90,7 +90,11 @@ export const handleCheckoutCompleted = internalMutation({
       userId,
       orderNumber,
       status: args.paymentStatus === "paid" ? "confirmed" : "pending",
-      totalAmount: args.amountTotal,
+      subtotal: args.amountTotal,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      total: args.amountTotal,
       currency: args.currency,
       paidAt: args.paymentStatus === "paid" ? now : undefined,
       metadata: args.metadata,
@@ -102,7 +106,7 @@ export const handleCheckoutCompleted = internalMutation({
     const paymentId = await ctx.db.insert("stripePayments", {
       userId,
       orderId,
-      stripePaymentIntentId: args.paymentIntentId,
+      stripePaymentIntentId: args.paymentIntentId ?? "",
       stripeCheckoutSessionId: args.sessionId,
       stripeCustomerId: args.customerId ?? "",
       amount: args.amountTotal,
@@ -437,7 +441,7 @@ export const handleDisputeCreated = internalMutation({
       payment = await ctx.db
         .query("stripePayments")
         .withIndex("by_stripe_payment_intent", (q) =>
-          q.eq("stripePaymentIntentId", args.paymentIntentId)
+          q.eq("stripePaymentIntentId", args.paymentIntentId!)
         )
         .first();
     }
@@ -451,14 +455,19 @@ export const handleDisputeCreated = internalMutation({
         .first();
     }
 
+    if (!payment) {
+      console.log("Payment not found for dispute:", args.disputeId);
+      return { success: false, error: "Payment not found" };
+    }
+
     // Record the dispute
     const disputeId = await ctx.db.insert("stripeDisputes", {
       stripeDisputeId: args.disputeId,
       stripeChargeId: args.chargeId,
-      stripePaymentIntentId: args.paymentIntentId,
-      paymentId: payment?._id,
-      orderId: payment?.orderId,
+      paymentId: payment._id,
+      orderId: payment.orderId,
       amount: args.amount,
+      currency: payment.currency,
       reason: args.reason,
       status: args.status,
       createdAt: now,
@@ -586,7 +595,7 @@ export const handleCustomerCreated = internalMutation({
     } else if (args.email) {
       const user = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .withIndex("email", (q) => q.eq("email", args.email as string))
         .first();
       userId = user?._id;
     }

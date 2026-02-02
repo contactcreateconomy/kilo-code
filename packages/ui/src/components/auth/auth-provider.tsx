@@ -15,7 +15,7 @@ import {
   clearSessionToken,
   getCookieDomain,
   COOKIE_NAMES,
-} from "../lib/auth-cookies";
+} from "../../lib/auth-cookies";
 
 /**
  * User information from the session

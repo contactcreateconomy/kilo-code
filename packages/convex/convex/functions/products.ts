@@ -1,4 +1,4 @@
-import { query, mutation } from "../_generated/server";
+import { query, mutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "../_generated/dataModel";
@@ -707,5 +707,38 @@ export const incrementViewCount = mutation({
     await ctx.db.patch(args.productId, {
       viewCount: product.viewCount + 1,
     });
+  },
+});
+
+// ============================================================================
+// Internal Queries
+// ============================================================================
+
+/**
+ * Get product by ID (internal use)
+ *
+ * @param productId - Product ID
+ * @returns Product with images or null
+ */
+export const getProductById = internalQuery({
+  args: {
+    productId: v.id("products"),
+  },
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.productId);
+    if (!product || product.isDeleted) {
+      return null;
+    }
+
+    // Get images
+    const images = await ctx.db
+      .query("productImages")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .collect();
+
+    return {
+      ...product,
+      images: images.sort((a, b) => a.sortOrder - b.sortOrder).map((img) => img.url),
+    };
   },
 });

@@ -78,7 +78,7 @@ export async function GET(
         }
 
         // Validate session with Convex
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!.replace(
+        const convexUrl = process.env["NEXT_PUBLIC_CONVEX_URL"]!.replace(
           ".convex.cloud",
           ".convex.site"
         );
@@ -192,7 +192,7 @@ export async function POST(
         }
 
         // Refresh session with Convex
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!.replace(
+        const convexUrl = process.env["NEXT_PUBLIC_CONVEX_URL"]!.replace(
           ".convex.cloud",
           ".convex.site"
         );
@@ -240,7 +240,7 @@ export async function POST(
 
         if (sessionToken) {
           // Revoke session with Convex
-          const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!.replace(
+          const convexUrl = process.env["NEXT_PUBLIC_CONVEX_URL"]!.replace(
             ".convex.cloud",
             ".convex.site"
           );
@@ -315,7 +315,7 @@ export async function DELETE(
       const sessionToken = cookies[COOKIE_NAMES.SESSION_TOKEN];
 
       if (sessionToken) {
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!.replace(
+        const convexUrl = process.env["NEXT_PUBLIC_CONVEX_URL"]!.replace(
           ".convex.cloud",
           ".convex.site"
         );

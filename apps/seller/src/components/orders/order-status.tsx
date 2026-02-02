@@ -5,17 +5,22 @@ import { useState } from "react";
 type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 
 interface OrderStatusProps {
-  currentStatus: OrderStatus;
-  onStatusChange: (newStatus: OrderStatus) => void;
+  status?: OrderStatus;
+  currentStatus?: OrderStatus;
+  onStatusChange?: (newStatus: OrderStatus) => void;
   isLoading?: boolean;
 }
 
 export function OrderStatus({
-  currentStatus,
+  status,
+  currentStatus: currentStatusProp,
   onStatusChange,
   isLoading,
 }: OrderStatusProps) {
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Support both 'status' and 'currentStatus' props for flexibility
+  const currentStatus = currentStatusProp ?? status ?? "pending";
 
   const statusConfig: Record<
     OrderStatus,
@@ -42,7 +47,9 @@ export function OrderStatus({
     currentIndex < statusFlow.length - 1;
 
   const handleStatusChange = (newStatus: OrderStatus) => {
-    onStatusChange(newStatus);
+    if (onStatusChange) {
+      onStatusChange(newStatus);
+    }
     setIsOpen(false);
   };
 
@@ -100,13 +107,13 @@ export function OrderStatus({
 
       {/* Status Actions */}
       <div className="flex flex-wrap gap-2">
-        {canProgress && (
+        {canProgress && currentIndex + 1 < statusFlow.length && (
           <button
-            onClick={() => handleStatusChange(statusFlow[currentIndex + 1])}
+            onClick={() => handleStatusChange(statusFlow[currentIndex + 1]!)}
             disabled={isLoading}
             className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {isLoading ? "Updating..." : `Mark as ${statusConfig[statusFlow[currentIndex + 1]].label}`}
+            {isLoading ? "Updating..." : `Mark as ${statusConfig[statusFlow[currentIndex + 1]!].label}`}
           </button>
         )}
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export default function ReviewDetailPage() {
   const params = useParams();
-  const reviewId = params.id as string;
+  const reviewId = params["id"] as string;
 
   // Mock review data
   const review = {

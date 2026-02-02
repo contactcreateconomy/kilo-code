@@ -3,11 +3,6 @@
 import { useState } from "react";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 
-export const metadata = {
-  title: "Analytics",
-  description: "View your store analytics and insights",
-};
-
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState("30d");
 

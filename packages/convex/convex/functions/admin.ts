@@ -66,13 +66,12 @@ export const getDashboardStats = query({
     };
 
     // Get order stats
-    let ordersQuery = ctx.db.query("orders");
-    if (args.tenantId) {
-      ordersQuery = ctx.db
-        .query("orders")
-        .withIndex("by_tenant", (q: any) => q.eq("tenantId", args.tenantId));
-    }
-    const allOrders = await ordersQuery.collect();
+    const allOrders = args.tenantId
+      ? await ctx.db
+          .query("orders")
+          .withIndex("by_tenant", (q: any) => q.eq("tenantId", args.tenantId))
+          .collect()
+      : await ctx.db.query("orders").collect();
 
     const now = Date.now();
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
@@ -110,13 +109,12 @@ export const getDashboardStats = query({
     };
 
     // Get product stats
-    let productsQuery = ctx.db.query("products");
-    if (args.tenantId) {
-      productsQuery = ctx.db
-        .query("products")
-        .withIndex("by_tenant", (q: any) => q.eq("tenantId", args.tenantId));
-    }
-    const allProducts = await productsQuery.collect();
+    const allProducts = args.tenantId
+      ? await ctx.db
+          .query("products")
+          .withIndex("by_tenant", (q: any) => q.eq("tenantId", args.tenantId))
+          .collect()
+      : await ctx.db.query("products").collect();
 
     const productStats = {
       total: allProducts.length,
@@ -245,7 +243,7 @@ export const listAllUsers = query({
     // Get user details for each profile
     const usersWithProfiles = await Promise.all(
       items.map(async (profile: any) => {
-        const user = await ctx.db.get(profile.userId);
+        const user = await ctx.db.get(profile.userId) as { _id: Id<"users">; email?: string; name?: string; image?: string } | null;
 
         return {
           id: profile.userId,
@@ -427,7 +425,7 @@ export const listAllOrders = query({
     // Get user info for each order
     const ordersWithUsers = await Promise.all(
       items.map(async (order: any) => {
-        const user = await ctx.db.get(order.userId);
+        const user = await ctx.db.get(order.userId) as { _id: Id<"users">; email?: string; name?: string } | null;
 
         const itemCount = await ctx.db
           .query("orderItems")
@@ -557,8 +555,8 @@ export const listPendingReviews = query({
     // Get product and user info
     const reviewsWithDetails = await Promise.all(
       reviews.map(async (review: any) => {
-        const product = await ctx.db.get(review.productId);
-        const user = await ctx.db.get(review.userId);
+        const product = await ctx.db.get(review.productId) as { _id: Id<"products">; name: string } | null;
+        const user = await ctx.db.get(review.userId) as { _id: Id<"users">; email?: string; name?: string } | null;
 
         return {
           ...review,
@@ -665,8 +663,8 @@ export const listReportedPosts = query({
     // Get thread and user info
     const postsWithDetails = await Promise.all(
       posts.map(async (post: any) => {
-        const thread = await ctx.db.get(post.threadId);
-        const user = await ctx.db.get(post.authorId);
+        const thread = await ctx.db.get(post.threadId) as { _id: Id<"forumThreads">; title: string } | null;
+        const user = await ctx.db.get(post.authorId) as { _id: Id<"users">; email?: string; name?: string } | null;
 
         return {
           ...post,

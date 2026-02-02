@@ -8,6 +8,10 @@ interface SellerGuardProps {
   requireApproved?: boolean;
 }
 
+interface SellerData {
+  status: "pending" | "approved" | "suspended";
+}
+
 export function SellerGuard({ children, requireApproved = true }: SellerGuardProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -18,8 +22,8 @@ export function SellerGuard({ children, requireApproved = true }: SellerGuardPro
     const checkAuth = async () => {
       try {
         // Simulated auth check - replace with actual Convex query
-        const user = null; // await convex.query(api.users.current);
-        const seller = null; // await convex.query(api.sellers.current);
+        const user = null as unknown | null; // await convex.query(api.users.current);
+        const seller = null as SellerData | null; // await convex.query(api.sellers.current);
 
         if (!user) {
           router.push("/auth/signin");

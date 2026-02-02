@@ -3,14 +3,20 @@
 import { useState, useRef } from "react";
 
 interface ImageUploadProps {
-  images: string[];
-  onImagesChange: (images: string[]) => void;
+  productId?: string;
+  images?: string[];
+  onImagesChange?: (images: string[]) => void;
   maxImages?: number;
 }
 
-export function ImageUpload({ images, onImagesChange, maxImages = 10 }: ImageUploadProps) {
+export function ImageUpload({ productId, images: imagesProp, onImagesChange, maxImages = 10 }: ImageUploadProps) {
+  const [internalImages, setInternalImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Support both controlled and uncontrolled modes
+  const images = imagesProp ?? internalImages;
+  const setImages = onImagesChange ?? setInternalImages;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -43,7 +49,7 @@ export function ImageUpload({ images, onImagesChange, maxImages = 10 }: ImageUpl
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        onImagesChange([...images, result]);
+        setImages([...images, result]);
       };
       reader.readAsDataURL(file);
     });
@@ -51,15 +57,17 @@ export function ImageUpload({ images, onImagesChange, maxImages = 10 }: ImageUpl
 
   const removeImage = (index: number) => {
     const newImages = images.filter((_, i) => i !== index);
-    onImagesChange(newImages);
+    setImages(newImages);
   };
 
   const moveImage = (fromIndex: number, toIndex: number) => {
     if (toIndex < 0 || toIndex >= images.length) return;
     const newImages = [...images];
     const [movedImage] = newImages.splice(fromIndex, 1);
-    newImages.splice(toIndex, 0, movedImage);
-    onImagesChange(newImages);
+    if (movedImage !== undefined) {
+      newImages.splice(toIndex, 0, movedImage);
+      setImages(newImages);
+    }
   };
 
   return (

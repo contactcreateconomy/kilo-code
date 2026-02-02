@@ -6,9 +6,20 @@
     "./eslint": "./eslint.config.mjs",
     "./typescript/base": "./tsconfig.base.json",
     "./typescript/nextjs": "./tsconfig.nextjs.json",
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.nextjs.json": "./tsconfig.nextjs.json",
     "./tailwind": "./tailwind.config.ts",
+    "./tailwind.config": "./tailwind.config.ts",
+    "./tailwind.config.ts": "./tailwind.config.ts",
     "./postcss": "./postcss.config.mjs",
-    "./vitest": "./vitest.config.ts"
+    "./postcss.config.mjs": "./postcss.config.mjs",
+    "./vitest": "./vitest.config.ts",
+    "./security-headers": "./security-headers.ts",
+    "./csp": "./csp/index.ts",
+    "./csp/marketplace": "./csp/marketplace.ts",
+    "./csp/seller": "./csp/seller.ts",
+    "./csp/admin": "./csp/admin.ts",
+    "./csp/forum": "./csp/forum.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

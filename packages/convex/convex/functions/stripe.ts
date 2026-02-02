@@ -288,7 +288,7 @@ export const getPaymentDetails = query({
       payment = await ctx.db
         .query("stripePayments")
         .withIndex("by_stripe_payment_intent", (q) =>
-          q.eq("stripePaymentIntentId", args.paymentIntentId)
+          q.eq("stripePaymentIntentId", args.paymentIntentId as string)
         )
         .first();
     }
@@ -450,7 +450,7 @@ export const updatePaymentStatus = internalMutation({
       payment = await ctx.db
         .query("stripePayments")
         .withIndex("by_stripe_payment_intent", (q) =>
-          q.eq("stripePaymentIntentId", args.stripePaymentIntentId)
+          q.eq("stripePaymentIntentId", args.stripePaymentIntentId as string)
         )
         .first();
     } else if (args.stripeCheckoutSessionId) {
@@ -564,6 +564,7 @@ export const createConnectAccountRecord = internalMutation({
       chargesEnabled: false,
       payoutsEnabled: false,
       detailsSubmitted: false,
+      onboardingComplete: false,
       createdAt: now,
       updatedAt: now,
     });
@@ -646,7 +647,11 @@ export const createOrderFromCheckout = internalMutation({
       userId: args.userId,
       orderNumber,
       status: "confirmed",
-      totalAmount: args.amountTotal,
+      subtotal: args.amountTotal,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      total: args.amountTotal,
       currency: args.currency,
       paidAt: now,
       metadata: args.metadata,
