@@ -1,7 +1,18 @@
+"use client";
+
 import Link from "next/link";
-import { SearchBar } from "@/components/forum/search-bar";
+import { useTheme } from "next-themes";
 import { UserMenu } from "@/components/auth/user-menu";
-import { Button } from "@createconomy/ui";
+import {
+  Button,
+  GlassmorphismNavbar,
+  Logo,
+  AnimatedSearch,
+  ThemeToggle,
+  NotificationsDropdown,
+  type Notification,
+} from "@createconomy/ui";
+import { MessageSquarePlus } from "lucide-react";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -10,78 +21,112 @@ const navigation = [
 ];
 
 export function Header() {
+  const { theme, setTheme } = useTheme();
+
+  // Mock notifications - in production, fetch from API
+  const notifications: Notification[] = [
+    {
+      id: "1",
+      title: "New Reply",
+      message: "Someone replied to your thread",
+      timestamp: new Date(Date.now() - 1000 * 60 * 10), // 10 minutes ago
+      read: false,
+      type: "info",
+    },
+    {
+      id: "2",
+      title: "Thread Mentioned",
+      message: "You were mentioned in a discussion",
+      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+      read: true,
+      type: "info",
+    },
+  ];
+
+  const handleSearch = (query: string) => {
+    window.location.href = `/search?q=${encodeURIComponent(query)}`;
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    console.log("Notification clicked:", notification);
+  };
+
+  const handleMarkAllRead = () => {
+    console.log("Mark all as read");
+  };
+
+  const handleThemeChange = (newTheme: "light" | "dark") => {
+    setTheme(newTheme);
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo and Main Site Link */}
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">💬</span>
-              <span className="font-bold text-lg hidden sm:inline-block">
-                Createconomy Forum
-              </span>
-            </Link>
-
-            {/* Main Navigation */}
-            <nav className="hidden md:flex items-center gap-4">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          {/* Search and User Actions */}
-          <div className="flex items-center gap-4">
-            {/* Search - Hidden on mobile */}
-            <div className="hidden lg:block w-64">
-              <SearchBar placeholder="Search forum..." />
-            </div>
-
-            {/* New Thread Button */}
-            <Button asChild size="sm" className="hidden sm:inline-flex">
-              <Link href="/t/new">New Thread</Link>
-            </Button>
-
-            {/* User Menu */}
-            <UserMenu />
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2 rounded-md hover:bg-accent"
-              aria-label="Open menu"
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+    <>
+      <GlassmorphismNavbar>
+        {/* Left Section - Logo and Navigation */}
+        <div className="flex items-center gap-6">
+          <Logo
+            text="Forum"
+            href="/"
+            icon="💬"
+            showIcon={false}
+            iconClassName="bg-gradient-to-br from-blue-500 to-purple-600"
+          />
+          
+          {/* Main Navigation */}
+          <nav className="hidden md:flex items-center gap-4">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-          </div>
+                {item.name}
+              </Link>
+            ))}
+          </nav>
         </div>
-      </div>
+
+        {/* Center Section - Search */}
+        <div className="hidden flex-1 justify-center px-8 lg:flex">
+          <AnimatedSearch
+            placeholder="Search forum..."
+            onSearch={handleSearch}
+            className="max-w-md"
+          />
+        </div>
+
+        {/* Right Section - Actions */}
+        <div className="flex items-center gap-2">
+          <ThemeToggle
+            theme={(theme as "light" | "dark") || "light"}
+            onThemeChange={handleThemeChange}
+          />
+          <NotificationsDropdown
+            notifications={notifications}
+            onNotificationClick={handleNotificationClick}
+            onMarkAllRead={handleMarkAllRead}
+          />
+          
+          {/* New Thread Button */}
+          <Button asChild size="sm" className="hidden sm:inline-flex gap-2">
+            <Link href="/t/new">
+              <MessageSquarePlus className="h-4 w-4" />
+              New Thread
+            </Link>
+          </Button>
+
+          {/* User Menu */}
+          <UserMenu />
+        </div>
+      </GlassmorphismNavbar>
 
       {/* Back to Main Site Banner */}
-      <div className="border-t bg-muted/50">
+      <div className="sticky top-16 z-40 border-b bg-muted/50 backdrop-blur-sm">
         <div className="container mx-auto px-4">
           <div className="flex h-8 items-center justify-between text-xs">
             <Link
               href={process.env.NEXT_PUBLIC_MAIN_SITE_URL || "https://createconomy.com"}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
             >
               ← Back to Createconomy
             </Link>
@@ -91,6 +136,6 @@ export function Header() {
           </div>
         </div>
       </div>
-    </header>
+    </>
   );
 }

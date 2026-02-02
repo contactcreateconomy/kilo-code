@@ -17,12 +17,20 @@
     "./lib/auth-cookies": "./src/lib/auth-cookies.ts",
     "./components/*": "./src/components/*.tsx",
     "./components/auth": "./src/components/auth/index.ts",
+    "./components/layout": "./src/components/layout/index.ts",
+    "./components/navbar": "./src/components/navbar/index.ts",
     "./hooks/*": "./src/hooks/*.ts",
     "./test-utils": "./src/test-utils.tsx"
   },
   "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.2",
+    "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-popover": "^1.1.4",
+    "@radix-ui/react-scroll-area": "^1.2.2",
+    "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-toggle": "^1.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.6.0",
@@ -47,6 +55,7 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "next": ">=14.0.0"
   }
 }

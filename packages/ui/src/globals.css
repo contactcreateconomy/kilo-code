@@ -65,6 +65,33 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+
+    /* ========================================
+     * NEW: Glassmorphism & Glow Effects
+     * ======================================== */
+    
+    /* Glow effects - Indigo theme */
+    --glow-color: 238 84% 67%;
+    --glow-sm: 0 0 10px hsla(var(--glow-color) / 0.3);
+    --glow-md: 0 0 20px hsla(var(--glow-color) / 0.4);
+    --glow-lg: 0 0 30px hsla(var(--glow-color) / 0.5);
+    --glow-xl: 0 0 40px hsla(var(--glow-color) / 0.6);
+    
+    /* Dot grid pattern */
+    --dot-color: rgba(0, 0, 0, 0.12);
+    --dot-size: 1px;
+    --dot-spacing: 24px;
+    
+    /* Glassmorphism */
+    --glass-bg: rgba(255, 255, 255, 0.8);
+    --glass-bg-hover: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    
+    /* Navbar specific */
+    --navbar-height: 64px;
+    --navbar-bg: rgba(255, 255, 255, 0.7);
+    --navbar-border: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1), transparent);
   }
 
   .dark {
@@ -124,6 +151,32 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* ========================================
+     * NEW: Glassmorphism & Glow Effects (Dark)
+     * ======================================== */
+    
+    /* Glow effects - Indigo theme (brighter in dark mode) */
+    --glow-color: 238 84% 67%;
+    --glow-sm: 0 0 10px hsla(var(--glow-color) / 0.4);
+    --glow-md: 0 0 20px hsla(var(--glow-color) / 0.5);
+    --glow-lg: 0 0 30px hsla(var(--glow-color) / 0.6);
+    --glow-xl: 0 0 40px hsla(var(--glow-color) / 0.7);
+    
+    /* Dot grid pattern (lighter dots in dark mode) */
+    --dot-color: rgba(255, 255, 255, 0.08);
+    --dot-size: 1px;
+    --dot-spacing: 24px;
+    
+    /* Glassmorphism (darker glass in dark mode) */
+    --glass-bg: rgba(0, 0, 0, 0.5);
+    --glass-bg-hover: rgba(0, 0, 0, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    
+    /* Navbar specific */
+    --navbar-bg: rgba(0, 0, 0, 0.6);
+    --navbar-border: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   }
 }
 
@@ -138,5 +191,192 @@
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+  }
+}
+
+/* ========================================
+ * Dot Grid Background Pattern
+ * ======================================== */
+@layer components {
+  .dot-grid {
+    background-image: radial-gradient(
+      circle,
+      var(--dot-color) var(--dot-size),
+      transparent var(--dot-size)
+    );
+    background-size: var(--dot-spacing) var(--dot-spacing);
+    background-position: center center;
+  }
+
+  .dot-grid-fade {
+    mask-image: radial-gradient(
+      ellipse 80% 80% at 50% 50%,
+      black 30%,
+      transparent 100%
+    );
+    -webkit-mask-image: radial-gradient(
+      ellipse 80% 80% at 50% 50%,
+      black 30%,
+      transparent 100%
+    );
+  }
+}
+
+/* ========================================
+ * Glassmorphism Styles
+ * ======================================== */
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-navbar {
+    background: var(--navbar-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid transparent;
+    background-image: var(--navbar-border);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+}
+
+/* ========================================
+ * Glow Effects
+ * ======================================== */
+@layer components {
+  .glow-sm {
+    box-shadow: var(--glow-sm);
+  }
+
+  .glow-md {
+    box-shadow: var(--glow-md);
+  }
+
+  .glow-lg {
+    box-shadow: var(--glow-lg);
+  }
+
+  .glow-xl {
+    box-shadow: var(--glow-xl);
+  }
+
+  .glow-hover:hover {
+    box-shadow: var(--glow-md);
+    transition: box-shadow 300ms ease-in-out;
+  }
+
+  .glow-focus:focus,
+  .glow-focus:focus-within {
+    box-shadow: var(--glow-lg);
+    transition: box-shadow 300ms ease-in-out;
+  }
+}
+
+/* ========================================
+ * Animation Keyframes
+ * ======================================== */
+@layer base {
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-in-from-top {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-from-bottom {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: var(--glow-sm);
+    }
+    50% {
+      box-shadow: var(--glow-lg);
+    }
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 300ms ease-out;
+  }
+
+  .animate-fade-out {
+    animation: fade-out 300ms ease-out;
+  }
+
+  .animate-slide-in-top {
+    animation: slide-in-from-top 300ms ease-out;
+  }
+
+  .animate-slide-in-bottom {
+    animation: slide-in-from-bottom 300ms ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 300ms ease-out;
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
 }

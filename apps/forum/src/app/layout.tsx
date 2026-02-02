@@ -5,6 +5,7 @@ import { ConvexProvider } from "@/providers/convex-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { DotGridBackground } from "@createconomy/ui";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -93,11 +94,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ConvexProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
+            <DotGridBackground>
+              <div className="relative flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </div>
+            </DotGridBackground>
           </ConvexProvider>
         </ThemeProvider>
       </body>
