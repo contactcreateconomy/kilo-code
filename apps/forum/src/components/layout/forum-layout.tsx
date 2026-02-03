@@ -13,7 +13,7 @@ interface ForumLayoutProps {
  * ForumLayout - Three-column layout wrapper for the forum
  * - Left sidebar: 250px (hidden on mobile/tablet)
  * - Center feed: flexible width
- * - Right sidebar: 320px (hidden on mobile, shown on desktop)
+ * - Right sidebar: 300px (hidden on mobile, shown on desktop)
  */
 export function ForumLayout({ 
   children, 
@@ -22,13 +22,15 @@ export function ForumLayout({
   className 
 }: ForumLayoutProps) {
   return (
-    <div className={cn('container mx-auto px-4 py-6', className)}>
+    <div className={cn('mx-auto max-w-7xl px-4 py-6', className)}>
       <div className="flex gap-6">
         {/* Left Sidebar - Hidden on mobile/tablet */}
         {leftSidebar && (
-          <aside className="hidden lg:block w-[220px] xl:w-[250px] shrink-0">
-            <div className="sticky top-20">
-              {leftSidebar}
+          <aside className="hidden lg:block w-[250px] shrink-0">
+            <div className="sticky top-24">
+              <div className="rounded-lg border border-border bg-card shadow-sm">
+                {leftSidebar}
+              </div>
             </div>
           </aside>
         )}
@@ -40,8 +42,8 @@ export function ForumLayout({
 
         {/* Right Sidebar - Hidden on mobile/tablet, shown on desktop */}
         {rightSidebar && (
-          <aside className="hidden xl:block w-[280px] 2xl:w-[320px] shrink-0">
-            <div className="sticky top-20">
+          <aside className="hidden xl:block w-[300px] shrink-0">
+            <div className="sticky top-24">
               {rightSidebar}
             </div>
           </aside>
@@ -50,3 +52,5 @@ export function ForumLayout({
     </div>
   );
 }
+
+export default ForumLayout;

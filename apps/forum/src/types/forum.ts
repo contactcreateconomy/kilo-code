@@ -1,19 +1,20 @@
 /**
- * Forum-specific TypeScript types for the premium redesign
+ * Forum-specific TypeScript types for the redesigned forum
  */
 
 export interface Discussion {
   id: string;
   title: string;
-  summary: string;
+  aiSummary: string;
   author: User;
   category: Category;
   upvotes: number;
   comments: number;
-  participants: User[];
   createdAt: Date;
   imageUrl?: string;
   isPinned?: boolean;
+  isUpvoted?: boolean;
+  isBookmarked?: boolean;
 }
 
 export interface User {
@@ -28,7 +29,8 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  icon: string;
+  icon: string; // Lucide icon name (e.g., 'Code', 'Palette', 'Rocket')
+  color: string; // Tailwind color class (e.g., 'bg-blue-500')
   count: number;
   isPremium?: boolean;
   pointsRequired?: number;
@@ -38,7 +40,7 @@ export interface LeaderboardEntry {
   rank: number;
   user: User;
   points: number;
-  trend: 'up' | 'down' | 'stable';
+  badge: 'gold' | 'silver' | 'bronze';
 }
 
 export interface Campaign {
@@ -48,7 +50,14 @@ export interface Campaign {
   prize: string;
   endDate: Date;
   progress: number;
-  totalParticipants: number;
+  targetPoints: number;
+  participantCount: number;
+}
+
+export interface CommunityStats {
+  members: string;
+  discussions: string;
+  comments: string;
 }
 
 export interface TrendingTopic {

@@ -1,23 +1,35 @@
 'use client';
 
-import { WhatsVibingWidget } from '@/components/widgets/whats-vibing';
 import { LeaderboardWidget } from '@/components/widgets/leaderboard';
-import { ActiveCampaignWidget } from '@/components/widgets/active-campaign';
+import { CampaignWidget } from '@/components/widgets/campaign-widget';
+import { CommunityStatsWidget } from '@/components/widgets/community-stats';
+import { WhatsVibingWidget } from '@/components/widgets/whats-vibing';
+import { cn } from '@/lib/utils';
+
+interface RightSidebarProps {
+  className?: string;
+}
 
 /**
- * RightSidebar - Premium right sidebar with widgets
+ * RightSidebar - Redesigned right sidebar matching reference design
+ * Features: What's Vibing, Leaderboard, Campaign widget, Community stats
  */
-export function RightSidebar() {
+export function RightSidebar({ className }: RightSidebarProps) {
   return (
-    <div className="space-y-6">
-      {/* What's Vibing Widget */}
+    <aside className={cn('flex flex-col gap-4', className)}>
+      {/* What's Vibing Widget - Top position */}
       <WhatsVibingWidget />
 
       {/* Leaderboard Widget */}
       <LeaderboardWidget />
 
-      {/* Active Campaign Widget */}
-      <ActiveCampaignWidget />
-    </div>
+      {/* Campaign Widget */}
+      <CampaignWidget />
+
+      {/* Community Stats Widget */}
+      <CommunityStatsWidget />
+    </aside>
   );
 }
+
+export default RightSidebar;

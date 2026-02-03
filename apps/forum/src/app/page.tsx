@@ -1,51 +1,75 @@
-import { Suspense } from "react";
-import { ForumLayout } from "@/components/layout/forum-layout";
-import { LeftSidebar } from "@/components/layout/left-sidebar";
-import { RightSidebar } from "@/components/layout/right-sidebar";
-import { FeaturedSlider } from "@/components/feed/featured-slider";
-import { DiscussionFeed } from "@/components/feed/discussion-feed";
-import { DiscussionCardSkeleton, FeaturedSliderSkeleton } from "@/components/ui/skeletons";
-import { mockDiscussions, mockFeaturedDiscussions } from "@/data/mock-data";
-import type { Metadata } from "next";
+'use client';
 
-export const metadata: Metadata = {
-  title: "Createconomy Forum - Community Discussions",
-  description:
-    "Join the Createconomy community forum. Discuss digital products, share knowledge, get help, and connect with creators and buyers.",
-};
+import { useState } from 'react';
+import { Navbar } from '@/components/navbar/navbar';
+import { LeftSidebar } from '@/components/layout/left-sidebar';
+import { RightSidebar } from '@/components/layout/right-sidebar';
+import { DiscussionFeed } from '@/components/feed/discussion-feed';
+import { mockDiscussions } from '@/data/mock-data';
+import { cn } from '@/lib/utils';
 
-function FeedSkeleton() {
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <DiscussionCardSkeleton key={i} />
-      ))}
-    </div>
-  );
-}
-
+/**
+ * ForumHomePage - Main forum homepage matching reference design
+ */
 export default function ForumHomePage() {
-  return (
-    <ForumLayout
-      leftSidebar={<LeftSidebar />}
-      rightSidebar={<RightSidebar />}
-    >
-      {/* Center Content */}
-      <div className="space-y-8">
-        {/* Featured Slider */}
-        <section>
-          <Suspense fallback={<FeaturedSliderSkeleton />}>
-            <FeaturedSlider discussions={mockFeaturedDiscussions} />
-          </Suspense>
-        </section>
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-        {/* Discussion Feed */}
-        <section>
-          <Suspense fallback={<FeedSkeleton />}>
+  return (
+    <div className="dot-grid-background min-h-screen bg-background font-sans">
+      {/* Navbar */}
+      <Navbar
+        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        isMobileMenuOpen={isMobileMenuOpen}
+      />
+
+      {/* Main Content */}
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <div className="flex gap-6">
+          {/* Left Sidebar - Desktop */}
+          <div className="hidden w-[250px] shrink-0 lg:block">
+            <div className="sticky top-24">
+              <LeftSidebar className="rounded-lg border border-border bg-card shadow-sm" />
+            </div>
+          </div>
+
+          {/* Mobile Sidebar Overlay */}
+          <div
+            className={cn(
+              'fixed inset-0 z-40 bg-foreground/50 transition-opacity duration-300 lg:hidden',
+              isMobileMenuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+            )}
+            onClick={() => setIsMobileMenuOpen(false)}
+            onKeyDown={(e) => e.key === 'Escape' && setIsMobileMenuOpen(false)}
+            role="button"
+            tabIndex={0}
+            aria-label="Close sidebar"
+          />
+
+          {/* Mobile Sidebar */}
+          <div
+            className={cn(
+              'fixed inset-y-0 left-0 z-50 w-[280px] transform bg-card shadow-xl transition-transform duration-300 ease-out lg:hidden',
+              isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            )}
+          >
+            <div className="h-full overflow-y-auto pt-20">
+              <LeftSidebar />
+            </div>
+          </div>
+
+          {/* Center Feed */}
+          <main className="min-w-0 flex-1">
             <DiscussionFeed initialDiscussions={mockDiscussions} />
-          </Suspense>
-        </section>
+          </main>
+
+          {/* Right Sidebar - Desktop & Tablet */}
+          <div className="hidden w-[300px] shrink-0 xl:block">
+            <div className="sticky top-24">
+              <RightSidebar />
+            </div>
+          </div>
+        </div>
       </div>
-    </ForumLayout>
+    </div>
   );
 }

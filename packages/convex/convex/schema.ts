@@ -131,6 +131,7 @@ export default defineSchema({
    */
   userProfiles: defineTable({
     userId: v.id("users"),
+    username: v.optional(v.string()), // Unique username for forum
     displayName: v.optional(v.string()),
     bio: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
@@ -152,6 +153,7 @@ export default defineSchema({
         currency: v.optional(v.string()),
       })
     ),
+    points: v.optional(v.number()), // Forum points
     defaultRole: userRoleValidator,
     isBanned: v.boolean(),
     bannedAt: v.optional(v.number()),
@@ -160,6 +162,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
+    .index("by_username", ["username"])
     .index("by_role", ["defaultRole"])
     .index("by_banned", ["isBanned"]),
 
@@ -438,6 +441,8 @@ export default defineSchema({
     slug: v.string(),
     description: v.optional(v.string()),
     parentId: v.optional(v.id("forumCategories")),
+    icon: v.optional(v.string()), // Lucide icon name
+    color: v.optional(v.string()), // Tailwind color class
     sortOrder: v.number(),
     isActive: v.boolean(),
     threadCount: v.number(),
@@ -462,10 +467,14 @@ export default defineSchema({
     authorId: v.id("users"),
     title: v.string(),
     slug: v.string(),
+    aiSummary: v.optional(v.string()), // AI-generated summary
+    imageUrl: v.optional(v.string()), // Preview image
     isPinned: v.boolean(),
     isLocked: v.boolean(),
     viewCount: v.number(),
     postCount: v.number(),
+    upvoteCount: v.optional(v.number()), // Upvote count
+    bookmarkCount: v.optional(v.number()), // Bookmark count
     lastPostAt: v.optional(v.number()),
     lastPostUserId: v.optional(v.id("users")),
     isDeleted: v.boolean(),
@@ -480,6 +489,7 @@ export default defineSchema({
     .index("by_tenant_slug", ["tenantId", "slug"])
     .index("by_pinned", ["isPinned"])
     .index("by_deleted", ["isDeleted"])
+    .index("by_upvotes", ["upvoteCount"])
     .searchIndex("search_threads", {
       searchField: "title",
       filterFields: ["tenantId", "categoryId", "isDeleted"],
@@ -532,6 +542,95 @@ export default defineSchema({
     .index("by_author", ["authorId"])
     .index("by_parent", ["parentId"])
     .index("by_deleted", ["isDeleted"]),
+
+  /**
+   * Forum reactions
+   * Upvotes, downvotes, and bookmarks on threads/posts/comments
+   */
+  forumReactions: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    userId: v.id("users"),
+    targetType: v.union(v.literal("thread"), v.literal("post"), v.literal("comment")),
+    targetId: v.string(),
+    reactionType: v.union(v.literal("upvote"), v.literal("downvote"), v.literal("bookmark")),
+    createdAt: v.number(),
+  })
+    .index("by_user_target", ["userId", "targetType", "targetId"])
+    .index("by_target", ["targetType", "targetId"])
+    .index("by_user", ["userId"])
+    .index("by_tenant", ["tenantId"]),
+
+  /**
+   * Forum tags
+   * Tags for categorizing threads
+   */
+  forumTags: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    name: v.string(),
+    slug: v.string(),
+    color: v.optional(v.string()),
+    usageCount: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_tenant_slug", ["tenantId", "slug"])
+    .index("by_usage", ["usageCount"])
+    .index("by_tenant", ["tenantId"]),
+
+  /**
+   * Forum thread tags
+   * Junction table linking threads to tags
+   */
+  forumThreadTags: defineTable({
+    threadId: v.id("forumThreads"),
+    tagId: v.id("forumTags"),
+    createdAt: v.number(),
+  })
+    .index("by_thread", ["threadId"])
+    .index("by_tag", ["tagId"]),
+
+  /**
+   * User points
+   * Gamification points for users
+   */
+  userPoints: defineTable({
+    userId: v.id("users"),
+    tenantId: v.optional(v.id("tenants")),
+    totalPoints: v.number(),
+    weeklyPoints: v.number(),
+    monthlyPoints: v.number(),
+    level: v.number(),
+    badges: v.array(v.string()),
+    lastActivityAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_tenant", ["tenantId"])
+    .index("by_weekly_points", ["weeklyPoints"])
+    .index("by_total_points", ["totalPoints"]),
+
+  /**
+   * Forum campaigns
+   * Active campaigns for user engagement
+   */
+  forumCampaigns: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    title: v.string(),
+    description: v.string(),
+    prize: v.string(),
+    startDate: v.number(),
+    endDate: v.number(),
+    targetPoints: v.number(),
+    currentProgress: v.number(),
+    participantCount: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_active", ["isActive"])
+    .index("by_end_date", ["endDate"])
+    .index("by_tenant", ["tenantId"]),
 
   // -------------------------------------------------------------------------
   // Stripe Integration Tables

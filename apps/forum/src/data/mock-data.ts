@@ -1,113 +1,138 @@
-import type { Category, Campaign, User, Discussion, LeaderboardEntry, TrendingTopic } from '@/types/forum';
+import type { Category, Campaign, User, Discussion, LeaderboardEntry, CommunityStats } from '@/types/forum';
 
 /**
- * Mock data for development - will be replaced with real API data
+ * Mock data for development - matches reference design
  */
 
+// Users with realistic data
+export const mockUsers: User[] = [
+  { id: '1', name: 'Sarah Chen', username: 'sarahchen', avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face', points: 12450 },
+  { id: '2', name: 'Alex Rivera', username: 'alexr', avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face', points: 11230 },
+  { id: '3', name: 'Emily Watson', username: 'emilyw', avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face', points: 10890 },
+  { id: '4', name: 'Marcus Johnson', username: 'marcusj', avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face', points: 9750 },
+  { id: '5', name: 'David Kim', username: 'davidk', avatarUrl: 'https://images.unsplash.com/photo-1599566150163-29194dcabd36?w=100&h=100&fit=crop&crop=face', points: 8920 },
+  { id: '6', name: 'Lisa Park', username: 'lisap', avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face', points: 7650 },
+  { id: '7', name: 'Tom Wilson', username: 'tomw', avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face', points: 6540 },
+  { id: '8', name: 'Nina Brown', username: 'ninab', avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face', points: 5890 },
+  { id: '9', name: 'James Lee', username: 'jamesl', avatarUrl: 'https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?w=100&h=100&fit=crop&crop=face', points: 5120 },
+  { id: '10', name: 'Amy Zhang', username: 'amyz', avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=face', points: 4780 },
+];
+
+// Categories with Lucide icons and Tailwind colors
 export const mockCategories: Category[] = [
-  { id: '1', name: 'News', slug: 'news', icon: '📰', count: 12 },
-  { id: '2', name: 'Review', slug: 'review', icon: '⭐', count: 45 },
-  { id: '3', name: 'Compare', slug: 'compare', icon: '⚖️', count: 8 },
-  { id: '4', name: 'List', slug: 'list', icon: '📋', count: 23 },
-  { id: '5', name: 'Help', slug: 'help', icon: '❓', count: 67 },
-  { id: '6', name: 'Showcase', slug: 'showcase', icon: '✨', count: 34 },
-  { id: '7', name: 'Tutorial', slug: 'tutorial', icon: '📚', count: 19 },
+  { id: '1', name: 'Programming', slug: 'programming', icon: 'Code', color: 'bg-blue-500', count: 1234 },
+  { id: '2', name: 'Design', slug: 'design', icon: 'Palette', color: 'bg-pink-500', count: 856 },
+  { id: '3', name: 'Startups', slug: 'startups', icon: 'Rocket', color: 'bg-orange-500', count: 432 },
+  { id: '4', name: 'AI & ML', slug: 'ai-ml', icon: 'Brain', color: 'bg-violet-500', count: 2156 },
+  { id: '5', name: 'Gaming', slug: 'gaming', icon: 'Gamepad2', color: 'bg-green-500', count: 678 },
+  { id: '6', name: 'Learning', slug: 'learning', icon: 'BookOpen', color: 'bg-cyan-500', count: 345 },
 ];
 
+// Premium categories (optional)
 export const mockPremiumCategories: Category[] = [
-  { id: '8', name: 'Debate', slug: 'debate', icon: '🎭', count: 0, isPremium: true, pointsRequired: 500 },
-  { id: '9', name: 'Launch', slug: 'launch', icon: '🚀', count: 0, isPremium: true, pointsRequired: 1000 },
+  { id: '7', name: 'Debate', slug: 'debate', icon: 'MessageSquare', color: 'bg-amber-500', count: 0, isPremium: true, pointsRequired: 500 },
+  { id: '8', name: 'Launch', slug: 'launch', icon: 'Rocket', color: 'bg-rose-500', count: 0, isPremium: true, pointsRequired: 1000 },
 ];
 
+// Campaign data
 export const mockCampaign: Campaign = {
   id: '1',
-  title: 'Best Product Review',
-  description: 'Write the most helpful product review and win!',
-  prize: '$500',
-  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  progress: 65,
-  totalParticipants: 234,
+  title: 'Win Claude Pro!',
+  description: 'Top contributors this month win 3 months of Claude Pro subscription.',
+  prize: 'Claude Pro',
+  endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+  progress: 2450,
+  targetPoints: 5000,
+  participantCount: 234,
 };
 
-export const mockUsers: User[] = [
-  { id: '1', name: 'Alex Chen', username: 'alexchen', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex', points: 2450 },
-  { id: '2', name: 'Sarah Kim', username: 'sarahk', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah', points: 1890 },
-  { id: '3', name: 'Mike Johnson', username: 'mikej', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mike', points: 1650 },
-  { id: '4', name: 'Emma Wilson', username: 'emmaw', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emma', points: 1420 },
-  { id: '5', name: 'David Lee', username: 'davidl', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=david', points: 1200 },
-];
-
+// Leaderboard with badges
 export const mockLeaderboard: LeaderboardEntry[] = [
-  { rank: 1, user: mockUsers[0]!, points: 2450, trend: 'up' },
-  { rank: 2, user: mockUsers[1]!, points: 1890, trend: 'stable' },
-  { rank: 3, user: mockUsers[2]!, points: 1650, trend: 'down' },
+  { rank: 1, user: mockUsers[0]!, points: 12450, badge: 'gold' },
+  { rank: 2, user: mockUsers[1]!, points: 11230, badge: 'gold' },
+  { rank: 3, user: mockUsers[2]!, points: 10890, badge: 'gold' },
+  { rank: 4, user: mockUsers[3]!, points: 9750, badge: 'silver' },
+  { rank: 5, user: mockUsers[4]!, points: 8920, badge: 'silver' },
+  { rank: 6, user: mockUsers[5]!, points: 7650, badge: 'silver' },
+  { rank: 7, user: mockUsers[6]!, points: 6540, badge: 'bronze' },
+  { rank: 8, user: mockUsers[7]!, points: 5890, badge: 'bronze' },
+  { rank: 9, user: mockUsers[8]!, points: 5120, badge: 'bronze' },
+  { rank: 10, user: mockUsers[9]!, points: 4780, badge: 'bronze' },
 ];
 
-export const mockTrendingTopics: TrendingTopic[] = [
-  { id: '1', title: 'AI Tools for Creators', category: 'News', engagement: 89, trend: 'hot' },
-  { id: '2', title: 'Best Design Resources 2024', category: 'List', engagement: 76, trend: 'rising' },
-  { id: '3', title: 'Figma vs Sketch Comparison', category: 'Compare', engagement: 54, trend: 'new' },
-];
+// Community stats
+export const mockCommunityStats: CommunityStats = {
+  members: '24.5K',
+  discussions: '8.2K',
+  comments: '156K',
+};
 
+// Discussions with AI summaries
 export const mockDiscussions: Discussion[] = [
   {
     id: '1',
-    title: 'Best AI Tools for Content Creators in 2024',
-    summary: 'A comprehensive guide to the most useful AI tools that can help content creators streamline their workflow and boost productivity.',
+    title: 'What are the best practices for building scalable React applications in 2025?',
+    aiSummary: 'Discussion covers React Server Components, state management patterns, and performance optimization techniques for large-scale applications.',
     author: mockUsers[0]!,
     category: mockCategories[0]!,
-    upvotes: 342,
-    comments: 89,
-    participants: mockUsers.slice(0, 5),
+    upvotes: 234,
+    comments: 56,
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    imageUrl: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=600&h=338&fit=crop',
     isPinned: true,
+    isUpvoted: false,
+    isBookmarked: false,
   },
   {
     id: '2',
-    title: 'How I Built a $10k/month Digital Product Business',
-    summary: 'Sharing my journey from zero to $10k monthly revenue selling digital products. Tips, strategies, and lessons learned.',
-    author: mockUsers[1]!,
-    category: mockCategories[5]!,
-    upvotes: 256,
-    comments: 67,
-    participants: mockUsers.slice(1, 4),
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+    title: 'The future of AI-powered design tools: Are designers being replaced?',
+    aiSummary: 'Explores how AI tools like Midjourney and Figma AI are changing the design landscape and the evolving role of human designers.',
+    author: mockUsers[3]!,
+    category: mockCategories[1]!,
+    upvotes: 189,
+    comments: 78,
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+    isUpvoted: false,
+    isBookmarked: false,
   },
   {
     id: '3',
-    title: 'Figma vs Sketch vs Adobe XD - Which One Should You Choose?',
-    summary: 'An in-depth comparison of the three most popular design tools. Pros, cons, and use cases for each.',
+    title: 'How I built a $10M ARR SaaS in 18 months with a team of 3',
+    aiSummary: 'Detailed breakdown of growth strategies, tech stack choices, and lessons learned from scaling a B2B SaaS company rapidly.',
     author: mockUsers[2]!,
     category: mockCategories[2]!,
-    upvotes: 189,
-    comments: 45,
-    participants: mockUsers.slice(2, 5),
-    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-    imageUrl: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=400&fit=crop',
+    upvotes: 567,
+    comments: 123,
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
+    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=338&fit=crop',
+    isUpvoted: true,
+    isBookmarked: false,
   },
   {
     id: '4',
-    title: 'Need help with my first digital product launch',
-    summary: 'I\'m about to launch my first ebook and would love some advice from experienced creators on pricing and marketing.',
-    author: mockUsers[3]!,
-    category: mockCategories[4]!,
-    upvotes: 45,
-    comments: 23,
-    participants: mockUsers.slice(0, 3),
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    title: 'GPT-5 leaked benchmarks show unprecedented reasoning capabilities',
+    aiSummary: 'Analysis of rumored GPT-5 performance metrics showing significant improvements in multi-step reasoning and code generation.',
+    author: mockUsers[1]!,
+    category: mockCategories[3]!,
+    upvotes: 892,
+    comments: 234,
+    createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
+    isUpvoted: false,
+    isBookmarked: true,
   },
   {
     id: '5',
-    title: 'Top 10 Resources for Learning Web Development in 2024',
-    summary: 'A curated list of the best courses, tutorials, and resources for aspiring web developers.',
+    title: 'The indie game that made $2M in its first week - A postmortem',
+    aiSummary: 'Solo developer shares marketing strategies, launch timing decisions, and community building tactics that led to viral success.',
     author: mockUsers[4]!,
-    category: mockCategories[3]!,
-    upvotes: 178,
-    comments: 34,
-    participants: mockUsers.slice(1, 5),
-    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    category: mockCategories[4]!,
+    upvotes: 445,
+    comments: 89,
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    isUpvoted: false,
+    isBookmarked: false,
   },
 ];
 
-export const mockFeaturedDiscussions = mockDiscussions.filter(d => d.isPinned || d.upvotes > 200);
+// Featured discussions (pinned or high upvotes)
+export const mockFeaturedDiscussions = mockDiscussions.filter(d => d.isPinned || d.upvotes > 400);

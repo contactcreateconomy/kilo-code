@@ -1,142 +1,123 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { GlowCard } from '@/components/ui/glow-card';
-import { mockTrendingTopics } from '@/data/mock-data';
-import type { TrendingTopic } from '@/types/forum';
+import Link from 'next/link';
+import { Flame, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { cn, Card, CardContent, Badge } from '@createconomy/ui';
+
+// Trending topics data
+const trendingTopics = [
+  {
+    id: '1',
+    title: 'Claude 3.5 Sonnet vs GPT-4o',
+    category: 'AI & ML',
+    posts: 234,
+    trend: 'hot' as const,
+  },
+  {
+    id: '2',
+    title: 'Best React frameworks 2026',
+    category: 'Programming',
+    posts: 189,
+    trend: 'rising' as const,
+  },
+  {
+    id: '3',
+    title: 'Startup funding tips',
+    category: 'Startups',
+    posts: 156,
+    trend: 'hot' as const,
+  },
+  {
+    id: '4',
+    title: 'UI design trends',
+    category: 'Design',
+    posts: 142,
+    trend: 'rising' as const,
+  },
+  {
+    id: '5',
+    title: 'Learning Rust in 2026',
+    category: 'Learning',
+    posts: 98,
+    trend: 'rising' as const,
+  },
+];
 
 interface WhatsVibingWidgetProps {
-  topics?: TrendingTopic[];
-  autoRotateInterval?: number;
+  className?: string;
 }
 
 /**
- * WhatsVibingWidget - Morphing card stack showing trending topics
+ * WhatsVibingWidget - Shows trending topics with fire emoji
+ * Features: Trending topics list, post counts, category badges
  */
-export function WhatsVibingWidget({
-  topics = mockTrendingTopics,
-  autoRotateInterval = 4000,
-}: WhatsVibingWidgetProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (topics.length <= 1) return;
-
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % topics.length);
-    }, autoRotateInterval);
-
-    return () => clearInterval(interval);
-  }, [topics.length, autoRotateInterval]);
-
-  const getTrendIcon = (trend: TrendingTopic['trend']) => {
-    switch (trend) {
-      case 'rising':
-        return '📈';
-      case 'hot':
-        return '🔥';
-      case 'new':
-        return '✨';
-      default:
-        return '📊';
-    }
-  };
-
-  const getTrendColor = (trend: TrendingTopic['trend']) => {
-    switch (trend) {
-      case 'rising':
-        return 'text-green-500';
-      case 'hot':
-        return 'text-orange-500';
-      case 'new':
-        return 'text-blue-500';
-      default:
-        return 'text-muted-foreground';
-    }
-  };
-
-  if (topics.length === 0) return null;
-
+export function WhatsVibingWidget({ className }: WhatsVibingWidgetProps) {
   return (
-    <GlowCard className="relative overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold flex items-center gap-2">
-          <span>🎵</span>
-          <span>What&apos;s Vibing</span>
-        </h3>
-        <div className="flex gap-1">
-          {topics.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveIndex(index)}
-              className={`w-2 h-2 rounded-full transition-all ${
-                index === activeIndex
-                  ? 'bg-primary w-4'
-                  : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-              }`}
-            />
-          ))}
+    <Card className={cn('overflow-hidden', className)}>
+      <CardContent className="p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔥</span>
+            <h3 className="text-sm font-bold">What's Vibing</h3>
+          </div>
+          <Link 
+            href="/trending" 
+            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+          >
+            See all
+            <ArrowUpRight className="h-3 w-3" />
+          </Link>
         </div>
-      </div>
 
-      {/* Card Stack */}
-      <div className="relative h-[140px]">
-        <AnimatePresence mode="popLayout">
-          {topics.map((topic, index) => {
-            const isActive = index === activeIndex;
-            const offset = (index - activeIndex + topics.length) % topics.length;
+        {/* Trending Topics List */}
+        <div className="space-y-3">
+          {trendingTopics.map((topic, index) => (
+            <Link
+              key={topic.id}
+              href={`/search?q=${encodeURIComponent(topic.title)}`}
+              className="group flex items-start gap-3 p-2 -mx-2 rounded-lg hover:bg-accent transition-colors"
+            >
+              {/* Rank Number */}
+              <span className={cn(
+                'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shrink-0',
+                index === 0 && 'bg-orange-500/20 text-orange-500',
+                index === 1 && 'bg-amber-500/20 text-amber-500',
+                index === 2 && 'bg-yellow-500/20 text-yellow-500',
+                index > 2 && 'bg-muted text-muted-foreground'
+              )}>
+                {index + 1}
+              </span>
 
-            return (
-              <motion.div
-                key={topic.id}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{
-                  opacity: isActive ? 1 : 0.5 - offset * 0.2,
-                  y: offset * 8,
-                  scale: 1 - offset * 0.05,
-                  zIndex: topics.length - offset,
-                }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="absolute inset-0 cursor-pointer"
-                onClick={() => setActiveIndex(index)}
-              >
-                <div className="h-full p-4 rounded-lg bg-muted/50 border">
-                  {/* Trend Badge */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-sm font-medium ${getTrendColor(topic.trend)}`}>
-                      {getTrendIcon(topic.trend)} {topic.trend.charAt(0).toUpperCase() + topic.trend.slice(1)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {topic.engagement.toLocaleString()} engaged
-                    </span>
-                  </div>
-
-                  {/* Title */}
-                  <h4 className="font-semibold text-sm mb-2 line-clamp-2">
-                    {topic.title}
-                  </h4>
-
-                  {/* Category */}
-                  <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+              {/* Topic Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                  {topic.title}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
                     {topic.category}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    {topic.posts} posts
                   </span>
                 </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
+              </div>
 
-      {/* View All Link */}
-      <a
-        href="/trending"
-        className="block text-center text-sm text-primary hover:underline mt-4"
-      >
-        View all trending →
-      </a>
-    </GlowCard>
+              {/* Trend Indicator */}
+              <div className="shrink-0">
+                {topic.trend === 'hot' ? (
+                  <Flame className="h-4 w-4 text-orange-500" />
+                ) : (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
+
+export default WhatsVibingWidget;

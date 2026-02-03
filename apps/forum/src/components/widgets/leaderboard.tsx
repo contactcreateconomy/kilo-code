@@ -1,8 +1,9 @@
 'use client';
 
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { GlowCard } from '@/components/ui/glow-card';
+import { useState } from 'react';
+import Link from 'next/link';
+import { Trophy, Zap, Crown, Medal, Award } from 'lucide-react';
+import { cn, Card, CardContent, CardHeader, CardTitle, Avatar, AvatarImage, AvatarFallback } from '@createconomy/ui';
 import { mockLeaderboard } from '@/data/mock-data';
 import type { LeaderboardEntry } from '@/types/forum';
 
@@ -16,125 +17,85 @@ interface LeaderboardWidgetProps {
  */
 export function LeaderboardWidget({
   entries = mockLeaderboard,
-  maxEntries = 5,
+  maxEntries = 10,
 }: LeaderboardWidgetProps) {
+  const [hoveredUser, setHoveredUser] = useState<number | null>(null);
   const displayEntries = entries.slice(0, maxEntries);
 
-  const getRankBadge = (rank: number) => {
+  const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return { emoji: '🥇', color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
+        return <Crown className="h-4 w-4 text-yellow-500" />;
       case 2:
-        return { emoji: '🥈', color: 'text-gray-400', bg: 'bg-gray-400/10' };
+        return <Medal className="h-4 w-4 text-gray-400" />;
       case 3:
-        return { emoji: '🥉', color: 'text-amber-600', bg: 'bg-amber-600/10' };
+        return <Award className="h-4 w-4 text-amber-600" />;
       default:
-        return { emoji: `#${rank}`, color: 'text-muted-foreground', bg: 'bg-muted' };
-    }
-  };
-
-  const getTrendIcon = (trend: LeaderboardEntry['trend']) => {
-    switch (trend) {
-      case 'up':
-        return <span className="text-green-500 text-xs">↑</span>;
-      case 'down':
-        return <span className="text-red-500 text-xs">↓</span>;
-      case 'stable':
-        return <span className="text-muted-foreground text-xs">→</span>;
+        return <span className="text-xs font-bold text-muted-foreground">#{rank}</span>;
     }
   };
 
   return (
-    <GlowCard>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold flex items-center gap-2">
-          <span>🏆</span>
-          <span>Weekly Top Creators</span>
-        </h3>
-      </div>
-
-      {/* Leaderboard List */}
-      <div className="space-y-3">
-        {displayEntries.map((entry, index) => {
-          const badge = getRankBadge(entry.rank);
-
-          return (
-            <motion.a
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Trophy className="h-5 w-5 text-primary" />
+          Leaderboard
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {/* Leaderboard List */}
+        <div className="space-y-2">
+          {displayEntries.map((entry, index) => (
+            <Link
               key={entry.user.id}
               href={`/u/${entry.user.username}`}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+              className={cn(
+                'group flex items-center gap-3 rounded-lg px-2 py-2 transition-all duration-200',
+                hoveredUser === entry.rank ? 'bg-accent' : '',
+                entry.rank <= 3 && 'bg-muted/50'
+              )}
+              onMouseEnter={() => setHoveredUser(entry.rank)}
+              onMouseLeave={() => setHoveredUser(null)}
+              style={{
+                animation: `fadeInRight 0.4s ease-out ${index * 50}ms both`,
+              }}
             >
-              {/* Rank Badge */}
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${badge.bg} ${badge.color}`}
-              >
-                {entry.rank <= 3 ? badge.emoji : entry.rank}
+              {/* Rank Icon */}
+              <div className="flex h-6 w-6 items-center justify-center">
+                {getRankIcon(entry.rank)}
               </div>
 
               {/* Avatar */}
-              <Image
-                src={entry.user.avatarUrl}
-                alt={entry.user.name}
-                width={40}
-                height={40}
-                className="rounded-full ring-2 ring-transparent group-hover:ring-primary/50 transition-all"
-              />
+              <Avatar
+                className={cn(
+                  'h-8 w-8 ring-2 transition-all duration-300',
+                  hoveredUser === entry.rank ? 'scale-110 ring-primary/50' : 'ring-transparent'
+                )}
+              >
+                <AvatarImage src={entry.user.avatarUrl} alt={entry.user.name} />
+                <AvatarFallback>{entry.user.name.charAt(0)}</AvatarFallback>
+              </Avatar>
 
               {/* User Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <span className="font-medium text-sm truncate">
-                    {entry.user.name}
-                  </span>
-                  {getTrendIcon(entry.trend)}
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  @{entry.user.username}
-                </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{entry.user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">@{entry.user.username}</p>
               </div>
 
               {/* Points */}
-              <div className="text-right">
-                <div className="font-semibold text-sm text-primary">
+              <div className="flex items-center gap-1">
+                <Zap className="h-3 w-3 text-primary" />
+                <span className="text-xs font-semibold text-foreground">
                   {entry.points.toLocaleString()}
-                </div>
-                <div className="text-xs text-muted-foreground">points</div>
+                </span>
               </div>
-            </motion.a>
-          );
-        })}
-      </div>
-
-      {/* Mini Trend Chart (simplified visual) */}
-      <div className="mt-4 pt-4 border-t">
-        <div className="flex items-end justify-between h-8 gap-1">
-          {[40, 65, 45, 80, 55, 90, 70].map((height, i) => (
-            <motion.div
-              key={i}
-              initial={{ height: 0 }}
-              animate={{ height: `${height}%` }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
-              className="flex-1 bg-primary/20 rounded-t hover:bg-primary/40 transition-colors"
-            />
+            </Link>
           ))}
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>Mon</span>
-          <span>Sun</span>
-        </div>
-      </div>
-
-      {/* View Full Link */}
-      <a
-        href="/leaderboard"
-        className="block text-center text-sm text-primary hover:underline mt-4"
-      >
-        View Full Leaderboard →
-      </a>
-    </GlowCard>
+      </CardContent>
+    </Card>
   );
 }
+
+export default LeaderboardWidget;
