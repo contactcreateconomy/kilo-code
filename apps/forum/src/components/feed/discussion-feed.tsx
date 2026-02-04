@@ -121,15 +121,15 @@ export function DiscussionFeed({
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
-      {/* Tabs */}
-      <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
       {/* Featured Slider */}
       {showFeaturedSlider && featuredDiscussions.length > 0 && (
         <div className="mb-2">
           <FeaturedSlider discussions={featuredDiscussions} />
         </div>
       )}
+
+      {/* Tabs */}
+      <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Discussion Cards */}
       <div className="flex flex-col gap-4">

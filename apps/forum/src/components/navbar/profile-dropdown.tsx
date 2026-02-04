@@ -4,22 +4,24 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Button } from '@createconomy/ui';
-
-// Mock auth state - will be replaced with actual auth
-const useAuth = () => {
-  return {
-    user: null as { name: string; username: string; avatarUrl: string } | null,
-    isAuthenticated: false,
-  };
-};
+import { useAuth } from '@/hooks/use-auth';
 
 /**
  * ProfileDropdown - User avatar with dropdown menu or Sign In button
+ * Uses real Convex Auth state for authentication
  */
 export function ProfileDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading, signOut } = useAuth();
 
+  // Show loading skeleton during auth check
+  if (isLoading) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-muted animate-pulse" />
+    );
+  }
+
+  // Show Sign In button when not authenticated
   if (!isAuthenticated) {
     return (
       <Button asChild size="sm" className="shadow-glow-sm hover:shadow-glow">
@@ -28,6 +30,16 @@ export function ProfileDropdown() {
     );
   }
 
+  // Get user display info from Google profile or fallback
+  const displayName = user?.name || user?.email?.split('@')[0] || 'User';
+  const avatarUrl = user?.image || user?.profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`;
+  const username = user?.profile?.displayName || user?.email?.split('@')[0] || 'user';
+
+  const handleSignOut = async () => {
+    setIsOpen(false);
+    await signOut();
+  };
+
   return (
     <div className="relative">
       <button
@@ -35,8 +47,8 @@ export function ProfileDropdown() {
         className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent hover:border-primary/50 transition-colors"
       >
         <img
-          src={user?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}
-          alt={user?.name || 'User'}
+          src={avatarUrl}
+          alt={displayName}
           className="w-full h-full object-cover"
         />
       </button>
@@ -57,13 +69,13 @@ export function ProfileDropdown() {
               className="absolute right-0 top-12 w-56 bg-card border rounded-xl shadow-lg z-50 overflow-hidden"
             >
               <div className="p-4 border-b">
-                <p className="font-medium">{user?.name}</p>
-                <p className="text-sm text-muted-foreground">@{user?.username}</p>
+                <p className="font-medium">{displayName}</p>
+                <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
               </div>
               
               <nav className="p-2">
                 <Link
-                  href="/account"
+                  href={`/u/${username}`}
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm transition-colors"
                 >
@@ -73,7 +85,7 @@ export function ProfileDropdown() {
                   Profile
                 </Link>
                 <Link
-                  href="/account/notifications"
+                  href="/account"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm transition-colors"
                 >
@@ -83,17 +95,26 @@ export function ProfileDropdown() {
                   </svg>
                   Settings
                 </Link>
-                <hr className="my-2" />
                 <Link
-                  href="/auth/signout"
+                  href="/account/notifications"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm text-destructive transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  Notifications
+                </Link>
+                <hr className="my-2" />
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm text-destructive transition-colors w-full"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                   Sign Out
-                </Link>
+                </button>
               </nav>
             </motion.div>
           </>

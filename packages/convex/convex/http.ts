@@ -2,18 +2,30 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { getCorsHeaders, ALLOWED_ORIGINS } from "./auth.config";
+import { auth } from "./auth";
 import Stripe from "stripe";
 
 /**
  * HTTP Routes for Createconomy
  *
  * This file configures HTTP endpoints for:
+ * - Convex Auth OAuth routes
  * - Cross-subdomain authentication
  * - Stripe webhook handling
  * - Health check endpoint
  */
 
 const http = httpRouter();
+
+// ============================================================================
+// Convex Auth Routes
+// ============================================================================
+
+/**
+ * Add Convex Auth HTTP routes for OAuth providers
+ * This handles routes like /api/auth/signin/google, /api/auth/callback/google, etc.
+ */
+auth.addHttpRoutes(http);
 
 // ============================================================================
 // CORS Helper

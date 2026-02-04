@@ -15,11 +15,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@createconomy/ui';
+import { useAuth } from '@/hooks/use-auth';
 
 interface NavbarProps {
   onMobileMenuToggle: () => void;
   isMobileMenuOpen: boolean;
-  isLoggedIn?: boolean;
 }
 
 // Mock notifications data
@@ -74,10 +74,12 @@ const mockNotifications = [
 /**
  * Navbar - Simplified navbar matching reference design
  * Features: Logo, search bar, dark mode toggle, notifications dropdown, user avatar/login
+ * Uses real Convex Auth state for authentication
  */
-export function Navbar({ onMobileMenuToggle, isMobileMenuOpen, isLoggedIn = true }: NavbarProps) {
+export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { user, isAuthenticated, isLoading, signOut } = useAuth();
 
   // Initialize dark mode from localStorage or system preference
   useEffect(() => {
@@ -170,15 +172,19 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen, isLoggedIn = true
             )}
           </Button>
 
-          {/* Notifications Dropdown */}
-          <NotificationsDropdown notifications={mockNotifications} unreadCount={unreadCount} />
+          {/* Notifications Dropdown - Only show when authenticated */}
+          {isAuthenticated && (
+            <NotificationsDropdown notifications={mockNotifications} unreadCount={unreadCount} />
+          )}
 
           {/* User Avatar Dropdown or Login Button */}
-          {isLoggedIn ? (
-            <UserMenu />
+          {isLoading ? (
+            <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+          ) : isAuthenticated && user ? (
+            <UserMenu user={user} onSignOut={signOut} />
           ) : (
             <Button asChild className="bg-primary hover:bg-primary/90">
-              <Link href="/auth/signin">Login</Link>
+              <Link href="/auth/signin">Sign In</Link>
             </Button>
           )}
         </div>
@@ -243,7 +249,7 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-80 max-h-[400px] overflow-y-auto"
+        className="w-80 max-h-[400px] overflow-y-auto bg-card border-border"
         sideOffset={8}
       >
         <DropdownMenuLabel className="flex items-center justify-between">
@@ -332,40 +338,65 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
 /**
  * UserMenu - User avatar with dropdown menu using shadcn/ui DropdownMenu
  * Features: Profile, Settings, My Discussions, Logout
+ * Uses real user data from Convex Auth
  */
-function UserMenu() {
+interface UserMenuProps {
+  user: {
+    id?: string;
+    email?: string;
+    name?: string;
+    image?: string;
+    profile?: {
+      displayName?: string;
+      avatarUrl?: string;
+    } | null;
+  };
+  onSignOut: () => Promise<void>;
+}
+
+function UserMenu({ user, onSignOut }: UserMenuProps) {
+  // Get user display info from Google profile or fallback
+  const displayName = user.name || user.email?.split('@')[0] || 'User';
+  const avatarUrl = user.image || user.profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || 'default'}`;
+  const username = user.profile?.displayName || user.email?.split('@')[0] || 'user';
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  const handleSignOut = async () => {
+    await onSignOut();
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
           <Avatar className="h-9 w-9 ring-2 ring-transparent transition-all duration-200 hover:ring-primary/30">
             <AvatarImage
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face"
-              alt="User avatar"
+              src={avatarUrl}
+              alt={displayName}
             />
-            <AvatarFallback>JD</AvatarFallback>
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" sideOffset={8}>
+      <DropdownMenuContent className="w-56 bg-card border-border" align="end" sideOffset={8}>
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face"
-                alt="User avatar"
+                src={avatarUrl}
+                alt={displayName}
               />
-              <AvatarFallback>JD</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">John Doe</p>
-              <p className="text-xs leading-none text-muted-foreground">@johndoe</p>
+              <p className="text-sm font-medium leading-none">{displayName}</p>
+              <p className="text-xs leading-none text-muted-foreground">@{username}</p>
             </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/u/johndoe" className="flex items-center gap-2 cursor-pointer">
+          <Link href={`/u/${username}`} className="flex items-center gap-2 cursor-pointer">
             <User className="h-4 w-4" />
             Profile
           </Link>
@@ -377,13 +408,16 @@ function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/u/johndoe/discussions" className="flex items-center gap-2 cursor-pointer">
+          <Link href={`/u/${username}/discussions`} className="flex items-center gap-2 cursor-pointer">
             <FileText className="h-4 w-4" />
             My Discussions
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer">
+        <DropdownMenuItem 
+          className="text-destructive focus:text-destructive cursor-pointer"
+          onClick={handleSignOut}
+        >
           <LogOut className="h-4 w-4 mr-2" />
           Sign out
         </DropdownMenuItem>

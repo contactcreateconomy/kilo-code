@@ -5,17 +5,35 @@ import { Navbar } from '@/components/navbar/navbar';
 import { LeftSidebar } from '@/components/layout/left-sidebar';
 import { RightSidebar } from '@/components/layout/right-sidebar';
 import { DiscussionFeed } from '@/components/feed/discussion-feed';
+import { GoogleOneTap } from '@/components/auth/google-one-tap';
+import { useAuth } from '@/hooks/use-auth';
 import { mockDiscussions } from '@/data/mock-data';
 import { cn } from '@/lib/utils';
 
 /**
  * ForumHomePage - Main forum homepage matching reference design
+ * Includes Google One Tap sign-in for seamless authentication
  */
 export default function ForumHomePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <div className="dot-grid-background min-h-screen bg-background font-sans">
+      {/* Google One Tap - Only show when not authenticated */}
+      {!isAuthenticated && !isLoading && (
+        <GoogleOneTap
+          onSuccess={() => {
+            console.log('Successfully signed in via Google One Tap');
+          }}
+          onError={(error) => {
+            console.error('Google One Tap error:', error);
+          }}
+          context="signin"
+          autoSelect={false}
+        />
+      )}
+
       {/* Navbar */}
       <Navbar
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
