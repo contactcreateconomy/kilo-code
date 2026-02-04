@@ -10,27 +10,25 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@convex-dev/auth": "^0.0.90",
+    "@createconomy/convex": "workspace:*",
+    "@createconomy/ui": "workspace:*",
+    "@stripe/stripe-js": "^8.7.0",
+    "convex": "^1.31.7",
     "next": "^16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "convex": "^1.31.7",
-    "@convex-dev/auth": "^0.0.90",
-    "@createconomy/ui": "workspace:*",
-    "@createconomy/convex": "workspace:*",
     "recharts": "^2.15.0",
-    "@stripe/stripe-js": "^8.7.0",
-    "stripe": "^20.3.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^3.4.0"
+    "stripe": "^20.3.0"
   },
   "devDependencies": {
     "@createconomy/config": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^25.2.0",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^5.9.3",
+    "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
-    "@tailwindcss/postcss": "^4.1.18",
-    "postcss": "^8.5.6"
+    "typescript": "^5.9.3"
   }
 }
