@@ -39,7 +39,7 @@
     },
     {
       "path": "/api/cron/update-trending",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
