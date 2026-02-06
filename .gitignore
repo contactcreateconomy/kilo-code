@@ -65,3 +65,10 @@ convex/_generated/
 # Cache
 .cache/
 *.cache
+
+# AI Agent Directories
+.cursor/
+.agent/
+.agents/
+.claude/
+.kilocode/

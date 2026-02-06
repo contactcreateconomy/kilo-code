@@ -1,298 +1,211 @@
 # Deployment Guide
 
-This guide covers deploying the Createconomy platform to Vercel.
+This document describes the Vercel deployment setup for the Createconomy monorepo using **Vercel's native GitHub integration**.
 
-## Overview
+## Architecture Overview
 
-The Createconomy platform consists of four Next.js applications deployed to different domains:
-
-| Application | Domain | Description |
-|-------------|--------|-------------|
-| Marketplace | createconomy.com | Main marketplace for buyers |
-| Forum | discuss.createconomy.com | Community discussion forum |
-| Admin | console.createconomy.com | Admin dashboard |
-| Seller | seller.createconomy.com | Seller portal |
-
-## Prerequisites
-
-- [Node.js](https://nodejs.org/) v20 or later
-- [pnpm](https://pnpm.io/) v9 or later
-- [Vercel CLI](https://vercel.com/cli) installed globally
-- A Vercel account with team access (recommended)
-- GitHub repository connected to Vercel
-
-## Initial Setup
-
-### 1. Install Vercel CLI
-
-```bash
-npm install -g vercel
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        GitHub Repository                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  feature/xyz ─────┐                                                  │
+│                   │  Push / PR                                       │
+│  bugfix/abc ──────┼─────────────────►  Preview Environment           │
+│                   │                    (Vercel auto-deploys)         │
+│  dev/something ───┘                                                  │
+│                                                                      │
+│         │                                                            │
+│         │ Merge PR (after CI passes)                                 │
+│         ▼                                                            │
+│                                                                      │
+│       main ─────────────────────────►  Production Environment        │
+│                                        (Vercel auto-deploys)         │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Login to Vercel
+## How It Works
 
-```bash
-vercel login
-```
+### Vercel Native Integration (Handles Deployments)
 
-### 3. Run Setup Script
+Vercel's GitHub integration automatically:
+- **Preview**: Deploys every push to non-main branches
+- **Production**: Deploys every push to `main` branch
+- **PR Comments**: Posts preview URLs on pull requests
+- **Build & Deploy**: Handles the entire build process
 
-```bash
-chmod +x scripts/setup-vercel.sh
-./scripts/setup-vercel.sh
-```
+### GitHub Actions (CI Only)
 
-This script will:
-- Link each app to a Vercel project
-- Guide you through environment variable setup
-- Provide domain configuration instructions
+A minimal [`.github/workflows/ci.yml`](.github/workflows/ci.yml) provides:
+- **Type checking** as a required status check before merge
+- Only runs on PRs targeting `main` with app/package changes
+
+## Environments
+
+| Environment | Branch | Trigger | Managed By |
+|-------------|--------|---------|------------|
+| **Preview** | Any non-main branch | Push / PR | Vercel |
+| **Production** | `main` | Merge to main | Vercel |
+
+### Production URLs
+
+| App | URL |
+|-----|-----|
+| Marketplace | https://createconomy.com |
+| Forum | https://discuss.createconomy.com |
+| Admin | https://console.createconomy.com |
+| Seller | https://seller.createconomy.com |
 
 ## Vercel Project Configuration
 
-### Creating Projects
+Each app should be configured in Vercel dashboard:
 
-Each app needs its own Vercel project. Create them with these settings:
+### 1. Required Environment Variable (CRITICAL)
 
-#### Marketplace Project
-- **Name**: `createconomy-marketplace`
-- **Framework**: Next.js
-- **Root Directory**: `apps/marketplace`
-- **Build Command**: `cd ../.. && pnpm turbo build --filter=@createconomy/marketplace`
-- **Install Command**: `cd ../.. && pnpm install`
+**For pnpm 10+ support**, add this environment variable to **each project** in Vercel:
 
-#### Forum Project
-- **Name**: `createconomy-forum`
-- **Framework**: Next.js
-- **Root Directory**: `apps/forum`
-- **Build Command**: `cd ../.. && pnpm turbo build --filter=@createconomy/forum`
-- **Install Command**: `cd ../.. && pnpm install`
+Navigate to **Project Settings → Environment Variables** and add:
 
-#### Admin Project
-- **Name**: `createconomy-admin`
-- **Framework**: Next.js
-- **Root Directory**: `apps/admin`
-- **Build Command**: `cd ../.. && pnpm turbo build --filter=@createconomy/admin`
-- **Install Command**: `cd ../.. && pnpm install`
+| Name | Value | Environments |
+|------|-------|--------------|
+| `ENABLE_EXPERIMENTAL_COREPACK` | `1` | Production, Preview, Development |
 
-#### Seller Project
-- **Name**: `createconomy-seller`
-- **Framework**: Next.js
-- **Root Directory**: `apps/seller`
-- **Build Command**: `cd ../.. && pnpm turbo build --filter=@createconomy/seller`
-- **Install Command**: `cd ../.. && pnpm install`
+This enables corepack which reads the `packageManager` field from `package.json` to use the correct pnpm version (10.28.2).
 
-## Environment Variables
+### 2. Git Integration Settings
 
-### Required Variables (All Apps)
+Navigate to **Project Settings → Git** for each app:
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL |
-| `AUTH_SECRET` | Authentication secret key |
-| `NEXT_PUBLIC_AUTH_DOMAIN` | Auth cookie domain (`.createconomy.com`) |
+| Setting | Value |
+|---------|-------|
+| **Production Branch** | `main` |
+| **Automatically expose System Environment Variables** | ✅ |
 
-### Marketplace & Seller Apps
+### 3. Ignored Build Step (Monorepo Optimization)
 
-| Variable | Description |
-|----------|-------------|
-| `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
-| `STRIPE_CONNECT_CLIENT_ID` | Stripe Connect client ID |
+To skip builds when only unrelated apps change, add this in **Project Settings → Git → Ignored Build Step**:
 
-### Admin App
-
-| Variable | Description |
-|----------|-------------|
-| `STRIPE_SECRET_KEY` | Stripe secret key (for refunds) |
-| `ADMIN_ALLOWED_EMAILS` | Comma-separated admin emails |
-
-### Setting Environment Variables
-
-Via Vercel CLI:
+For **Marketplace**:
 ```bash
-cd apps/marketplace
-vercel env add STRIPE_SECRET_KEY
+git diff HEAD^ HEAD --quiet apps/marketplace packages
 ```
 
-Via Vercel Dashboard:
-1. Go to Project Settings > Environment Variables
-2. Add each variable for Production, Preview, and Development
-
-## Domain Configuration
-
-### 1. Add Custom Domains
-
-For each project in Vercel Dashboard:
-1. Go to Project Settings > Domains
-2. Add the custom domain
-3. Follow DNS configuration instructions
-
-### 2. DNS Records
-
-Configure these DNS records at your domain registrar:
-
-```
-# A Records (for apex domain)
-createconomy.com → 76.76.21.21
-
-# CNAME Records (for subdomains)
-discuss.createconomy.com → cname.vercel-dns.com
-console.createconomy.com → cname.vercel-dns.com
-seller.createconomy.com → cname.vercel-dns.com
-```
-
-### 3. SSL Certificates
-
-Vercel automatically provisions SSL certificates for all domains.
-
-## Deployment
-
-### Manual Deployment
-
-Deploy all apps to preview:
+For **Forum**:
 ```bash
-./scripts/deploy.sh preview
+git diff HEAD^ HEAD --quiet apps/forum packages
 ```
 
-Deploy all apps to production:
+For **Admin**:
 ```bash
-./scripts/deploy.sh production
+git diff HEAD^ HEAD --quiet apps/admin packages
 ```
 
-Deploy a single app:
+For **Seller**:
 ```bash
-cd apps/marketplace
-vercel --prod
+git diff HEAD^ HEAD --quiet apps/seller packages
 ```
 
-### Automatic Deployment (CI/CD)
+This tells Vercel to skip the build if no relevant files changed.
 
-Deployments are automated via GitHub Actions:
+### 4. Root Directory
 
-- **Push to `main`**: Deploys to production
-- **Pull Request**: Deploys preview environments
+| App | Root Directory |
+|-----|----------------|
+| Marketplace | `apps/marketplace` |
+| Forum | `apps/forum` |
+| Admin | `apps/admin` |
+| Seller | `apps/seller` |
 
-### GitHub Actions Secrets
+## Branch Protection Rules
 
-Configure these secrets in GitHub repository settings:
+Configure in **GitHub Settings → Branches → Add branch protection rule** for `main`:
 
-| Secret | Description |
-|--------|-------------|
-| `VERCEL_TOKEN` | Vercel API token |
-| `VERCEL_ORG_ID` | Vercel organization ID |
-| `VERCEL_MARKETPLACE_PROJECT_ID` | Marketplace project ID |
-| `VERCEL_FORUM_PROJECT_ID` | Forum project ID |
-| `VERCEL_ADMIN_PROJECT_ID` | Admin project ID |
-| `VERCEL_SELLER_PROJECT_ID` | Seller project ID |
-| `TURBO_TOKEN` | Turborepo remote cache token |
+| Setting | Value |
+|---------|-------|
+| **Branch name pattern** | `main` |
+| **Require a pull request before merging** | ✅ Enabled |
+| **Require approvals** | 1 (adjust for team size) |
+| **Dismiss stale pull request approvals** | ✅ Enabled |
+| **Require status checks to pass** | ✅ Enabled |
+| **Required status checks** | `Type Check`, `Vercel` |
+| **Require branches to be up to date** | ✅ Enabled |
+| **Allow force pushes** | ❌ Disabled |
+| **Allow deletions** | ❌ Disabled |
 
-### GitHub Actions Variables
+## Workflow
 
-| Variable | Description |
-|----------|-------------|
-| `TURBO_TEAM` | Turborepo team name |
-
-## Remote Caching
-
-Enable Turborepo remote caching for faster builds:
-
-### 1. Login to Turborepo
+### Developer Flow
 
 ```bash
-npx turbo login
+# 1. Create feature branch
+git checkout -b feature/new-feature
+
+# 2. Make changes and push
+git add .
+git commit -m "feat: add new feature"
+git push origin feature/new-feature
+# → Vercel automatically creates preview deployment
+# → GitHub Actions runs type check
+
+# 3. Create Pull Request
+# → Preview URL appears in PR comments
+# → CI must pass before merge
+
+# 4. Merge to main
+# → Vercel automatically deploys to production
 ```
 
-### 2. Link Repository
+### What Triggers Deployments
 
-```bash
-npx turbo link
-```
-
-### 3. Verify Caching
-
-```bash
-pnpm build
-# Second build should show cache hits
-pnpm build
-```
-
-## Monitoring & Logs
-
-### Vercel Dashboard
-
-- View deployment logs
-- Monitor function invocations
-- Check analytics
-
-### Runtime Logs
-
-```bash
-vercel logs [deployment-url]
-```
-
-### Real-time Logs
-
-```bash
-vercel logs [deployment-url] --follow
-```
-
-## Rollback
-
-### Via CLI
-
-```bash
-vercel rollback [deployment-url]
-```
-
-### Via Dashboard
-
-1. Go to Deployments
-2. Find the previous working deployment
-3. Click "..." > "Promote to Production"
-
-## Troubleshooting
-
-### Build Failures
-
-1. Check build logs in Vercel Dashboard
-2. Verify environment variables are set
-3. Run build locally: `pnpm build`
-
-### Environment Variable Issues
-
-```bash
-# List all env vars
-vercel env ls
-
-# Pull env vars locally
-vercel env pull
-```
-
-### Domain Issues
-
-1. Verify DNS propagation: `dig createconomy.com`
-2. Check SSL certificate status in Vercel Dashboard
-3. Ensure domain is verified
-
-### Cache Issues
-
-Clear Turborepo cache:
-```bash
-pnpm clean
-rm -rf node_modules/.cache
-```
-
-## Security Considerations
-
-1. **Never commit secrets** - Use environment variables
-2. **Rotate secrets regularly** - Update Stripe keys, auth secrets
-3. **Review access** - Audit Vercel team members
-4. **Monitor deployments** - Set up alerts for failed deployments
+| Action | Preview Deploy | Production Deploy | CI Check |
+|--------|---------------|-------------------|----------|
+| Push to feature branch | ✅ | ❌ | ❌ |
+| Open PR to main | ✅ | ❌ | ✅ |
+| Update PR | ✅ | ❌ | ✅ |
+| Merge PR to main | ❌ | ✅ | ❌ |
 
 ## Cost Optimization
 
-1. **Use remote caching** - Reduces build times and costs
-2. **Optimize images** - Use Next.js Image component
-3. **Monitor usage** - Check Vercel usage dashboard
-4. **Set spending limits** - Configure in Vercel settings
+| Optimization | Implementation |
+|--------------|----------------|
+| **Skip unrelated builds** | Vercel "Ignored Build Step" for each app |
+| **Minimal CI** | Only type check, Vercel handles builds |
+| **Path filtering** | CI only runs on app/package changes |
+| **Concurrency** | Cancel in-progress CI runs |
+
+## Troubleshooting
+
+### Preview not deploying
+
+1. Check Vercel dashboard → Deployments for errors
+2. Verify the app's root directory is correct
+3. Check if "Ignored Build Step" incorrectly skipped the build
+
+### Type check failing but Vercel deploying
+
+Vercel deploys are independent of GitHub Actions. To block deployments on CI failure:
+1. Enable branch protection requiring status checks
+2. Require PRs before merging to main
+
+### Production not updating after merge
+
+1. Check Vercel dashboard → Deployments
+2. Verify `main` is set as production branch
+3. Check if "Ignored Build Step" skipped the build
+
+## Local Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run type check locally
+pnpm typecheck
+
+# Run specific app
+pnpm --filter marketplace dev
+pnpm --filter forum dev
+pnpm --filter admin dev
+pnpm --filter seller dev
+```
