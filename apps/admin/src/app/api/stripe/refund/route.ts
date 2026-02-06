@@ -18,13 +18,17 @@ import {
  * not Clerk — the previous import would always fail.
  */
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-});
+// Lazy-initialize Stripe to avoid build-time errors when env vars are not yet available
+function getStripe() {
+  return new Stripe(process.env['STRIPE_SECRET_KEY']!, {
+    apiVersion: '2026-01-28.clover',
+  });
+}
 
-// Initialize Convex client
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+// Lazy-initialize Convex client
+function getConvex() {
+  return new ConvexHttpClient(process.env['NEXT_PUBLIC_CONVEX_URL']!);
+}
 
 // Refund request body type
 interface RefundRequest {
@@ -61,7 +65,7 @@ async function validateAdminSession(
   }
 
   // Validate session with Convex auth endpoint (same pattern as auth route)
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!.replace(
+  const convexUrl = process.env['NEXT_PUBLIC_CONVEX_URL']!.replace(
     ".convex.cloud",
     ".convex.site"
   );
@@ -149,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Retrieve the payment intent to verify it exists and get details
     let paymentIntent: Stripe.PaymentIntent;
     try {
-      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
     } catch (stripeError) {
       console.error("Failed to retrieve payment intent:", stripeError);
       return NextResponse.json(
@@ -170,12 +174,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already fully refunded
-    const existingRefunds = await stripe.refunds.list({
+    const existingRefunds = await getStripe().refunds.list({
       payment_intent: paymentIntentId,
     });
 
     const totalRefunded = existingRefunds.data.reduce(
-      (sum, refund) => sum + (refund.status === "succeeded" ? refund.amount : 0),
+      (sum: number, refund: Stripe.Refund) => sum + (refund.status === "succeeded" ? refund.amount : 0),
       0
     );
 
@@ -201,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the refund
-    const refund = await stripe.refunds.create({
+    const refund = await getStripe().refunds.create({
       payment_intent: paymentIntentId,
       amount: refundAmount,
       reason: reason || "requested_by_customer",
@@ -215,7 +219,7 @@ export async function POST(request: NextRequest) {
 
     // Update order status in Convex
     try {
-      await convex.mutation(api.functions.stripe.updateOrderRefundStatus, {
+      await getConvex().mutation(api.functions.stripe.updateOrderRefundStatus, {
         orderId,
         refundId: refund.id,
         refundAmount: refundAmount,
@@ -296,15 +300,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Retrieve payment intent
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
 
     // Get all refunds for this payment
-    const refunds = await stripe.refunds.list({
+    const refunds = await getStripe().refunds.list({
       payment_intent: paymentIntentId,
     });
 
     const totalRefunded = refunds.data.reduce(
-      (sum, refund) => sum + (refund.status === "succeeded" ? refund.amount : 0),
+      (sum: number, refund: Stripe.Refund) => sum + (refund.status === "succeeded" ? refund.amount : 0),
       0
     );
 
@@ -317,7 +321,7 @@ export async function GET(request: NextRequest) {
         status: paymentIntent.status,
         created: paymentIntent.created,
       },
-      refunds: refunds.data.map((refund) => ({
+      refunds: refunds.data.map((refund: Stripe.Refund) => ({
         id: refund.id,
         amount: refund.amount,
         currency: refund.currency,
