@@ -90,7 +90,7 @@ export function ActiveCampaignWidget({
         {/* Progress Bar */}
         <div className="mb-4">
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>{campaign.totalParticipants} participants</span>
+            <span>{campaign.participantCount} participants</span>
             <span>{campaign.progress}% complete</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">

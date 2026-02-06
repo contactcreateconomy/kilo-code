@@ -57,8 +57,8 @@ export function UserMenu() {
         aria-haspopup="true"
       >
         <UserBadge
-          username={user.username}
-          avatar={user.avatar}
+          username={user.name ?? user.email ?? "User"}
+          avatar={user.image}
           showName={false}
           linkToProfile={false}
           size="sm"
@@ -83,14 +83,14 @@ export function UserMenu() {
         <div className="absolute right-0 mt-2 w-56 bg-card rounded-lg border shadow-lg py-1 z-50">
           {/* User Info */}
           <div className="px-4 py-3 border-b">
-            <p className="font-medium">{user.username}</p>
+            <p className="font-medium">{user.name ?? user.email ?? "User"}</p>
             <p className="text-sm text-muted-foreground truncate">{user.email}</p>
           </div>
 
           {/* Menu Items */}
           <div className="py-1">
             <Link
-              href={`/u/${user.username}`}
+              href={`/u/${encodeURIComponent(user.name ?? user.id)}`}
               className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-accent transition-colors"
               onClick={() => setIsOpen(false)}
             >

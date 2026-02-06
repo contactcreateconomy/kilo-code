@@ -1,7 +1,7 @@
 import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
+import type { Id, Doc } from "../_generated/dataModel";
 
 /**
  * Category Management Functions
@@ -51,8 +51,12 @@ export const listCategories = query({
     const rootCategories = categories.filter((c) => !c.parentId);
     const childCategories = categories.filter((c) => c.parentId);
 
-    function buildTree(parent: (typeof categories)[0]): any {
-      const children: any[] = childCategories
+    interface CategoryTreeNode extends Doc<"productCategories"> {
+      children?: CategoryTreeNode[];
+    }
+
+    function buildTree(parent: (typeof categories)[0]): CategoryTreeNode {
+      const children: CategoryTreeNode[] = childCategories
         .filter((c) => c.parentId === parent._id)
         .map((child) => buildTree(child));
 
@@ -174,16 +178,16 @@ export const getCategoryBreadcrumbs = query({
     let currentId: Id<"productCategories"> | undefined = args.categoryId;
 
     while (currentId) {
-      const category: any = await ctx.db.get(currentId);
-      if (!category) break;
+      const cat: Doc<"productCategories"> | null = await ctx.db.get(currentId);
+      if (!cat) break;
 
       breadcrumbs.unshift({
-        id: category._id,
-        name: category.name,
-        slug: category.slug,
+        id: cat._id,
+        name: cat.name,
+        slug: cat.slug,
       });
 
-      currentId = category.parentId;
+      currentId = cat.parentId ?? undefined;
     }
 
     return breadcrumbs;
@@ -353,12 +357,12 @@ export const updateCategory = mutation({
       // Check if new parent is a descendant
       let checkId: Id<"productCategories"> | undefined = args.parentId;
       while (checkId) {
-        const checkCategory: any = await ctx.db.get(checkId);
-        if (!checkCategory) break;
-        if (checkCategory.parentId === args.categoryId) {
+        const cat: Doc<"productCategories"> | null = await ctx.db.get(checkId);
+        if (!cat) break;
+        if (cat.parentId === args.categoryId) {
           throw new Error("Cannot set a descendant as parent");
         }
-        checkId = checkCategory.parentId;
+        checkId = cat.parentId ?? undefined;
       }
     }
 
@@ -461,7 +465,9 @@ export const reorderCategories = mutation({
     const now = Date.now();
 
     for (let i = 0; i < args.categoryIds.length; i++) {
-      await ctx.db.patch(args.categoryIds[i], {
+      const categoryId = args.categoryIds[i];
+      if (!categoryId) continue;
+      await ctx.db.patch(categoryId, {
         sortOrder: i,
         updatedAt: now,
       });

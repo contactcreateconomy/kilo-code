@@ -32,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Platform Infrastructure
 - Turborepo monorepo configuration with pnpm workspaces
 - Shared TypeScript, ESLint, and Tailwind configurations
-- Docker development environment setup
 - Vercel deployment configuration for all applications
 
 #### Marketplace Application

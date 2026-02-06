@@ -80,7 +80,7 @@ export function Header() {
         <div className="container mx-auto px-4">
           <div className="flex h-8 items-center justify-between text-xs">
             <Link
-              href={process.env.NEXT_PUBLIC_MAIN_SITE_URL || "https://createconomy.com"}
+              href={process.env['NEXT_PUBLIC_MAIN_SITE_URL'] || "https://createconomy.com"}
               className="text-muted-foreground hover:text-foreground flex items-center gap-1"
             >
               ← Back to Createconomy

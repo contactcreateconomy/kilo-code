@@ -1,8 +1,8 @@
-import { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 import { convexClient, api } from "@/lib/convex";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://createconomy.com";
+  const baseUrl = process.env["NEXT_PUBLIC_SITE_URL"] || "https://createconomy.com";
 
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
@@ -41,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic product pages
   let productPages: MetadataRoute.Sitemap = [];
   try {
-    const products = await convexClient.query(api.functions.products.list, {
+    const products = await convexClient.query(api.functions.products.listProducts, {
       limit: 1000,
     });
 
@@ -58,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic category pages
   let categoryPages: MetadataRoute.Sitemap = [];
   try {
-    const categories = await convexClient.query(api.functions.categories.list, {});
+    const categories = await convexClient.query(api.functions.categories.listCategories, {});
 
     categoryPages = (categories || []).map((category: { slug: string }) => ({
       url: `${baseUrl}/categories/${category.slug}`,

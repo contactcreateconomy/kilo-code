@@ -44,7 +44,6 @@ export function useAuth(): AuthState {
   const signOut = async () => {
     // TODO: Replace with actual sign out logic
     // This would typically call a Convex mutation or auth provider's signOut
-    console.log("Signing out...");
     setUser(null);
   };
 

@@ -5,8 +5,10 @@
  * and audit logging helpers for the Createconomy platform.
  */
 
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import type { GenericMutationCtx, GenericQueryCtx } from "convex/server";
+import type { MutationCtx } from "../_generated/server";
+import type { DataModel } from "../_generated/dataModel";
 
 // ============================================================================
 // Types
@@ -228,6 +230,117 @@ function simpleHash(str: string): string {
 }
 
 // ============================================================================
+// Database-Backed Rate Limiting
+// ============================================================================
+
+/**
+ * Check and enforce a rate limit using the `rateLimitRecords` database table.
+ *
+ * Uses a **fixed-window** algorithm: each key gets a single counter that resets
+ * when the window expires. This is simpler and cheaper than sliding windows
+ * and is sufficient for abuse prevention.
+ *
+ * **Important**: This function performs a database write (upsert) to update the
+ * counter, so it must be called from a **mutation** context (not a query).
+ *
+ * @param ctx - A Convex MutationCtx (needs db read/write access)
+ * @param key - Unique identifier for the rate limit bucket,
+ *   e.g. `"requestSellerRole:" + userId`
+ * @param config - Rate limit configuration (maxRequests, windowMs, action)
+ * @returns The rate limit result with `allowed`, `remaining`, `resetAt`, `retryAfter`
+ * @throws ConvexError with code "RATE_LIMITED" if the limit is exceeded
+ *
+ * @example
+ * ```ts
+ * import { checkRateLimitWithDb, rateLimitConfigs } from "../lib/security";
+ *
+ * export const requestSellerRole = mutation({
+ *   args: { businessName: v.string() },
+ *   handler: async (ctx, args) => {
+ *     const userId = await requireAuth(ctx);
+ *     await checkRateLimitWithDb(
+ *       ctx,
+ *       `requestSellerRole:${userId}`,
+ *       { maxRequests: 3, windowMs: 60 * 60 * 1000, action: "request_seller_role" }
+ *     );
+ *     // ... rest of handler
+ *   },
+ * });
+ * ```
+ */
+export async function checkRateLimitWithDb(
+  ctx: MutationCtx,
+  key: string,
+  config: RateLimitConfig
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const windowStart = now - config.windowMs;
+
+  // Look up existing record
+  const existing = await ctx.db
+    .query("rateLimitRecords")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .first();
+
+  if (existing) {
+    // Check if the window has expired — if so, reset the counter
+    if (existing.windowStart < windowStart) {
+      // Window expired; start a new one with count = 1
+      await ctx.db.patch(existing._id, {
+        count: 1,
+        windowStart: now,
+      });
+      return {
+        allowed: true,
+        remaining: config.maxRequests - 1,
+        resetAt: now + config.windowMs,
+        retryAfter: 0,
+      };
+    }
+
+    // Window is still active — check if under the limit
+    if (existing.count >= config.maxRequests) {
+      const resetAt = existing.windowStart + config.windowMs;
+      const result: RateLimitResult = {
+        allowed: false,
+        remaining: 0,
+        resetAt,
+        retryAfter: resetAt - now,
+      };
+      throw new ConvexError({
+        code: "RATE_LIMITED",
+        message: `Rate limit exceeded for ${config.action}. Try again in ${Math.ceil((resetAt - now) / 1000)} seconds.`,
+        retryAfter: result.retryAfter,
+      });
+    }
+
+    // Under the limit — increment
+    const newCount = existing.count + 1;
+    await ctx.db.patch(existing._id, { count: newCount });
+    return {
+      allowed: true,
+      remaining: config.maxRequests - newCount,
+      resetAt: existing.windowStart + config.windowMs,
+      retryAfter: 0,
+    };
+  }
+
+  // No existing record — create one with count = 1
+  await ctx.db.insert("rateLimitRecords", {
+    key,
+    count: 1,
+    windowStart: now,
+  });
+
+  return {
+    allowed: true,
+    remaining: config.maxRequests - 1,
+    resetAt: now + config.windowMs,
+    retryAfter: 0,
+  };
+}
+
+// ============================================================================
 // Request Validation
 // ============================================================================
 
@@ -238,7 +351,7 @@ function simpleHash(str: string): string {
  * @throws Error if not authenticated
  */
 export async function requireAuth(
-  ctx: GenericQueryCtx<any> | GenericMutationCtx<any>
+  ctx: GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>
 ): Promise<string> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
@@ -639,7 +752,7 @@ export const securityValidators = {
     resourceId: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
     userAgent: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null()))), // Security fix (S5): replaced v.any()
     success: v.boolean(),
     errorMessage: v.optional(v.string()),
   }),

@@ -149,10 +149,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                 <span>{category.threadCount} threads</span>
               </div>
               <div className="flex items-center gap-4">
-                <SearchBar
-                  placeholder={`Search in ${category.name}...`}
-                  className="w-64"
-                />
+                <div className="w-64">
+                  <SearchBar
+                    placeholder={`Search in ${category.name}...`}
+                  />
+                </div>
                 <select
                   className="rounded-md border bg-background px-3 py-2 text-sm"
                   defaultValue={sort}
@@ -168,9 +169,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           {/* Thread List */}
           <Suspense fallback={<ThreadListSkeleton />}>
             <ThreadList
-              categorySlug={slug}
-              page={currentPage}
-              sort={sort}
+              emptyMessage={`No threads found in ${category.name}`}
             />
           </Suspense>
 
@@ -202,7 +201,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
         {/* Sidebar */}
         <aside className="w-full lg:w-80">
-          <Sidebar categorySlug={slug} />
+          <Sidebar currentCategory={slug} />
         </aside>
       </div>
     </div>

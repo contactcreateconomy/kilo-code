@@ -116,10 +116,14 @@ export function buildCsp(directives: CspDirectives): string {
 
 /**
  * Base CSP directives shared across all apps
+ *
+ * Security fix (S6): Removed 'unsafe-eval' from script-src for production safety.
+ * TODO: Replace 'unsafe-inline' with nonce-based CSP in a future iteration
+ * for full script-src hardening. This requires Next.js nonce support integration.
  */
 export const baseCspDirectives: CspDirectives = {
   "default-src": ["'self'"],
-  "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+  "script-src": ["'self'", "'unsafe-inline'"],
   "style-src": ["'self'", "'unsafe-inline'"],
   "img-src": ["'self'", "data:", "blob:", "https:"],
   "font-src": ["'self'", "data:"],
@@ -160,10 +164,10 @@ export const marketplaceCspDirectives: CspDirectives = {
     "va.vercel-scripts.com",
   ],
   "frame-src": ["'self'", "*.stripe.com", "js.stripe.com"],
+  // Security fix (S6): Removed 'unsafe-eval' from script-src
   "script-src": [
     "'self'",
     "'unsafe-inline'",
-    "'unsafe-eval'",
     "js.stripe.com",
     "va.vercel-scripts.com",
   ],
@@ -188,10 +192,10 @@ export const forumCspDirectives: CspDirectives = {
     "vitals.vercel-insights.com",
     "va.vercel-scripts.com",
   ],
+  // Security fix (S6): Removed 'unsafe-eval' from script-src
   "script-src": [
     "'self'",
     "'unsafe-inline'",
-    "'unsafe-eval'",
     "va.vercel-scripts.com",
   ],
 };
@@ -217,10 +221,10 @@ export const adminCspDirectives: CspDirectives = {
   ],
   "frame-src": ["'self'"],
   "frame-ancestors": ["'none'"], // Prevent framing of admin panel
+  // Security fix (S6): Removed 'unsafe-eval' from script-src
   "script-src": [
     "'self'",
     "'unsafe-inline'",
-    "'unsafe-eval'",
     "va.vercel-scripts.com",
   ],
 };
@@ -246,10 +250,10 @@ export const sellerCspDirectives: CspDirectives = {
     "va.vercel-scripts.com",
   ],
   "frame-src": ["'self'", "*.stripe.com", "connect.stripe.com"],
+  // Security fix (S6): Removed 'unsafe-eval' from script-src
   "script-src": [
     "'self'",
     "'unsafe-inline'",
-    "'unsafe-eval'",
     "js.stripe.com",
     "connect.stripe.com",
     "va.vercel-scripts.com",

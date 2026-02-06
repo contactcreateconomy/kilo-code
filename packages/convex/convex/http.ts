@@ -13,6 +13,37 @@ import Stripe from "stripe";
  * - Cross-subdomain authentication
  * - Stripe webhook handling
  * - Health check endpoint
+ *
+ * ## API Versioning Strategy (A7)
+ *
+ * All current routes are implicitly **v1**. They are NOT prefixed with `/v1/`
+ * to avoid a breaking rename of existing endpoints that clients already use.
+ *
+ * ### When to version
+ *
+ * If a **breaking change** is needed (e.g. changing a response shape, removing
+ * a field, renaming a route, or altering authentication semantics):
+ *
+ * 1. **Create new routes** under a `/v2/` prefix (e.g. `/v2/auth/session`).
+ * 2. **Keep the original routes** unchanged so existing clients continue to work.
+ * 3. Add a `Deprecation` response header to the old routes:
+ *    `Deprecation: true` and `Sunset: <ISO-8601 date 6 months from now>`.
+ * 4. Document the migration path in the CHANGELOG.
+ *
+ * ### Deprecation & sunset policy
+ *
+ * - Deprecated versions are supported for **6 months** after the successor
+ *   version is released.
+ * - After the sunset date, deprecated routes may return `410 Gone`.
+ * - Announce deprecations in release notes, API docs, and via the
+ *   `Deprecation` / `Sunset` response headers.
+ *
+ * ### Non-breaking changes (no new version needed)
+ *
+ * - Adding a new route
+ * - Adding an optional field to a response
+ * - Adding an optional query parameter
+ * - Bug fixes that don't change the contract
  */
 
 const http = httpRouter();
@@ -162,7 +193,12 @@ http.route({
  * Create a new session
  * POST /auth/session
  *
- * Creates a new cross-subdomain session after authentication
+ * Creates a new cross-subdomain session after authentication.
+ *
+ * SECURITY FIX (S3): No longer accepts userId from the request body.
+ * Instead, requires a valid Convex Auth token in the Authorization header
+ * and derives the userId from the authenticated identity. This prevents
+ * attackers from creating sessions for arbitrary users.
  */
 http.route({
   path: "/auth/session",
@@ -171,24 +207,30 @@ http.route({
     const origin = request.headers.get("Origin");
 
     try {
-      const body = await request.json();
-      const { userId, tenantId, userAgent, ipAddress } = body;
-
-      if (!userId) {
+      // SECURITY: Derive userId from authenticated identity instead of request body
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
         return corsResponse(
-          JSON.stringify({ success: false, error: "userId is required" }),
-          400,
+          JSON.stringify({ success: false, error: "Authentication required. Provide a valid Convex Auth token in the Authorization header." }),
+          401,
           origin
         );
       }
 
-      // Create the session
-      const session = await ctx.runMutation(api.functions.sessions.createSession, {
-        userId,
+      // Parse optional fields from request body (userId is no longer accepted)
+      const body = await request.json().catch(() => ({}));
+      const { tenantId } = body;
+
+      // Derive userId from the authenticated identity's subject claim
+      // The subject maps to the Convex user ID in @convex-dev/auth
+      const userId = identity.subject;
+
+      // Create the session using the internal mutation (server-side only, no public args for userId)
+      const session = await ctx.runMutation(internal.functions.sessions.internalCreateSession, {
+        userId: userId as never,
         tenantId,
-        userAgent: userAgent || request.headers.get("User-Agent") || undefined,
-        ipAddress: ipAddress || request.headers.get("X-Forwarded-For") || undefined,
-        origin: origin || undefined,
+        userAgent: request.headers.get("User-Agent") || undefined,
+        ipAddress: request.headers.get("X-Forwarded-For") || undefined,
       });
 
       return corsResponse(
@@ -196,11 +238,7 @@ http.route({
           success: true,
           session: {
             token: session.token,
-            userId: session.userId,
-            tenantId: session.tenantId,
-            role: session.role,
             expiresAt: session.expiresAt,
-            user: session.user,
           },
         }),
         201,
@@ -459,7 +497,7 @@ function verifyStripeSignature(
   webhookSecret: string
 ): Stripe.Event | null {
   try {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"]!, {
       apiVersion: "2026-01-28.clover",
     });
     return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
@@ -494,7 +532,7 @@ http.route({
     }
 
     // Get webhook secret from environment
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"];
 
     if (!webhookSecret) {
       console.error("STRIPE_WEBHOOK_SECRET not configured");
@@ -527,7 +565,8 @@ http.route({
         {
           stripeEventId: event.id,
           type: event.type,
-          payload: event,
+          // Security fix (S5): payload is now v.string() — serialize the Stripe event
+          payload: JSON.stringify(event),
         }
       );
 
@@ -557,7 +596,7 @@ http.route({
               amountTotal: session.amount_total ?? 0,
               currency: session.currency ?? "usd",
               paymentStatus: session.payment_status,
-              metadata: session.metadata,
+              metadata: session.metadata ?? undefined,
             });
             break;
           }
@@ -675,7 +714,7 @@ http.route({
             await ctx.runMutation(internal.functions.webhooks.handleCustomerCreated, {
               customerId: customer.id,
               email: customer.email ?? undefined,
-              metadata: customer.metadata,
+              metadata: customer.metadata ?? undefined,
             });
             break;
           }
@@ -692,7 +731,7 @@ http.route({
 
           default:
             // Log unhandled event types but don't fail
-            console.log(`Unhandled Stripe event type: ${event.type}`);
+            console.warn(`Unhandled Stripe event type: ${event.type}`);
         }
       } catch (e) {
         error = e instanceof Error ? e.message : "Unknown error";
@@ -737,54 +776,12 @@ http.route({
   }),
 });
 
-// ============================================================================
-// OAuth Callbacks
-// ============================================================================
-
-/**
- * OAuth callback endpoint
- * GET /auth/callback
- *
- * Handles OAuth provider callbacks
- */
-http.route({
-  path: "/auth/callback",
-  method: "GET",
-  handler: httpAction(async (ctx, request) => {
-    const url = new URL(request.url);
-    const code = url.searchParams.get("code");
-    const state = url.searchParams.get("state");
-    const error = url.searchParams.get("error");
-
-    if (error) {
-      // Redirect to error page
-      const errorUrl = new URL("/auth/error", url.origin);
-      errorUrl.searchParams.set("error", error);
-      return Response.redirect(errorUrl.toString(), 302);
-    }
-
-    if (!code || !state) {
-      return new Response(
-        JSON.stringify({ error: "Missing code or state parameter" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // In production, you would:
-    // 1. Verify the state parameter
-    // 2. Exchange the code for tokens
-    // 3. Create or update the user
-    // 4. Create a session
-    // 5. Redirect to the success URL with session token
-
-    // For now, redirect to success page
-    const successUrl = new URL("/auth/success", url.origin);
-    return Response.redirect(successUrl.toString(), 302);
-  }),
-});
+// BUG FIX B3: Removed the custom /auth/callback route. It contained only
+// placeholder code that redirected to a success page without completing the
+// OAuth flow (no state verification, no token exchange, no session creation).
+// Convex Auth's auth.addHttpRoutes(http) (line 28) already registers proper
+// OAuth callback handlers at /api/auth/callback/* that handle the full flow.
+// Keeping this custom route would confuse clients and bypass the real auth flow.
 
 // ============================================================================
 // CORS Preflight for Other Endpoints
@@ -822,12 +819,7 @@ http.route({
   }),
 });
 
-http.route({
-  path: "/auth/callback",
-  method: "OPTIONS",
-  handler: httpAction(async (ctx, request) => {
-    return handlePreflight(request.headers.get("Origin"));
-  }),
-});
+// BUG FIX B3: Also removed the /auth/callback OPTIONS handler since the
+// GET route was removed above. No custom callback route = no preflight needed.
 
 export default http;

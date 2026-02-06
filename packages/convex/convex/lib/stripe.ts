@@ -16,7 +16,7 @@ import Stripe from "stripe";
  * Uses API version 2024-12-18.acacia as specified
  */
 export function getStripeClient(): Stripe {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = process.env["STRIPE_SECRET_KEY"];
 
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY environment variable is not set");
@@ -31,6 +31,24 @@ export function getStripeClient(): Stripe {
 // ============================================================================
 // Price Formatting Utilities
 // ============================================================================
+
+// PERF: Hoisted Intl.NumberFormat to module scope — constructors are expensive.
+// A Map-based cache keyed by uppercase currency code ensures each formatter is
+// created at most once per currency for the lifetime of this module.
+const currencyFormatters = new Map<string, Intl.NumberFormat>();
+
+function getCurrencyFormatter(currency: string): Intl.NumberFormat {
+  const key = currency.toUpperCase();
+  let formatter = currencyFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: key,
+    });
+    currencyFormatters.set(key, formatter);
+  }
+  return formatter;
+}
 
 /**
  * Convert amount from cents to dollars
@@ -60,12 +78,7 @@ export function formatPrice(
   amountInCents: number,
   currency: string = "usd"
 ): string {
-  const formatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  });
-
-  return formatter.format(centsToDollars(amountInCents));
+  return getCurrencyFormatter(currency).format(centsToDollars(amountInCents));
 }
 
 /**
@@ -78,12 +91,7 @@ export function formatPriceFromDollars(
   amountInDollars: number,
   currency: string = "usd"
 ): string {
-  const formatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  });
-
-  return formatter.format(amountInDollars);
+  return getCurrencyFormatter(currency).format(amountInDollars);
 }
 
 // ============================================================================
@@ -308,11 +316,11 @@ export function buildPaymentMetadata(data: {
 }): Stripe.MetadataParam {
   const metadata: Stripe.MetadataParam = {};
 
-  if (data.orderId) metadata.orderId = data.orderId;
-  if (data.userId) metadata.userId = data.userId;
-  if (data.sellerId) metadata.sellerId = data.sellerId;
-  if (data.productIds) metadata.productIds = data.productIds.join(",");
-  if (data.tenantId) metadata.tenantId = data.tenantId;
+  if (data.orderId) metadata["orderId"] = data.orderId;
+  if (data.userId) metadata["userId"] = data.userId;
+  if (data.sellerId) metadata["sellerId"] = data.sellerId;
+  if (data.productIds) metadata["productIds"] = data.productIds.join(",");
+  if (data.tenantId) metadata["tenantId"] = data.tenantId;
 
   return metadata;
 }

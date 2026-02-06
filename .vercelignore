@@ -41,11 +41,6 @@ dist/
 .next/
 out/
 
-# Docker files (not needed for Vercel)
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-
 # Git
 .git/
 .gitignore

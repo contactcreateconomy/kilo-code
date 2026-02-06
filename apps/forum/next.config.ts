@@ -74,14 +74,14 @@ const nextConfig: NextConfig = {
   // Environment variables exposed to the browser
   env: {
     NEXT_PUBLIC_APP_NAME:
-      process.env.NEXT_PUBLIC_APP_NAME || "Createconomy Forum",
+      process.env["NEXT_PUBLIC_APP_NAME"] || "Createconomy Forum",
     NEXT_PUBLIC_SITE_URL:
-      process.env.NEXT_PUBLIC_SITE_URL || "https://discuss.createconomy.com",
+      process.env["NEXT_PUBLIC_SITE_URL"] || "https://discuss.createconomy.com",
   },
 
   // Experimental features
   experimental: {
-    // Enable server actions
+    // Server Actions configuration
     serverActions: {
       bodySizeLimit: "2mb",
     },

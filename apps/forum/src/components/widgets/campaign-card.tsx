@@ -44,7 +44,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         {/* Progress */}
         <div className="mb-3">
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>{campaign.totalParticipants} participants</span>
+            <span>{campaign.participantCount} participants</span>
             <span>{daysLeft} days left</span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">

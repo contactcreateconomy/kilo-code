@@ -1,6 +1,5 @@
 import { query, mutation, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { Id } from "../_generated/dataModel";
 import { SESSION_CONFIG } from "../auth.config";
 
 /**
@@ -402,16 +401,16 @@ export const internalRevokeSession = internalMutation({
 // ============================================================================
 
 /**
- * Generate a secure session token
- * Format: sess_<64 random chars>_<timestamp>
+ * Generate a cryptographically secure session token
+ *
+ * SECURITY FIX (S1): Replaced Math.random() with crypto.randomUUID() which is
+ * cryptographically secure. Removed Date.now() timestamp to avoid leaking
+ * timing information. crypto.randomUUID() is available in the Convex runtime.
  */
 function generateSessionToken(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
-  for (let i = 0; i < 64; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `sess_${token}_${Date.now()}`;
+  const uuid1 = crypto.randomUUID();
+  const uuid2 = crypto.randomUUID();
+  return `sess_${uuid1}${uuid2}`.replace(/-/g, '');
 }
 
 /**

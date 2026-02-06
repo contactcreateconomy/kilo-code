@@ -65,7 +65,9 @@ export function middleware(request: NextRequest) {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js
+      // Security fix (S6): Removed 'unsafe-eval' from script-src.
+      // TODO: Replace 'unsafe-inline' with nonce-based CSP in a future iteration.
+      "script-src 'self' 'unsafe-inline'", // Required for Next.js
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",

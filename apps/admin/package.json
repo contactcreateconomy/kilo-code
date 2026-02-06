@@ -15,7 +15,6 @@
     "react-dom": "^19.2.4",
     "convex": "^1.31.7",
     "@convex-dev/auth": "^0.0.90",
-    "@clerk/nextjs": "^6.37.2",
     "@createconomy/ui": "workspace:*",
     "@createconomy/convex": "workspace:*",
     "recharts": "^2.15.0",

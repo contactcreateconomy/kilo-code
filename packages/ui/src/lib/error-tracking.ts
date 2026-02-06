@@ -146,10 +146,10 @@ export function parseStackFrame(frame: string): {
 
   if (match) {
     return {
-      function: match[1],
-      file: match[2],
-      line: parseInt(match[3], 10),
-      column: parseInt(match[4], 10),
+      function: match[1]!,
+      file: match[2]!,
+      line: parseInt(match[3]!, 10),
+      column: parseInt(match[4]!, 10),
     };
   }
 
@@ -159,9 +159,9 @@ export function parseStackFrame(frame: string): {
   if (simpleMatch) {
     return {
       function: "<anonymous>",
-      file: simpleMatch[1],
-      line: parseInt(simpleMatch[2], 10),
-      column: parseInt(simpleMatch[3], 10),
+      file: simpleMatch[1]!,
+      line: parseInt(simpleMatch[2]!, 10),
+      column: parseInt(simpleMatch[3]!, 10),
     };
   }
 
@@ -291,7 +291,7 @@ export const consoleReporter: ErrorReporter = {
         ? console.error
         : level === "warning"
           ? console.warn
-          : console.log;
+          : console.info;
 
     logFn(`[${level.toUpperCase()}] ${message}`, { id, context });
 
@@ -300,22 +300,22 @@ export const consoleReporter: ErrorReporter = {
 
   setUser(user): void {
     if (user) {
-      console.log("[ErrorTracking] User set:", user.id);
+      console.debug("[ErrorTracking] User set:", user.id);
     } else {
-      console.log("[ErrorTracking] User cleared");
+      console.debug("[ErrorTracking] User cleared");
     }
   },
 
   setTag(key: string, value: string): void {
-    console.log(`[ErrorTracking] Tag set: ${key}=${value}`);
+    console.debug(`[ErrorTracking] Tag set: ${key}=${value}`);
   },
 
   setExtra(key: string, value: unknown): void {
-    console.log(`[ErrorTracking] Extra set: ${key}=`, value);
+    console.debug(`[ErrorTracking] Extra set: ${key}=`, value);
   },
 
   addBreadcrumb(breadcrumb: Breadcrumb): void {
-    console.log("[ErrorTracking] Breadcrumb:", breadcrumb);
+    console.debug("[ErrorTracking] Breadcrumb:", breadcrumb);
   },
 };
 
@@ -338,7 +338,7 @@ export function createRemoteReporter(config: {
   const tags: Record<string, string> = {};
   const extras: Record<string, unknown> = {};
 
-  async function sendToEndpoint(payload: unknown): Promise<void> {
+  async function sendToEndpoint(payload: Record<string, unknown>): Promise<void> {
     try {
       await fetch(endpoint, {
         method: "POST",

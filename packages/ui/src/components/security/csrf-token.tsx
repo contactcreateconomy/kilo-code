@@ -7,7 +7,7 @@
  * Generates a token on mount and includes it in forms for validation.
  */
 
-import { useEffect, useState, createContext, useContext, useCallback, type ReactNode } from "react";
+import { useEffect, useState, createContext, use, useCallback, type ReactNode } from "react";
 import { generateCsrfToken, getCsrfToken, validateCsrfToken } from "@/lib/security";
 
 // ============================================================================
@@ -38,7 +38,7 @@ const CsrfContext = createContext<CsrfContextValue | null>(null);
  * @throws Error if used outside CsrfProvider
  */
 export function useCsrf(): CsrfContextValue {
-  const context = useContext(CsrfContext);
+  const context = use(CsrfContext);
   if (!context) {
     throw new Error("useCsrf must be used within a CsrfProvider");
   }

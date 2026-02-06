@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   authors: [{ name: "Createconomy" }],
   creator: "Createconomy",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://createconomy.com"
+    process.env["NEXT_PUBLIC_SITE_URL"] || "https://createconomy.com"
   ),
   openGraph: {
     type: "website",
@@ -82,10 +82,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <ConvexClientProvider>
           <ThemeProvider
-            attribute="class"
             defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
           >
             <div className="relative flex min-h-screen flex-col">
               <Header />

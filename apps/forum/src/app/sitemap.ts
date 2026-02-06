@@ -1,4 +1,4 @@
-import { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
 // In a real application, these would be fetched from the database
 async function getCategories() {
@@ -20,7 +20,7 @@ async function getRecentThreads() {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://discuss.createconomy.com";
+  const baseUrl = process.env['NEXT_PUBLIC_APP_URL'] || "https://discuss.createconomy.com";
 
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [

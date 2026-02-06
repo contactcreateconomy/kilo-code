@@ -17,7 +17,7 @@ export default function PoliciesSettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Policies updated");
+    // TODO: Save policies via Convex mutation
   };
 
   return (

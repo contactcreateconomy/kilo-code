@@ -131,7 +131,7 @@ export default async function UserProfilePage({ params }: Props) {
               <h1 className="text-2xl font-bold">{user.displayName}</h1>
               <p className="text-muted-foreground">@{user.username}</p>
               <span
-                className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${roleColors[user.role] || roleColors.Member}`}
+                className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${roleColors[user.role] || roleColors['Member']}`}
               >
                 {user.role}
               </span>
@@ -193,7 +193,7 @@ export default async function UserProfilePage({ params }: Props) {
           <section>
             <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
             <Suspense fallback={<ActivitySkeleton />}>
-              <ThreadList authorUsername={username} limit={10} />
+              <ThreadList limit={10} emptyMessage="No recent activity" />
             </Suspense>
           </section>
         </div>

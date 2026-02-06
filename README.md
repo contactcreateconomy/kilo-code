@@ -311,16 +311,6 @@ cd packages/convex
 npx convex deploy
 ```
 
-### Docker Development
-
-For local development with Docker:
-
-```bash
-docker-compose up
-```
-
----
-
 ## Documentation
 
 - [Architecture Overview](./docs/architecture.md)

@@ -7,7 +7,6 @@ This guide covers setting up and running the Createconomy platform locally.
 - [Node.js](https://nodejs.org/) v20 or later
 - [pnpm](https://pnpm.io/) v9 or later
 - [Git](https://git-scm.com/)
-- [Docker](https://www.docker.com/) (optional, for containerized development)
 
 ## Quick Start
 
@@ -172,34 +171,6 @@ All apps support hot reloading. Changes to:
 - App code → Instant refresh
 - Shared packages → Automatic rebuild and refresh
 - Convex functions → Automatic deployment to dev environment
-
-## Docker Development
-
-For containerized development:
-
-### Start All Services
-
-```bash
-docker-compose up
-```
-
-### Start Specific Services
-
-```bash
-docker-compose up marketplace forum
-```
-
-### Rebuild Containers
-
-```bash
-docker-compose up --build
-```
-
-### Stop Services
-
-```bash
-docker-compose down
-```
 
 ## Testing
 

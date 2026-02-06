@@ -2,6 +2,14 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
+// Security fix (S5): Reusable validator for metadata fields.
+// Replaces v.any() with a safe record type that allows string keys
+// with string, number, boolean, or null values. This prevents arbitrary
+// data injection while remaining flexible for key-value metadata.
+export const metadataValidator = v.optional(
+  v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null()))
+);
+
 /**
  * Createconomy Database Schema
  *
@@ -235,7 +243,7 @@ export default defineSchema({
     isDigital: v.boolean(),
     digitalFileUrl: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     averageRating: v.optional(v.number()),
     reviewCount: v.number(),
     salesCount: v.number(),
@@ -258,6 +266,19 @@ export default defineSchema({
       searchField: "name",
       filterFields: ["tenantId", "categoryId", "status", "isDeleted"],
     }),
+
+  /**
+   * Product view tracking
+   * PERF: Lightweight table to deduplicate view counts per viewer per product.
+   * Each row records a single viewer's most recent view of a product,
+   * enabling a throttle window (e.g., 1 hour) before re-counting.
+   */
+  productViews: defineTable({
+    productId: v.id("products"),
+    viewerId: v.string(), // userId or anonymous session token
+    viewedAt: v.number(),
+  })
+    .index("by_product_viewer", ["productId", "viewerId"]),
 
   /**
    * Product images
@@ -315,7 +336,7 @@ export default defineSchema({
       })
     ),
     notes: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     paidAt: v.optional(v.number()),
     shippedAt: v.optional(v.number()),
     deliveredAt: v.optional(v.number()),
@@ -345,7 +366,7 @@ export default defineSchema({
     quantity: v.number(),
     subtotal: v.number(),
     status: orderStatusValidator,
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -646,7 +667,7 @@ export default defineSchema({
     stripeCustomerId: v.string(),
     email: v.optional(v.string()),
     defaultPaymentMethodId: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -675,7 +696,7 @@ export default defineSchema({
     failureCode: v.optional(v.string()),
     failureMessage: v.optional(v.string()),
     refundedAmount: v.optional(v.number()),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -697,7 +718,10 @@ export default defineSchema({
     processed: v.boolean(),
     processedAt: v.optional(v.number()),
     error: v.optional(v.string()),
-    payload: v.optional(v.any()),
+    // Security fix (S5): replaced v.any() for webhook event payload.
+    // Stored as JSON-serialized string to avoid deeply nested arbitrary objects.
+    // The raw Stripe event is complex; serializing to string is safest for audit.
+    payload: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_stripe_event", ["stripeEventId"])
@@ -734,7 +758,7 @@ export default defineSchema({
     isApproved: v.boolean(),
     approvedAt: v.optional(v.number()),
     isActive: v.boolean(),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -761,7 +785,7 @@ export default defineSchema({
     country: v.optional(v.string()),
     defaultCurrency: v.optional(v.string()),
     deauthorizedAt: v.optional(v.number()),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -786,7 +810,7 @@ export default defineSchema({
     evidenceDueBy: v.optional(v.number()),
     isChargeRefundable: v.optional(v.boolean()),
     closedAt: v.optional(v.number()),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -795,4 +819,27 @@ export default defineSchema({
     .index("by_order", ["orderId"])
     .index("by_stripe_dispute", ["stripeDisputeId"])
     .index("by_status", ["status"]),
+
+  // -------------------------------------------------------------------------
+  // Rate Limiting Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Rate limit records for database-backed rate limiting.
+   *
+   * Stores sliding-window counters keyed by action + identifier (e.g.,
+   * "requestSellerRole:userId123"). Each record tracks the request count
+   * within the current window. Expired windows are lazily reset on the
+   * next check.
+   *
+   * @see packages/convex/convex/lib/security.ts — checkRateLimitWithDb()
+   */
+  rateLimitRecords: defineTable({
+    /** Composite key, e.g. "createOrder:userId123" or "incrementView:productId:userId" */
+    key: v.string(),
+    /** Number of requests recorded in the current window */
+    count: v.number(),
+    /** Timestamp (ms) when the current window started */
+    windowStart: v.number(),
+  }).index("by_key", ["key"]),
 });

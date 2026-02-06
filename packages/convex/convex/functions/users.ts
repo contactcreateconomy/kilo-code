@@ -1,8 +1,8 @@
 import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
 import { userRoleValidator } from "../schema";
+import { checkRateLimitWithDb } from "../lib/security";
 
 /**
  * User Management Functions
@@ -399,41 +399,94 @@ export const setUserTenantRole = mutation({
 
 /**
  * Request to become a seller
- * Changes user role from customer to seller (pending approval in production)
+ *
+ * BUG FIX B6: Previously this mutation directly upgraded the user's role to
+ * "seller", bypassing any approval process. Now it creates a pending seller
+ * record in the `sellers` table with `isApproved: false` and keeps the user's
+ * role as "customer" until an admin approves the request. The admin can approve
+ * sellers via the admin dashboard (sellers/pending page) or a dedicated
+ * `approveSeller` mutation.
+ *
+ * @param businessName - The seller's business name
+ * @param businessEmail - Optional business email
+ * @param description - Optional business description
+ * @returns Object with status and message
  */
 export const requestSellerRole = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    businessName: v.string(),
+    businessEmail: v.optional(v.string()),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Authentication required");
     }
+
+    // A3: Rate limit seller role requests — 3 per hour per user.
+    // Prevents abuse of the seller application flow.
+    await checkRateLimitWithDb(ctx, `requestSellerRole:${userId}`, {
+      maxRequests: 3,
+      windowMs: 60 * 60 * 1000, // 1 hour
+      action: "request_seller_role",
+    });
 
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
+    // BUG FIX B6: Check if the user already has a seller role — don't allow re-requesting
+    if (profile?.defaultRole === "seller") {
+      throw new Error("User already has seller role");
+    }
+
+    // BUG FIX B6: Check if there's already a pending (or active) seller record
+    const existingSeller = await ctx.db
+      .query("sellers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (existingSeller) {
+      if (existingSeller.isApproved) {
+        throw new Error("Seller account already approved");
+      }
+      throw new Error("Seller request already pending approval");
+    }
+
     const now = Date.now();
 
-    if (profile) {
-      // For now, directly upgrade to seller
-      // In production, this would create a pending request
-      await ctx.db.patch(profile._id, {
-        defaultRole: "seller",
-        updatedAt: now,
-      });
-    } else {
+    // BUG FIX B6: Create a seller record with isApproved: false instead of
+    // directly upgrading the user's role. The user's defaultRole stays as-is
+    // until an admin approves the seller application.
+    await ctx.db.insert("sellers", {
+      userId,
+      businessName: args.businessName,
+      businessEmail: args.businessEmail,
+      description: args.description,
+      stripeOnboarded: false,
+      isApproved: false,
+      isActive: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Ensure the user has a profile (create one if missing)
+    if (!profile) {
       await ctx.db.insert("userProfiles", {
         userId,
-        defaultRole: "seller",
+        defaultRole: "customer",
         isBanned: false,
         createdAt: now,
         updatedAt: now,
       });
     }
 
-    return true;
+    return {
+      status: "pending" as const,
+      message: "Your seller request has been submitted and is pending admin approval.",
+    };
   },
 });
 

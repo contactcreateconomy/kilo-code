@@ -1,4 +1,4 @@
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { loadStripe, type Stripe } from "@stripe/stripe-js";
 
 /**
  * Client-side Stripe Utilities for Marketplace
@@ -19,7 +19,7 @@ let stripePromise: Promise<Stripe | null> | null = null;
  */
 export function getStripe(): Promise<Stripe | null> {
   if (!stripePromise) {
-    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    const publishableKey = process.env["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"];
 
     if (!publishableKey) {
       console.error("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set");
@@ -37,21 +37,12 @@ export function getStripe(): Promise<Stripe | null> {
 // ============================================================================
 
 /**
- * Redirect to Stripe Checkout
- * @param sessionId - Stripe Checkout session ID
+ * Redirect to Stripe Checkout via URL
+ * @param url - Stripe Checkout session URL
+ * @deprecated Use initiateCheckout which handles URL redirection directly
  */
-export async function redirectToCheckout(sessionId: string): Promise<void> {
-  const stripe = await getStripe();
-
-  if (!stripe) {
-    throw new Error("Stripe.js failed to load");
-  }
-
-  const { error } = await stripe.redirectToCheckout({ sessionId });
-
-  if (error) {
-    throw new Error(error.message);
-  }
+export function redirectToCheckoutUrl(url: string): void {
+  window.location.href = url;
 }
 
 /**
@@ -83,9 +74,9 @@ export async function initiateCheckout(
       return;
     }
 
-    // Otherwise use Stripe.js to redirect
+    // If we have a sessionId but no URL, construct the checkout URL
     if (sessionId) {
-      await redirectToCheckout(sessionId);
+      throw new Error("Checkout session URL is required for redirection");
     }
   } catch (error) {
     console.error("Checkout error:", error);

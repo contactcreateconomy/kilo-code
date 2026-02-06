@@ -48,9 +48,8 @@ export function ReplyForm({
       if (onSubmit) {
         await onSubmit(content);
       } else {
-        // Default behavior: log to console (for development)
-        console.log("Reply submitted:", { threadId, replyToPostId, content });
-        // In production, this would call a Convex mutation
+        // Default behavior: placeholder (for development)
+        // TODO: Call a Convex mutation to submit the reply
       }
       setContent("");
     } catch (err) {

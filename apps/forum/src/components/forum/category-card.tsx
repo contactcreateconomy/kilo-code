@@ -49,7 +49,7 @@ export function CategoryCard({
       <div className="flex gap-4">
         {/* Icon */}
         <div
-          className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl shrink-0 border ${colorClasses[color] || colorClasses.gray}`}
+          className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl shrink-0 border ${colorClasses[color] || colorClasses['gray']}`}
         >
           {icon}
         </div>

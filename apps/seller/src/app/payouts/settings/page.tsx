@@ -13,7 +13,7 @@ export default function PayoutSettingsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission
-    console.log("Payout settings updated");
+    // TODO: Save payout settings via Convex mutation
   };
 
   return (

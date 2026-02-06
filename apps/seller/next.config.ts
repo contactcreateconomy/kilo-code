@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
   transpilePackages: ["@createconomy/ui", "@createconomy/convex"],
 
   // Turbopack configuration (Next.js 16 default)

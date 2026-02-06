@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback } from "react";
 import { ConvexProvider as ConvexClientProvider, ConvexReactClient } from "convex/react";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import {
@@ -9,7 +9,7 @@ import {
   LoginRedirect,
 } from "@createconomy/ui/components/auth";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convex = new ConvexReactClient(process.env['NEXT_PUBLIC_CONVEX_URL']!);
 
 interface ConvexProviderProps {
   children: ReactNode;
@@ -43,7 +43,7 @@ export function ConvexProvider({ children }: ConvexProviderProps) {
     <ConvexClientProvider client={convex}>
       <ConvexAuthProvider client={convex}>
         <AuthProvider
-          convexUrl={process.env.NEXT_PUBLIC_CONVEX_URL!}
+          convexUrl={process.env['NEXT_PUBLIC_CONVEX_URL']!}
           onAuthError={handleAuthError}
         >
           <SessionSync onLogoutSync={handleLogoutSync} />

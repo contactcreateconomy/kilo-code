@@ -1,8 +1,7 @@
 import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
-import { forumPostStatusValidator } from "../schema";
+import type { Doc } from "../_generated/dataModel";
 
 /**
  * Forum Management Functions
@@ -47,8 +46,12 @@ export const listForumCategories = query({
     const rootCategories = categories.filter((c) => !c.parentId);
     const childCategories = categories.filter((c) => c.parentId);
 
-    function buildTree(parent: (typeof categories)[0]): any {
-      const children: any[] = childCategories
+    interface ForumCategoryTreeNode extends Doc<"forumCategories"> {
+      children?: ForumCategoryTreeNode[];
+    }
+
+    function buildTree(parent: (typeof categories)[0]): ForumCategoryTreeNode {
+      const children: ForumCategoryTreeNode[] = childCategories
         .filter((c) => c.parentId === parent._id)
         .map((child) => buildTree(child));
 
@@ -182,7 +185,7 @@ export const listThreads = query({
       pinned: threadsWithAuthors.filter((t) => t.isPinned),
       threads: threadsWithAuthors.filter((t) => !t.isPinned),
       hasMore,
-      nextCursor: hasMore ? threads[threads.length - 1]._id : null,
+      nextCursor: hasMore ? threads[threads.length - 1]?._id ?? null : null,
     };
   },
 });
@@ -377,7 +380,12 @@ export const getPostComments = query({
     const rootComments = commentsWithAuthors.filter((c) => !c.parentId);
     const childComments = commentsWithAuthors.filter((c) => c.parentId);
 
-    const buildTree = (parent: (typeof commentsWithAuthors)[0]): any => {
+    type CommentWithAuthor = (typeof commentsWithAuthors)[0];
+    interface CommentTreeNode extends CommentWithAuthor {
+      replies?: CommentTreeNode[];
+    }
+
+    const buildTree = (parent: CommentWithAuthor): CommentTreeNode => {
       const children = childComments
         .filter((c) => c.parentId === parent._id)
         .map((child) => buildTree(child));

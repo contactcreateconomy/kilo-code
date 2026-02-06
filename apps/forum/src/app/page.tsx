@@ -24,7 +24,7 @@ export default function ForumHomePage() {
       {!isAuthenticated && !isLoading && (
         <GoogleOneTap
           onSuccess={() => {
-            console.log('Successfully signed in via Google One Tap');
+            console.debug('Successfully signed in via Google One Tap');
           }}
           onError={(error) => {
             console.error('Google One Tap error:', error);
