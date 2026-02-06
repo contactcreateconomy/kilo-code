@@ -3,6 +3,7 @@
   "framework": "nextjs",
   "buildCommand": "cd ../.. && npx -y pnpm@10.28.2 turbo build --filter=@createconomy/admin",
   "installCommand": "cd ../.. && npx -y pnpm@10.28.2 install",
+  "ignoreCommand": "npx turbo-ignore",
   "outputDirectory": ".next",
   "headers": [
     {

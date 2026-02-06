@@ -62,9 +62,11 @@ export default function CategoriesPage() {
 
     const draggedIndex = categories.findIndex((c) => c.id === draggedItem);
     const targetIndex = categories.findIndex((c) => c.id === targetId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
 
     const newCategories = [...categories];
-    const [removed] = newCategories.splice(draggedIndex, 1);
+    const removed = newCategories.splice(draggedIndex, 1)[0];
+    if (!removed) return;
     newCategories.splice(targetIndex, 0, removed);
 
     // Update order numbers
