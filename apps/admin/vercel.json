@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && pnpm turbo build --filter=@createconomy/admin",
-  "installCommand": "npm i -g pnpm@10.28.2 && cd ../.. && pnpm install",
+  "buildCommand": "cd ../.. && npx -y pnpm@10.28.2 turbo build --filter=@createconomy/admin",
+  "installCommand": "cd ../.. && npx -y pnpm@10.28.2 install",
   "outputDirectory": ".next",
   "headers": [
     {
