@@ -11,8 +11,8 @@ interface ProductFormProps {
     category: string;
     status: string;
   };
-  onSubmit: (data: ProductFormData) => void;
-  onCancel: () => void;
+  onSubmit?: (data: ProductFormData) => void;
+  onCancel?: () => void;
 }
 
 interface ProductFormData {
@@ -34,7 +34,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit?.(formData);
   };
 
   return (

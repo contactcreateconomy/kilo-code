@@ -133,13 +133,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Product Images */}
           <div className="space-y-4">
             <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
-              <Image
-                src={product.images[0]}
-                alt={product.name}
-                fill
-                className="object-cover"
-                priority
-              />
+              {product.images[0] && (
+                <Image
+                  src={product.images[0]}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              )}
             </div>
             {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
