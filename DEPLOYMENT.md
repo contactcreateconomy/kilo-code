@@ -61,7 +61,19 @@ A minimal [`.github/workflows/ci.yml`](.github/workflows/ci.yml) provides:
 
 Each app should be configured in Vercel dashboard:
 
-### 1. Git Integration Settings
+### 1. Required Environment Variable (CRITICAL)
+
+**For pnpm 10+ support**, add this environment variable to **each project** in Vercel:
+
+Navigate to **Project Settings → Environment Variables** and add:
+
+| Name | Value | Environments |
+|------|-------|--------------|
+| `ENABLE_EXPERIMENTAL_COREPACK` | `1` | Production, Preview, Development |
+
+This enables corepack which reads the `packageManager` field from `package.json` to use the correct pnpm version (10.28.2).
+
+### 2. Git Integration Settings
 
 Navigate to **Project Settings → Git** for each app:
 
@@ -70,7 +82,7 @@ Navigate to **Project Settings → Git** for each app:
 | **Production Branch** | `main` |
 | **Automatically expose System Environment Variables** | ✅ |
 
-### 2. Ignored Build Step (Monorepo Optimization)
+### 3. Ignored Build Step (Monorepo Optimization)
 
 To skip builds when only unrelated apps change, add this in **Project Settings → Git → Ignored Build Step**:
 
@@ -96,7 +108,7 @@ git diff HEAD^ HEAD --quiet apps/seller packages
 
 This tells Vercel to skip the build if no relevant files changed.
 
-### 3. Root Directory
+### 4. Root Directory
 
 | App | Root Directory |
 |-----|----------------|
