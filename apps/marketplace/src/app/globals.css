@@ -1,7 +1,11 @@
 @import "tailwindcss";
 @import "@createconomy/ui/globals.css";
 
-/* App-specific styles */
+@custom-variant dark (&:is(.dark *));
+
+/* ──────────────────────────────────────────────
+   Marketplace App Overrides
+   ────────────────────────────────────────────── */
 @layer base {
   :root {
     --container-max-width: 1280px;

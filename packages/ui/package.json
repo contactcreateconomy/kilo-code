@@ -14,11 +14,19 @@
     ".": "./src/index.ts",
     "./globals.css": "./src/globals.css",
     "./lib/utils": "./src/lib/utils.ts",
+    "./lib/animations": "./src/lib/animations.ts",
     "./lib/auth-cookies": "./src/lib/auth-cookies.ts",
     "./components/*": "./src/components/*.tsx",
     "./components/auth": "./src/components/auth/index.ts",
+    "./providers/theme-provider": "./src/providers/theme-provider.tsx",
     "./hooks/*": "./src/hooks/*.ts",
-    "./test-utils": "./src/test-utils.tsx"
+    "./test-utils": "./src/test-utils.tsx",
+    "./tokens/colors": "./src/tokens/colors.ts",
+    "./tokens/animations": "./src/tokens/animations.ts",
+    "./tokens/shadows": "./src/tokens/shadows.ts",
+    "./tokens/typography": "./src/tokens/typography.ts",
+    "./tokens/layout": "./src/tokens/layout.ts",
+    "./tokens": "./src/tokens/index.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
@@ -50,6 +58,7 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "framer-motion": "^11.0.0 || ^12.0.0"
   }
 }

@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import { ConvexProvider } from '@/providers/convex-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
 import './globals.css';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: {
@@ -26,9 +29,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           defaultTheme="system"
+          storageKey="admin-theme"
         >
           <ConvexProvider>{children}</ConvexProvider>
         </ThemeProvider>

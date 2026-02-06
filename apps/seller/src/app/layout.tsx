@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/providers/theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
@@ -30,8 +30,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} antialiased`}>
-        <ThemeProvider>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <ThemeProvider defaultTheme="system" storageKey="seller-theme">
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </ThemeProvider>
       </body>
