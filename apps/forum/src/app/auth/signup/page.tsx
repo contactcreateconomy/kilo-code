@@ -23,7 +23,8 @@ export default function SignUpPage() {
         <div className="rounded-lg border bg-card p-6">
           <SignUpForm />
 
-          <div className="mt-6 text-center text-sm">
+          {/* Sign In Link */}
+          <div className="mt-4 text-center text-sm">
             <span className="text-muted-foreground">
               Already have an account?{" "}
             </span>
@@ -31,19 +32,6 @@ export default function SignUpPage() {
               Sign in
             </Link>
           </div>
-        </div>
-
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>
-            By creating an account, you agree to our{" "}
-            <Link href="/terms" className="text-primary hover:underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="text-primary hover:underline">
-              Privacy Policy
-            </Link>
-          </p>
         </div>
       </div>
     </div>

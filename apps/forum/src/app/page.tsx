@@ -1,112 +1,92 @@
-import Link from "next/link";
-import { Suspense } from "react";
-import { ThreadList } from "@/components/forum/thread-list";
-import { CategoryList } from "@/components/forum/category-list";
-import { SearchBar } from "@/components/forum/search-bar";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Skeleton } from "@createconomy/ui";
-import type { Metadata } from "next";
+'use client';
 
-export const metadata: Metadata = {
-  title: "Createconomy Forum - Community Discussions",
-  description:
-    "Join the Createconomy community forum. Discuss digital products, share knowledge, get help, and connect with creators and buyers.",
-};
+import { useState } from 'react';
+import { Navbar } from '@/components/navbar/navbar';
+import { LeftSidebar } from '@/components/layout/left-sidebar';
+import { RightSidebar } from '@/components/layout/right-sidebar';
+import { DiscussionFeed } from '@/components/feed/discussion-feed';
+import { GoogleOneTap } from '@/components/auth/google-one-tap';
+import { useAuth } from '@/hooks/use-auth';
+import { mockDiscussions } from '@/data/mock-data';
+import { cn } from '@/lib/utils';
 
-function ThreadListSkeleton() {
-  return (
-    <div className="space-y-4">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="thread-card">
-          <Skeleton className="h-6 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-full mb-2" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CategoryListSkeleton() {
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="rounded-lg border p-4">
-          <Skeleton className="h-6 w-1/2 mb-2" />
-          <Skeleton className="h-4 w-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
+/**
+ * ForumHomePage - Main forum homepage matching reference design
+ * Includes Google One Tap sign-in for seamless authentication
+ */
 export default function ForumHomePage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <section className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">
-          Welcome to Createconomy Forum
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
-          Connect with creators and buyers. Share knowledge, get help, and be
-          part of our growing community.
-        </p>
-        <div className="max-w-xl mx-auto">
-          <SearchBar placeholder="Search discussions..." />
+    <div className="dot-grid-background min-h-screen bg-background font-sans">
+      {/* Google One Tap - Only show when not authenticated */}
+      {!isAuthenticated && !isLoading && (
+        <GoogleOneTap
+          onSuccess={() => {
+            console.log('Successfully signed in via Google One Tap');
+          }}
+          onError={(error) => {
+            console.error('Google One Tap error:', error);
+          }}
+          context="signin"
+          autoSelect={false}
+        />
+      )}
+
+      {/* Navbar */}
+      <Navbar
+        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        isMobileMenuOpen={isMobileMenuOpen}
+      />
+
+      {/* Main Content */}
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <div className="flex gap-6">
+          {/* Left Sidebar - Desktop */}
+          <div className="hidden w-[250px] shrink-0 lg:block">
+            <div className="sticky top-24">
+              <LeftSidebar className="rounded-lg border border-border bg-card shadow-sm" />
+            </div>
+          </div>
+
+          {/* Mobile Sidebar Overlay */}
+          <div
+            className={cn(
+              'fixed inset-0 z-40 bg-foreground/50 transition-opacity duration-300 lg:hidden',
+              isMobileMenuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+            )}
+            onClick={() => setIsMobileMenuOpen(false)}
+            onKeyDown={(e) => e.key === 'Escape' && setIsMobileMenuOpen(false)}
+            role="button"
+            tabIndex={0}
+            aria-label="Close sidebar"
+          />
+
+          {/* Mobile Sidebar */}
+          <div
+            className={cn(
+              'fixed inset-y-0 left-0 z-50 w-[280px] transform bg-card shadow-xl transition-transform duration-300 ease-out lg:hidden',
+              isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            )}
+          >
+            <div className="h-full overflow-y-auto pt-20">
+              <LeftSidebar />
+            </div>
+          </div>
+
+          {/* Center Feed */}
+          <main className="min-w-0 flex-1">
+            <DiscussionFeed initialDiscussions={mockDiscussions} />
+          </main>
+
+          {/* Right Sidebar - Desktop & Tablet */}
+          <div className="hidden w-[300px] shrink-0 xl:block">
+            <div className="sticky top-24">
+              <RightSidebar />
+            </div>
+          </div>
         </div>
-      </section>
-
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Main Content */}
-        <div className="flex-1 space-y-8">
-          {/* Featured/Pinned Threads */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold">📌 Pinned Discussions</h2>
-            </div>
-            <Suspense fallback={<ThreadListSkeleton />}>
-              <ThreadList filter="pinned" limit={3} />
-            </Suspense>
-          </section>
-
-          {/* Categories Overview */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold">Categories</h2>
-              <Link
-                href="/c"
-                className="text-sm text-primary hover:underline"
-              >
-                View all →
-              </Link>
-            </div>
-            <Suspense fallback={<CategoryListSkeleton />}>
-              <CategoryList limit={6} />
-            </Suspense>
-          </section>
-
-          {/* Recent Activity */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold">Recent Discussions</h2>
-              <Link
-                href="/c"
-                className="text-sm text-primary hover:underline"
-              >
-                View all →
-              </Link>
-            </div>
-            <Suspense fallback={<ThreadListSkeleton />}>
-              <ThreadList filter="recent" limit={10} />
-            </Suspense>
-          </section>
-        </div>
-
-        {/* Sidebar */}
-        <aside className="w-full lg:w-80">
-          <Sidebar />
-        </aside>
       </div>
     </div>
   );

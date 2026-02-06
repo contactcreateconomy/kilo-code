@@ -34,15 +34,5 @@
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/cleanup-expired-carts",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/sync-stripe-products",
-      "schedule": "0 */6 * * *"
-    }
   ]
 }

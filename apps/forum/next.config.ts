@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Transpile monorepo packages
   transpilePackages: ["@createconomy/ui", "@createconomy/convex"],
 
+  // Turbopack configuration (Next.js 16 default)
+  turbopack: {},
+
   // Image optimization configuration
   images: {
     remotePatterns: [
@@ -19,8 +22,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com",
+      },
     ],
     formats: ["image/avif", "image/webp"],
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   // Security headers

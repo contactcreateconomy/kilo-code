@@ -3,8 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConvexProvider } from "@/providers/convex-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -13,11 +13,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Createconomy Forum - Community Discussions",
-    template: "%s | Createconomy Forum",
+    default: "Forum | Community Discussions",
+    template: "%s | Forum",
   },
   description:
-    "Join the Createconomy community forum. Discuss digital products, share knowledge, get help, and connect with creators and buyers.",
+    "Join the community forum. Discuss topics, share knowledge, get help, and connect with others.",
   keywords: [
     "forum",
     "community",
@@ -28,36 +28,36 @@ export const metadata: Metadata = {
     "help",
     "support",
   ],
-  authors: [{ name: "Createconomy" }],
-  creator: "Createconomy",
-  publisher: "Createconomy",
+  authors: [{ name: "Forum" }],
+  creator: "Forum",
+  publisher: "Forum",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://discuss.createconomy.com"
+    process.env["NEXT_PUBLIC_SITE_URL"] || "https://forum.example.com"
   ),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "/",
-    siteName: "Createconomy Forum",
-    title: "Createconomy Forum - Community Discussions",
+    siteName: "Forum",
+    title: "Forum | Community Discussions",
     description:
-      "Join the Createconomy community forum. Discuss digital products, share knowledge, get help, and connect with creators and buyers.",
+      "Join the community forum. Discuss topics, share knowledge, get help, and connect with others.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Createconomy Forum",
+        alt: "Forum",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Createconomy Forum - Community Discussions",
+    title: "Forum | Community Discussions",
     description:
-      "Join the Createconomy community forum. Discuss digital products, share knowledge, get help, and connect with creators and buyers.",
+      "Join the community forum. Discuss topics, share knowledge, get help, and connect with others.",
     images: ["/og-image.png"],
-    creator: "@createconomy",
+    creator: "@forum",
   },
   robots: {
     index: true,
@@ -86,18 +86,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider defaultTheme="system">
           <ConvexProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
+            <ToastProvider>
+              <div className="dot-grid-background relative flex min-h-screen flex-col bg-background">
+                <main className="relative z-10 flex-1">{children}</main>
+                <Footer />
+              </div>
+            </ToastProvider>
           </ConvexProvider>
         </ThemeProvider>
       </body>

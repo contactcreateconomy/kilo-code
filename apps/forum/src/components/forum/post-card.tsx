@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { UserBadge } from "@/components/forum/user-badge";
 import { formatDistanceToNow } from "@/lib/utils";

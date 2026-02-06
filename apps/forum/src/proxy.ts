@@ -54,14 +54,14 @@ function isPublicThreadView(pathname: string): boolean {
 }
 
 /**
- * Middleware for the forum app
+ * Proxy for the forum app (migrated from middleware for Next.js 16+)
  *
  * Handles:
  * - Session validation for protected routes
  * - Security headers
  * - CORS for cross-subdomain requests
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get("Origin");
 
@@ -128,7 +128,7 @@ export function middleware(request: NextRequest) {
     }
 
     // Note: Full session validation happens server-side in API routes
-    // and client-side in the AuthProvider. Middleware only checks
+    // and client-side in the AuthProvider. Proxy only checks
     // for the presence of the session cookie for performance.
   }
 

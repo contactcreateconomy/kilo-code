@@ -29,15 +29,5 @@
         { "key": "Expires", "value": "0" }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/generate-reports",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/cleanup-audit-logs",
-      "schedule": "0 3 * * 0"
-    }
   ]
 }

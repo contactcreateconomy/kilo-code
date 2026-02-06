@@ -8,6 +8,23 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Button, Skeleton } from "@createconomy/ui";
 import type { Metadata } from "next";
 
+interface Post {
+  id: string;
+  content: string;
+  author: {
+    id: string;
+    username: string;
+    avatar?: string;
+    role?: string;
+    joinedAt?: Date | string;
+    postCount?: number;
+  };
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+  likeCount?: number;
+  isLiked?: boolean;
+}
+
 // Mock function - in production, this would fetch from Convex
 async function getThread(id: string) {
   // Simulated thread data
@@ -18,7 +35,7 @@ async function getThread(id: string) {
       title: string;
       content: string;
       category: { slug: string; name: string };
-      author: { username: string; avatar: string; role: string };
+      author: { id: string; username: string; avatar: string; role: string };
       createdAt: string;
       isPinned: boolean;
       isLocked: boolean;
@@ -50,7 +67,7 @@ We're excited to have you here. This forum is a place for creators and buyers to
 Happy creating! 🎨
       `.trim(),
       category: { slug: "announcements", name: "Announcements" },
-      author: { username: "admin", avatar: "/avatars/admin.png", role: "Admin" },
+      author: { id: "admin-1", username: "admin", avatar: "/avatars/admin.png", role: "Admin" },
       createdAt: "2024-01-15T10:00:00Z",
       isPinned: true,
       isLocked: false,
@@ -60,6 +77,62 @@ Happy creating! 🎨
   };
 
   return threads[id] || null;
+}
+
+// Mock function to get posts for a thread
+async function getThreadPosts(threadId: string, page: number): Promise<Post[]> {
+  // In production, this would fetch from Convex with pagination
+  const mockPosts: Record<string, Post[]> = {
+    "1": [
+      {
+        id: "post-1",
+        content: "Welcome everyone! Excited to be part of this community. Looking forward to learning and sharing with all of you.",
+        author: {
+          id: "user-1",
+          username: "sarah_creator",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
+          role: "Member",
+          joinedAt: "2024-01-10T00:00:00Z",
+          postCount: 15,
+        },
+        createdAt: "2024-01-15T12:30:00Z",
+        likeCount: 12,
+        isLiked: false,
+      },
+      {
+        id: "post-2",
+        content: "Great to see such clear guidelines! This will help keep the community positive and productive.",
+        author: {
+          id: "user-2",
+          username: "mike_dev",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
+          role: "Member",
+          joinedAt: "2024-01-08T00:00:00Z",
+          postCount: 28,
+        },
+        createdAt: "2024-01-15T14:45:00Z",
+        likeCount: 8,
+        isLiked: true,
+      },
+      {
+        id: "post-3",
+        content: "Thanks for the warm welcome! I have a question - where's the best place to share my first digital product for feedback?",
+        author: {
+          id: "user-3",
+          username: "emma_design",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
+          role: "Member",
+          joinedAt: "2024-01-14T00:00:00Z",
+          postCount: 3,
+        },
+        createdAt: "2024-01-16T09:15:00Z",
+        likeCount: 5,
+        isLiked: false,
+      },
+    ],
+  };
+
+  return mockPosts[threadId] || [];
 }
 
 type Props = {
@@ -119,6 +192,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
   }
 
   const currentPage = parseInt(page, 10);
+  const posts = await getThreadPosts(id, currentPage);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -210,7 +284,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
             </h2>
 
             <Suspense fallback={<PostListSkeleton />}>
-              <PostList threadId={id} page={currentPage} />
+              <PostList posts={posts} originalPostId={thread.id} />
             </Suspense>
 
             {/* Pagination */}
@@ -257,7 +331,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
 
         {/* Sidebar */}
         <aside className="w-full lg:w-80">
-          <Sidebar threadId={id} categorySlug={thread.category.slug} />
+          <Sidebar currentCategory={thread.category.slug} />
         </aside>
       </div>
     </div>

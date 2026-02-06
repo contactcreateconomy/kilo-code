@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   // Transpile monorepo packages
   transpilePackages: ["@createconomy/ui", "@createconomy/convex", "@createconomy/config"],
 
+  // Turbopack configuration (Next.js 16 default)
+  turbopack: {},
+
   // Image optimization configuration
   images: {
     remotePatterns: [
