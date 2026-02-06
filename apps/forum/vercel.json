@@ -31,15 +31,5 @@
       "source": "/feed.xml",
       "destination": "/api/feed"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/cleanup-old-notifications",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/update-trending",
-      "schedule": "0 0 * * *"
-    }
   ]
 }
