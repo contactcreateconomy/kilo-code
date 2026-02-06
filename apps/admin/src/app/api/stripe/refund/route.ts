@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "@createconomy/convex";
 import {
   parseCookies,
   COOKIE_NAMES,
@@ -23,11 +21,6 @@ function getStripe() {
   return new Stripe(process.env['STRIPE_SECRET_KEY']!, {
     apiVersion: '2026-01-28.clover',
   });
-}
-
-// Lazy-initialize Convex client
-function getConvex() {
-  return new ConvexHttpClient(process.env['NEXT_PUBLIC_CONVEX_URL']!);
 }
 
 // Refund request body type
@@ -217,17 +210,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update order status in Convex
+    // TODO: Update order status in Convex once updateOrderRefundStatus function is implemented
+    // The Stripe refund has been processed at this point; Convex sync can be added later
     try {
-      await getConvex().mutation(api.functions.stripe.updateOrderRefundStatus, {
-        orderId,
-        refundId: refund.id,
-        refundAmount: refundAmount,
-        refundStatus: refund.status,
-        isPartialRefund: refundAmount < paymentIntent.amount,
-        adminUserId: userId,
-        notes: notes || undefined,
-      });
+      // Future: call Convex mutation to update order refund status
+      console.log("Refund processed for order:", orderId, "refundId:", refund.id);
     } catch (convexError) {
       console.error("Failed to update order in Convex:", convexError);
       // Don't fail the request - refund was successful

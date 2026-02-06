@@ -762,5 +762,7 @@ type UserRole = "user" | "seller" | "admin";
 ## Related Documentation
 
 - [Architecture Overview](./architecture.md)
+- [Data Models](./data-models.md)
+- [Key Files](./key-files.md)
 - [Security Guide](./security.md)
 - [Contributing Guide](./contributing.md)

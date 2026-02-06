@@ -47,8 +47,8 @@ Violations may result in temporary or permanent bans from the project. Report is
 
 ### Prerequisites
 
-- Node.js >= 20.0.0
-- pnpm >= 9.0.0
+- Node.js >= 24.0.0
+- pnpm >= 10.0.0
 - Git
 - A GitHub account
 

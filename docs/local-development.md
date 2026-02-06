@@ -4,8 +4,8 @@ This guide covers setting up and running the Createconomy platform locally.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v20 or later
-- [pnpm](https://pnpm.io/) v9 or later
+- [Node.js](https://nodejs.org/) v24 or later
+- [pnpm](https://pnpm.io/) v10 or later
 - [Git](https://git-scm.com/)
 
 ## Quick Start
@@ -343,7 +343,8 @@ Recommended settings (`.vscode/settings.json`):
 
 ## Getting Help
 
-- Check the [Deployment Guide](./deployment.md)
-- Review [Architecture Documentation](../plans/createconomy-platform-architecture.md)
+- Check the [Troubleshooting Guide](./troubleshooting.md)
+- Review [Architecture Documentation](./architecture.md)
+- Review [Environment & Configuration](./environment.md)
 - Open an issue on GitHub
 - Ask in the team Slack channel

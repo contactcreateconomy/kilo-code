@@ -555,5 +555,6 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
 
 - [Architecture Overview](./architecture.md)
 - [API Reference](./api-reference.md)
+- [Conventions & Patterns](./conventions.md)
 - [Contributing Guide](./contributing.md)
 - [Security Policy](../SECURITY.md)
