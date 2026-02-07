@@ -12,8 +12,8 @@ interface CategoryFormProps {
     status: string;
   };
   categories?: { id: string; name: string }[];
-  onSubmit: (data: CategoryFormData) => void;
-  onCancel: () => void;
+  onSubmit?: (data: CategoryFormData) => void;
+  onCancel?: () => void;
 }
 
 interface CategoryFormData {
@@ -40,7 +40,7 @@ export function CategoryForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit?.(formData);
   };
 
   const generateSlug = (name: string) => {

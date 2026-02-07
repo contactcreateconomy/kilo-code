@@ -12,12 +12,14 @@ export function ProductCard({ product }: ProductCardProps) {
     <Link href={`/products/${product.slug}`} className="group">
       <Card className="overflow-hidden transition-shadow hover:shadow-lg">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            className="object-cover transition-transform group-hover:scale-105"
-          />
+          {product.images[0] && (
+            <Image
+              src={product.images[0]}
+              alt={product.name}
+              fill
+              className="object-cover transition-transform group-hover:scale-105"
+            />
+          )}
         </div>
         <CardContent className="p-4">
           <h3 className="line-clamp-1 font-semibold group-hover:text-primary">

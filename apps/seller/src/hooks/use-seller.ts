@@ -85,7 +85,7 @@ export function useSellerProducts() {
     setError(null);
     try {
       // await createProduct(data);
-      console.log("Creating product:", data);
+      // TODO: Implement with Convex mutation
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create product");
       throw err;
@@ -99,7 +99,7 @@ export function useSellerProducts() {
     setError(null);
     try {
       // await updateProduct({ id, ...data });
-      console.log("Updating product:", id, data);
+      // TODO: Implement with Convex mutation
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update product");
       throw err;
@@ -113,7 +113,7 @@ export function useSellerProducts() {
     setError(null);
     try {
       // await deleteProduct({ id });
-      console.log("Deleting product:", id);
+      // TODO: Implement with Convex mutation
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete product");
       throw err;
@@ -145,7 +145,7 @@ export function useSellerOrders() {
       setError(null);
       try {
         // await updateOrderStatus({ orderId, status });
-        console.log("Updating order status:", orderId, status);
+        // TODO: Implement with Convex mutation
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update order");
         throw err;
@@ -169,7 +169,7 @@ export function useSellerOrders() {
       setError(null);
       try {
         // await addShippingInfo({ orderId, ...shipping });
-        console.log("Adding shipping info:", orderId, shipping);
+        // TODO: Implement with Convex mutation
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to add shipping info"

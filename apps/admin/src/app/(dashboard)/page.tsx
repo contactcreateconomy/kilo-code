@@ -18,29 +18,29 @@ export default function DashboardPage() {
         <StatsCard
           title="Total Revenue"
           value="$45,231.89"
-          change="+20.1%"
-          changeType="positive"
+          change={20.1}
+          trend="up"
           icon="dollar"
         />
         <StatsCard
           title="Orders"
           value="2,350"
-          change="+15.2%"
-          changeType="positive"
+          change={15.2}
+          trend="up"
           icon="shopping-cart"
         />
         <StatsCard
           title="Active Users"
           value="12,234"
-          change="+5.4%"
-          changeType="positive"
+          change={5.4}
+          trend="up"
           icon="users"
         />
         <StatsCard
           title="Products"
           value="573"
-          change="+12"
-          changeType="neutral"
+          change={12}
+          trend="neutral"
           icon="package"
         />
       </div>

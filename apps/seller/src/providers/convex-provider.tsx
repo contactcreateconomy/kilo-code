@@ -9,7 +9,9 @@ import {
   LoginRedirect,
 } from "@createconomy/ui/components/auth";
 
-const convex = new ConvexReactClient(process.env["NEXT_PUBLIC_CONVEX_URL"]!);
+const convex = new ConvexReactClient(
+  process.env["NEXT_PUBLIC_CONVEX_URL"] ?? "https://placeholder.convex.cloud"
+);
 
 interface ConvexClientProviderProps {
   children: ReactNode;
@@ -45,7 +47,7 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
     <ConvexProvider client={convex}>
       <ConvexAuthProvider client={convex}>
         <AuthProvider
-          convexUrl={process.env["NEXT_PUBLIC_CONVEX_URL"]!}
+          convexUrl={process.env["NEXT_PUBLIC_CONVEX_URL"] ?? "https://placeholder.convex.cloud"}
           onAuthError={handleAuthError}
         >
           <SessionSync onLogoutSync={handleLogoutSync} />

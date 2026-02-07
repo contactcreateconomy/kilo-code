@@ -1,8 +1,24 @@
 import { query, mutation } from "../_generated/server";
+import type { QueryCtx, MutationCtx } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
-import { userRoleValidator, orderStatusValidator } from "../schema";
+import type { Doc, Id } from "../_generated/dataModel";
+import { userRoleValidator, orderStatusValidator, productStatusValidator } from "../schema";
+
+/** Order status literal type (mirrors orderStatusValidator) */
+type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "refunded"
+  | "partially_refunded"
+  | "disputed";
+
+/** Product status literal type (mirrors productStatusValidator) */
+type ProductStatus = "draft" | "active" | "inactive" | "archived";
 
 /**
  * Admin Management Functions
@@ -20,7 +36,7 @@ import { userRoleValidator, orderStatusValidator } from "../schema";
 /**
  * Verify the current user is an admin
  */
-async function requireAdmin(ctx: any) {
+async function requireAdmin(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
   if (!userId) {
     throw new Error("Authentication required");
@@ -28,7 +44,7 @@ async function requireAdmin(ctx: any) {
 
   const profile = await ctx.db
     .query("userProfiles")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .withIndex("by_user", (q) => q.eq("userId", userId))
     .first();
 
   if (!profile || profile.defaultRole !== "admin") {
@@ -54,83 +70,207 @@ export const getDashboardStats = query({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
-    // Get user counts
-    const allProfiles = await ctx.db.query("userProfiles").collect();
+    // PERF: Use index-based queries per role instead of collecting ALL profiles
+    // and filtering in memory. The "by_role" and "by_banned" indexes allow
+    // Convex to narrow the scan. Still uses .collect() for counting — should
+    // be replaced with pre-computed counters (e.g., a dashboardCounters table
+    // updated via mutations) once table sizes justify the extra complexity.
+    const [customers, sellers, admins, moderators, bannedProfiles] =
+      await Promise.all([
+        ctx.db
+          .query("userProfiles")
+          .withIndex("by_role", (q) => q.eq("defaultRole", "customer"))
+          .collect(),
+        ctx.db
+          .query("userProfiles")
+          .withIndex("by_role", (q) => q.eq("defaultRole", "seller"))
+          .collect(),
+        ctx.db
+          .query("userProfiles")
+          .withIndex("by_role", (q) => q.eq("defaultRole", "admin"))
+          .collect(),
+        ctx.db
+          .query("userProfiles")
+          .withIndex("by_role", (q) => q.eq("defaultRole", "moderator"))
+          .collect(),
+        ctx.db
+          .query("userProfiles")
+          .withIndex("by_banned", (q) => q.eq("isBanned", true))
+          .collect(),
+      ]);
+
     const userStats = {
-      total: allProfiles.length,
-      customers: allProfiles.filter((p: any) => p.defaultRole === "customer").length,
-      sellers: allProfiles.filter((p: any) => p.defaultRole === "seller").length,
-      admins: allProfiles.filter((p: any) => p.defaultRole === "admin").length,
-      moderators: allProfiles.filter((p: any) => p.defaultRole === "moderator").length,
-      banned: allProfiles.filter((p: any) => p.isBanned).length,
+      total: customers.length + sellers.length + admins.length + moderators.length,
+      customers: customers.length,
+      sellers: sellers.length,
+      admins: admins.length,
+      moderators: moderators.length,
+      banned: bannedProfiles.length,
     };
 
-    // Get order stats
-    const allOrders = args.tenantId
-      ? await ctx.db
+    // PERF: Use index-based queries per order status instead of collecting ALL
+    // orders then filtering in memory. Each query uses "by_status" (or
+    // "by_tenant_status") so Convex only scans matching rows.
+    const ordersByStatus = async (status: OrderStatus) => {
+      if (args.tenantId) {
+        return ctx.db
           .query("orders")
-          .withIndex("by_tenant", (q: any) => q.eq("tenantId", args.tenantId))
-          .collect()
-      : await ctx.db.query("orders").collect();
+          .withIndex("by_tenant_status", (q) =>
+            q.eq("tenantId", args.tenantId).eq("status", status)
+          )
+          .collect();
+      }
+      return ctx.db
+        .query("orders")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .collect();
+    };
+
+    const [
+      pendingOrders,
+      confirmedOrders,
+      processingOrders,
+      shippedOrders,
+      deliveredOrders,
+      cancelledOrders,
+    ] = await Promise.all([
+      ordersByStatus("pending"),
+      ordersByStatus("confirmed"),
+      ordersByStatus("processing"),
+      ordersByStatus("shipped"),
+      ordersByStatus("delivered"),
+      ordersByStatus("cancelled"),
+    ]);
 
     const now = Date.now();
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
     const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
     const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
 
+    // PERF: For time-range counts we still need a scan. Ideally add a
+    // "by_createdAt" index and use range queries, or pre-compute counters.
+    // For now, collect recent orders (desc) and filter in memory.
+    const recentOrdersCap = args.tenantId
+      ? await ctx.db
+          .query("orders")
+          .withIndex("by_tenant", (q) => q.eq("tenantId", args.tenantId))
+          .order("desc")
+          .collect()
+      : await ctx.db.query("orders").order("desc").collect();
+
+    const recentOrdersLastMonth = recentOrdersCap.filter(
+      (o) => o.createdAt > oneMonthAgo
+    );
+
+    const allOrders = [
+      ...pendingOrders,
+      ...confirmedOrders,
+      ...processingOrders,
+      ...shippedOrders,
+      ...deliveredOrders,
+      ...cancelledOrders,
+    ];
+
     const orderStats = {
       total: allOrders.length,
-      pending: allOrders.filter((o: any) => o.status === "pending").length,
-      confirmed: allOrders.filter((o: any) => o.status === "confirmed").length,
-      processing: allOrders.filter((o: any) => o.status === "processing").length,
-      shipped: allOrders.filter((o: any) => o.status === "shipped").length,
-      delivered: allOrders.filter((o: any) => o.status === "delivered").length,
-      cancelled: allOrders.filter((o: any) => o.status === "cancelled").length,
-      last24Hours: allOrders.filter((o: any) => o.createdAt > oneDayAgo).length,
-      lastWeek: allOrders.filter((o: any) => o.createdAt > oneWeekAgo).length,
-      lastMonth: allOrders.filter((o: any) => o.createdAt > oneMonthAgo).length,
+      pending: pendingOrders.length,
+      confirmed: confirmedOrders.length,
+      processing: processingOrders.length,
+      shipped: shippedOrders.length,
+      delivered: deliveredOrders.length,
+      cancelled: cancelledOrders.length,
+      last24Hours: recentOrdersLastMonth.filter(
+        (o) => o.createdAt > oneDayAgo
+      ).length,
+      lastWeek: recentOrdersLastMonth.filter(
+        (o) => o.createdAt > oneWeekAgo
+      ).length,
+      lastMonth: recentOrdersLastMonth.length,
     };
 
-    // Calculate revenue
-    const completedOrders = allOrders.filter(
-      (o: any) => o.status === "delivered" || o.status === "shipped"
-    );
+    // PERF: Revenue only needs shipped + delivered orders. We already have
+    // those from the index-based queries above — no extra full-table scan.
+    const completedOrders = [...shippedOrders, ...deliveredOrders];
     const revenueStats = {
-      total: completedOrders.reduce((sum: number, o: any) => sum + o.total, 0),
+      total: completedOrders.reduce((sum: number, o) => sum + o.total, 0),
       last24Hours: completedOrders
-        .filter((o: any) => o.createdAt > oneDayAgo)
-        .reduce((sum: number, o: any) => sum + o.total, 0),
+        .filter((o) => o.createdAt > oneDayAgo)
+        .reduce((sum: number, o) => sum + o.total, 0),
       lastWeek: completedOrders
-        .filter((o: any) => o.createdAt > oneWeekAgo)
-        .reduce((sum: number, o: any) => sum + o.total, 0),
+        .filter((o) => o.createdAt > oneWeekAgo)
+        .reduce((sum: number, o) => sum + o.total, 0),
       lastMonth: completedOrders
-        .filter((o: any) => o.createdAt > oneMonthAgo)
-        .reduce((sum: number, o: any) => sum + o.total, 0),
+        .filter((o) => o.createdAt > oneMonthAgo)
+        .reduce((sum: number, o) => sum + o.total, 0),
     };
 
-    // Get product stats
-    const allProducts = args.tenantId
+    // PERF: Use index-based queries per product status instead of collecting
+    // ALL products then filtering. Uses "by_tenant_status" or "by_status" and
+    // "by_deleted" indexes to narrow each scan.
+    const productsByStatus = async (status: ProductStatus) => {
+      if (args.tenantId) {
+        return ctx.db
+          .query("products")
+          .withIndex("by_tenant_status", (q) =>
+            q.eq("tenantId", args.tenantId).eq("status", status)
+          )
+          .filter((q) => q.eq(q.field("isDeleted"), false))
+          .collect();
+      }
+      return ctx.db
+        .query("products")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .filter((q) => q.eq(q.field("isDeleted"), false))
+        .collect();
+    };
+
+    const deletedProducts = args.tenantId
       ? await ctx.db
           .query("products")
-          .withIndex("by_tenant", (q: any) => q.eq("tenantId", args.tenantId))
+          .withIndex("by_tenant", (q) => q.eq("tenantId", args.tenantId))
+          .filter((q) => q.eq(q.field("isDeleted"), true))
           .collect()
-      : await ctx.db.query("products").collect();
+      : await ctx.db
+          .query("products")
+          .withIndex("by_deleted", (q) => q.eq("isDeleted", true))
+          .collect();
+
+    const [activeProducts, draftProducts, inactiveProducts] = await Promise.all(
+      [
+        productsByStatus("active"),
+        productsByStatus("draft"),
+        productsByStatus("inactive"),
+      ]
+    );
 
     const productStats = {
-      total: allProducts.length,
-      active: allProducts.filter((p: any) => p.status === "active" && !p.isDeleted).length,
-      draft: allProducts.filter((p: any) => p.status === "draft" && !p.isDeleted).length,
-      inactive: allProducts.filter((p: any) => p.status === "inactive" && !p.isDeleted).length,
-      deleted: allProducts.filter((p: any) => p.isDeleted).length,
+      total:
+        activeProducts.length +
+        draftProducts.length +
+        inactiveProducts.length +
+        deletedProducts.length,
+      active: activeProducts.length,
+      draft: draftProducts.length,
+      inactive: inactiveProducts.length,
+      deleted: deletedProducts.length,
     };
 
-    // Get forum stats
-    const allThreads = await ctx.db.query("forumThreads").collect();
-    const allPosts = await ctx.db.query("forumPosts").collect();
+    // PERF: Use "by_deleted" index to only scan non-deleted threads/posts
+    // instead of collecting ALL records and filtering in memory.
+    const [activeThreads, activePosts] = await Promise.all([
+      ctx.db
+        .query("forumThreads")
+        .withIndex("by_deleted", (q) => q.eq("isDeleted", false))
+        .collect(),
+      ctx.db
+        .query("forumPosts")
+        .withIndex("by_deleted", (q) => q.eq("isDeleted", false))
+        .collect(),
+    ]);
 
     const forumStats = {
-      threads: allThreads.filter((t: any) => !t.isDeleted).length,
-      posts: allPosts.filter((p: any) => !p.isDeleted).length,
+      threads: activeThreads.length,
+      posts: activePosts.length,
     };
 
     return {
@@ -164,15 +304,15 @@ export const getSystemHealth = query({
       .take(100);
 
     const recentOrdersLastHour = recentOrders.filter(
-      (o: any) => o.createdAt > oneHourAgo
+      (o) => o.createdAt > oneHourAgo
     ).length;
 
     const recentSessions = await ctx.db
       .query("sessions")
-      .withIndex("by_expires", (q: any) => q.gt("expiresAt", now))
+      .withIndex("by_expires", (q) => q.gt("expiresAt", now))
       .collect();
 
-    const activeSessions = recentSessions.filter((s: any) => s.isActive).length;
+    const activeSessions = recentSessions.filter((s) => s.isActive).length;
 
     // Get webhook event stats
     const recentWebhooks = await ctx.db
@@ -181,7 +321,7 @@ export const getSystemHealth = query({
       .take(100);
 
     const failedWebhooks = recentWebhooks.filter(
-      (w: any) => w.processed && w.error
+      (w) => w.processed && w.error
     ).length;
 
     return {
@@ -223,14 +363,16 @@ export const listAllUsers = query({
 
     let profilesQuery;
 
-    if (args.role) {
+    if (args.role !== undefined) {
+      const role = args.role;
       profilesQuery = ctx.db
         .query("userProfiles")
-        .withIndex("by_role", (q: any) => q.eq("defaultRole", args.role));
+        .withIndex("by_role", (q) => q.eq("defaultRole", role));
     } else if (args.isBanned !== undefined) {
+      const isBanned = args.isBanned;
       profilesQuery = ctx.db
         .query("userProfiles")
-        .withIndex("by_banned", (q: any) => q.eq("isBanned", args.isBanned));
+        .withIndex("by_banned", (q) => q.eq("isBanned", isBanned));
     } else {
       profilesQuery = ctx.db.query("userProfiles");
     }
@@ -242,7 +384,7 @@ export const listAllUsers = query({
 
     // Get user details for each profile
     const usersWithProfiles = await Promise.all(
-      items.map(async (profile: any) => {
+      items.map(async (profile) => {
         const user = await ctx.db.get(profile.userId) as { _id: Id<"users">; email?: string; name?: string; image?: string } | null;
 
         return {
@@ -265,7 +407,7 @@ export const listAllUsers = query({
     return {
       items: usersWithProfiles,
       hasMore,
-      nextCursor: hasMore ? items[items.length - 1]._id : null,
+      nextCursor: hasMore ? items[items.length - 1]?._id ?? null : null,
     };
   },
 });
@@ -294,7 +436,7 @@ export const updateUserStatus = mutation({
 
     const profile = await ctx.db
       .query("userProfiles")
-      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
 
     if (!profile) {
@@ -314,7 +456,7 @@ export const updateUserStatus = mutation({
     if (args.isBanned) {
       const sessions = await ctx.db
         .query("sessions")
-        .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
         .collect();
 
       for (const session of sessions) {
@@ -350,7 +492,7 @@ export const changeUserRole = mutation({
 
     const profile = await ctx.db
       .query("userProfiles")
-      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
 
     const now = Date.now();
@@ -368,6 +510,129 @@ export const changeUserRole = mutation({
         createdAt: now,
         updatedAt: now,
       });
+    }
+
+    return true;
+  },
+});
+
+// ============================================================================
+// Seller Management
+// ============================================================================
+
+/**
+ * List pending seller applications
+ *
+ * BUG FIX B6: Added to support the seller approval workflow.
+ * Lists seller records that have not yet been approved.
+ *
+ * @param limit - Number of sellers to return
+ * @returns List of pending seller applications with user details
+ */
+export const listPendingSellers = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const limit = args.limit ?? 20;
+
+    const pendingSellers = await ctx.db
+      .query("sellers")
+      .withIndex("by_approved", (q) => q.eq("isApproved", false))
+      .order("desc")
+      .take(limit);
+
+    // Get user details for each seller
+    const sellersWithDetails = await Promise.all(
+      pendingSellers.map(async (seller) => {
+        const user = await ctx.db.get(seller.userId) as {
+          _id: Id<"users">;
+          email?: string;
+          name?: string;
+        } | null;
+
+        return {
+          ...seller,
+          user: user
+            ? {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+              }
+            : null,
+        };
+      })
+    );
+
+    return sellersWithDetails;
+  },
+});
+
+/**
+ * Approve or reject a seller application
+ *
+ * BUG FIX B6: Completes the seller approval workflow introduced by the
+ * updated requestSellerRole mutation. When approved, sets the seller record
+ * to approved/active and upgrades the user's profile role to "seller".
+ * When rejected, removes the seller record.
+ *
+ * @param sellerId - Seller record ID
+ * @param approved - Whether to approve or reject
+ * @returns Success boolean
+ */
+export const approveSeller = mutation({
+  args: {
+    sellerId: v.id("sellers"),
+    approved: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const seller = await ctx.db.get(args.sellerId);
+    if (!seller) {
+      throw new Error("Seller application not found");
+    }
+
+    if (seller.isApproved) {
+      throw new Error("Seller is already approved");
+    }
+
+    const now = Date.now();
+
+    if (args.approved) {
+      // Approve the seller record
+      await ctx.db.patch(args.sellerId, {
+        isApproved: true,
+        approvedAt: now,
+        isActive: true,
+        updatedAt: now,
+      });
+
+      // Upgrade the user's profile role to "seller"
+      const profile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", seller.userId))
+        .first();
+
+      if (profile) {
+        await ctx.db.patch(profile._id, {
+          defaultRole: "seller",
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("userProfiles", {
+          userId: seller.userId,
+          defaultRole: "seller",
+          isBanned: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    } else {
+      // Reject: remove the seller record so the user can re-apply later
+      await ctx.db.delete(args.sellerId);
     }
 
     return true;
@@ -400,19 +665,22 @@ export const listAllOrders = query({
     let ordersQuery;
 
     if (args.tenantId && args.status) {
+      const tenantId = args.tenantId;
+      const status = args.status;
       ordersQuery = ctx.db
         .query("orders")
-        .withIndex("by_tenant_status", (q: any) =>
-          q.eq("tenantId", args.tenantId).eq("status", args.status)
+        .withIndex("by_tenant_status", (q) =>
+          q.eq("tenantId", tenantId).eq("status", status)
         );
     } else if (args.status) {
+      const status = args.status;
       ordersQuery = ctx.db
         .query("orders")
-        .withIndex("by_status", (q: any) => q.eq("status", args.status));
+        .withIndex("by_status", (q) => q.eq("status", status));
     } else if (args.tenantId) {
       ordersQuery = ctx.db
         .query("orders")
-        .withIndex("by_tenant", (q: any) => q.eq("tenantId", args.tenantId));
+        .withIndex("by_tenant", (q) => q.eq("tenantId", args.tenantId));
     } else {
       ordersQuery = ctx.db.query("orders");
     }
@@ -424,12 +692,12 @@ export const listAllOrders = query({
 
     // Get user info for each order
     const ordersWithUsers = await Promise.all(
-      items.map(async (order: any) => {
+      items.map(async (order) => {
         const user = await ctx.db.get(order.userId) as { _id: Id<"users">; email?: string; name?: string } | null;
 
         const itemCount = await ctx.db
           .query("orderItems")
-          .withIndex("by_order", (q: any) => q.eq("orderId", order._id))
+          .withIndex("by_order", (q) => q.eq("orderId", order._id))
           .collect();
 
         return {
@@ -449,7 +717,7 @@ export const listAllOrders = query({
     return {
       items: ordersWithUsers,
       hasMore,
-      nextCursor: hasMore ? items[items.length - 1]._id : null,
+      nextCursor: hasMore ? items[items.length - 1]?._id ?? null : null,
     };
   },
 });
@@ -476,7 +744,7 @@ export const forceUpdateOrderStatus = mutation({
     }
 
     const now = Date.now();
-    const updates: Record<string, any> = {
+    const updates: Partial<Doc<"orders">> = {
       status: args.status,
       updatedAt: now,
     };
@@ -508,7 +776,7 @@ export const forceUpdateOrderStatus = mutation({
     // Update all order items
     const orderItems = await ctx.db
       .query("orderItems")
-      .withIndex("by_order", (q: any) => q.eq("orderId", args.orderId))
+      .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
       .collect();
 
     for (const item of orderItems) {
@@ -543,7 +811,7 @@ export const listPendingReviews = query({
 
     const reviews = await ctx.db
       .query("reviews")
-      .filter((q: any) =>
+      .filter((q) =>
         q.and(
           q.eq(q.field("isApproved"), false),
           q.eq(q.field("isDeleted"), false)
@@ -554,7 +822,7 @@ export const listPendingReviews = query({
 
     // Get product and user info
     const reviewsWithDetails = await Promise.all(
-      reviews.map(async (review: any) => {
+      reviews.map(async (review) => {
         const product = await ctx.db.get(review.productId) as { _id: Id<"products">; name: string } | null;
         const user = await ctx.db.get(review.userId) as { _id: Id<"users">; email?: string; name?: string } | null;
 
@@ -609,23 +877,22 @@ export const moderateReview = mutation({
         updatedAt: now,
       });
 
-      // Update product rating
-      const allReviews = await ctx.db
-        .query("reviews")
-        .withIndex("by_product_approved", (q: any) =>
-          q.eq("productId", review.productId).eq("isApproved", true)
-        )
-        .filter((q: any) => q.eq(q.field("isDeleted"), false))
-        .collect();
+      // BUG FIX B4: Compute new average rating mathematically instead of
+      // re-querying ALL approved reviews (O(n) and gets worse over time).
+      // Formula: newAvg = (oldAvg * oldCount + newRating) / (oldCount + 1)
+      const product = await ctx.db.get(review.productId);
+      if (product) {
+        const oldAvg = product.averageRating ?? 0;
+        const oldCount = product.reviewCount ?? 0;
+        const newCount = oldCount + 1;
+        const newAvg = (oldAvg * oldCount + review.rating) / newCount;
 
-      const totalRating = allReviews.reduce((sum: number, r: any) => sum + r.rating, 0);
-      const averageRating = totalRating / allReviews.length;
-
-      await ctx.db.patch(review.productId, {
-        averageRating: Math.round(averageRating * 10) / 10,
-        reviewCount: allReviews.length,
-        updatedAt: now,
-      });
+        await ctx.db.patch(review.productId, {
+          averageRating: Math.round(newAvg * 100) / 100, // Round to 2 decimals
+          reviewCount: newCount,
+          updatedAt: now,
+        });
+      }
     } else {
       // Soft delete rejected review
       await ctx.db.patch(args.reviewId, {
@@ -656,13 +923,13 @@ export const listReportedPosts = query({
 
     const posts = await ctx.db
       .query("forumPosts")
-      .withIndex("by_status", (q: any) => q.eq("status", "hidden"))
-      .filter((q: any) => q.eq(q.field("isDeleted"), false))
+      .withIndex("by_status", (q) => q.eq("status", "hidden"))
+      .filter((q) => q.eq(q.field("isDeleted"), false))
       .take(limit);
 
     // Get thread and user info
     const postsWithDetails = await Promise.all(
-      posts.map(async (post: any) => {
+      posts.map(async (post) => {
         const thread = await ctx.db.get(post.threadId) as { _id: Id<"forumThreads">; title: string } | null;
         const user = await ctx.db.get(post.authorId) as { _id: Id<"users">; email?: string; name?: string } | null;
 

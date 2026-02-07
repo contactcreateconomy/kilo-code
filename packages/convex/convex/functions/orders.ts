@@ -1,8 +1,30 @@
 import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { orderStatusValidator } from "../schema";
+import { generateOrderNumber } from "../lib/orderUtils";
+
+/**
+ * Typed update object for order status changes.
+ * Mirrors the mutable fields on the orders table that may be set
+ * when transitioning between statuses.
+ */
+interface OrderStatusUpdate {
+  status: Doc<"orders">["status"];
+  updatedAt: number;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  paidAt?: number;
+  shippedAt?: number;
+  deliveredAt?: number;
+  cancelledAt?: number;
+  cancelReason?: string;
+  refundedAt?: number;
+  refundAmount?: number;
+  refundReason?: string;
+  notes?: string;
+}
 
 /**
  * Order Management Functions
@@ -298,6 +320,12 @@ export const getSellerOrders = query({
 /**
  * Create an order from cart
  *
+ * A3 TODO: Add database-backed rate limiting here to prevent order creation
+ * abuse. Suggested config: rateLimitConfigs.orderCreation (10 per hour).
+ * Example:
+ *   await checkRateLimitWithDb(ctx, `createOrder:${userId}`, rateLimitConfigs.orderCreation);
+ * Deferred to avoid coupling with payment flow changes.
+ *
  * @param shippingAddress - Shipping address
  * @param billingAddress - Billing address (optional, uses shipping if not provided)
  * @param notes - Order notes
@@ -363,6 +391,11 @@ export const createOrder = mutation({
       throw new Error("Cart is empty");
     }
 
+    // BUG FIX B1: Store validated products in a Map during the validation phase
+    // so we can reuse them during inventory deduction, avoiding a redundant
+    // second ctx.db.get() call that could read stale data (race condition).
+    const validatedProducts = new Map<Id<"products">, Doc<"products">>();
+
     // Validate products and calculate totals
     let subtotal = 0;
     const orderItemsData = [];
@@ -379,6 +412,9 @@ export const createOrder = mutation({
           throw new Error(`Insufficient inventory for ${product.name}`);
         }
       }
+
+      // BUG FIX B1: Cache the product for reuse during inventory deduction
+      validatedProducts.set(product._id, product);
 
       const itemSubtotal = product.price * cartItem.quantity;
       subtotal += itemSubtotal;
@@ -402,8 +438,9 @@ export const createOrder = mutation({
 
     const now = Date.now();
 
-    // Generate order number
-    const orderNumber = `ORD-${now}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // BUG FIX B5: Use shared crypto-secure order number generator
+    // instead of inline Math.random() which is not cryptographically secure
+    const orderNumber = generateOrderNumber();
 
     // Create order
     const orderId = await ctx.db.insert("orders", {
@@ -424,7 +461,7 @@ export const createOrder = mutation({
       updatedAt: now,
     });
 
-    // Create order items
+    // Create order items and update inventory
     for (const itemData of orderItemsData) {
       await ctx.db.insert("orderItems", {
         orderId,
@@ -440,19 +477,19 @@ export const createOrder = mutation({
         updatedAt: now,
       });
 
-      // Update product inventory
-      const product = await ctx.db.get(itemData.productId);
-      if (product && product.trackInventory && product.inventory !== undefined) {
-        await ctx.db.patch(itemData.productId, {
-          inventory: product.inventory - itemData.quantity,
-        });
-      }
-
-      // Update product sales count
+      // BUG FIX B1: Reuse product data from the validation phase instead of
+      // fetching again — eliminates the race condition where inventory could
+      // change between the two reads. Also combines inventory deduction and
+      // salesCount update into a SINGLE patch to avoid overwriting changes.
+      const product = validatedProducts.get(itemData.productId);
       if (product) {
-        await ctx.db.patch(itemData.productId, {
-          salesCount: product.salesCount + itemData.quantity,
-        });
+        const patchData: { salesCount: number; inventory?: number } = {
+          salesCount: (product.salesCount ?? 0) + itemData.quantity,
+        };
+        if (product.trackInventory && product.inventory !== undefined) {
+          patchData.inventory = product.inventory - itemData.quantity;
+        }
+        await ctx.db.patch(itemData.productId, patchData);
       }
     }
 
@@ -535,7 +572,7 @@ export const updateOrderStatus = mutation({
     }
 
     const now = Date.now();
-    const updates: Record<string, any> = {
+    const updates: OrderStatusUpdate = {
       status: args.status,
       updatedAt: now,
     };

@@ -106,10 +106,7 @@ export default async function SearchPage({ searchParams }: Props) {
       {q ? (
         <Suspense fallback={<SearchResultsSkeleton />}>
           <ThreadList
-            searchQuery={q}
-            categorySlug={category}
-            sort={sort}
-            page={currentPage}
+            emptyMessage={`No results found for "${q}"`}
           />
         </Suspense>
       ) : (

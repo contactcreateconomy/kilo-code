@@ -22,54 +22,9 @@ interface NavbarProps {
   isMobileMenuOpen: boolean;
 }
 
-// Mock notifications data
-const mockNotifications = [
-  {
-    id: '1',
-    type: 'reply' as const,
-    title: 'New reply to your discussion',
-    message: 'Sarah commented on "Best practices for React hooks"',
-    time: '2m ago',
-    read: false,
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-  },
-  {
-    id: '2',
-    type: 'upvote' as const,
-    title: 'Your post is trending!',
-    message: 'Your discussion received 50+ upvotes',
-    time: '1h ago',
-    read: false,
-    avatar: null,
-  },
-  {
-    id: '3',
-    type: 'mention' as const,
-    title: 'You were mentioned',
-    message: '@mike mentioned you in "TypeScript tips"',
-    time: '3h ago',
-    read: true,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-  },
-  {
-    id: '4',
-    type: 'follow' as const,
-    title: 'New follower',
-    message: 'Alex started following you',
-    time: '1d ago',
-    read: true,
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-  },
-  {
-    id: '5',
-    type: 'campaign' as const,
-    title: 'Campaign milestone!',
-    message: 'You earned 100 points in the weekly challenge',
-    time: '2d ago',
-    read: true,
-    avatar: null,
-  },
-];
+// Notifications are not yet backed by a database table.
+// Empty array until a notifications system is implemented.
+const notifications: Notification[] = [];
 
 /**
  * Navbar - Simplified navbar matching reference design
@@ -105,7 +60,7 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
     }
   };
 
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <nav className="glassmorphism-navbar sticky top-0 z-50">
@@ -174,7 +129,7 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
 
           {/* Notifications Dropdown - Only show when authenticated */}
           {isAuthenticated && (
-            <NotificationsDropdown notifications={mockNotifications} unreadCount={unreadCount} />
+            <NotificationsDropdown notifications={notifications} unreadCount={unreadCount} />
           )}
 
           {/* User Avatar Dropdown or Login Button */}

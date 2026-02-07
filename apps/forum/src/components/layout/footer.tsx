@@ -14,8 +14,8 @@ const footerLinks = {
     { name: "Support", href: "/c/support" },
   ],
   platform: [
-    { name: "Marketplace", href: process.env.NEXT_PUBLIC_MAIN_SITE_URL || "https://createconomy.com" },
-    { name: "Seller Portal", href: process.env.NEXT_PUBLIC_SELLER_URL || "https://seller.createconomy.com" },
+    { name: "Marketplace", href: process.env['NEXT_PUBLIC_MAIN_SITE_URL'] || "https://createconomy.com" },
+    { name: "Seller Portal", href: process.env['NEXT_PUBLIC_SELLER_URL'] || "https://seller.createconomy.com" },
     { name: "Blog", href: "/blog" },
     { name: "Status", href: "/status" },
   ],

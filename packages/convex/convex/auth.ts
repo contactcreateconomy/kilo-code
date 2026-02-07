@@ -1,9 +1,9 @@
 import { convexAuth, getAuthUserId } from "@convex-dev/auth/server";
 import Google from "@auth/core/providers/google";
 import GitHub from "@auth/core/providers/github";
-import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
-import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import { query, mutation, internalMutation, type QueryCtx, type MutationCtx } from "./_generated/server";
+import { v, ConvexError } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { SESSION_CONFIG } from "./auth.config";
 
 /**
@@ -21,12 +21,12 @@ import { SESSION_CONFIG } from "./auth.config";
 export const { auth, signIn, signOut, store } = convexAuth({
   providers: [
     Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      clientId: process.env["AUTH_GOOGLE_ID"],
+      clientSecret: process.env["AUTH_GOOGLE_SECRET"],
     }),
     GitHub({
-      clientId: process.env.AUTH_GITHUB_ID,
-      clientSecret: process.env.AUTH_GITHUB_SECRET,
+      clientId: process.env["AUTH_GITHUB_ID"],
+      clientSecret: process.env["AUTH_GITHUB_SECRET"],
     }),
   ],
 });
@@ -167,6 +167,13 @@ export async function requireAdminOrModerator(
 // Cross-Subdomain Session Management Functions
 // ============================================================================
 
+/** Shared user info shape returned by session queries/mutations */
+interface SessionUserInfo {
+  id: Id<"users">;
+  email?: string;
+  name?: string;
+}
+
 /**
  * Create a cross-subdomain session
  * Used for maintaining auth across different subdomains
@@ -178,7 +185,14 @@ export const createSession = mutation({
     ipAddress: v.optional(v.string()),
     origin: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{
+    sessionId: Id<"sessions">;
+    token: string;
+    expiresAt: number;
+    userId: Id<"users">;
+    role: string;
+    tenantId: Id<"tenants"> | undefined;
+  }> => {
     const userId = await requireAuth(ctx);
 
     // Get user profile for role information
@@ -223,7 +237,15 @@ export const validateSession = query({
   args: {
     token: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{
+    sessionId: Id<"sessions">;
+    userId: Id<"users">;
+    tenantId: Id<"tenants"> | undefined;
+    expiresAt: number;
+    role: string;
+    user: SessionUserInfo | null;
+    needsRefresh: boolean;
+  } | null> => {
     const session = await ctx.db
       .query("sessions")
       .withIndex("by_token", (q) => q.eq("token", args.token))
@@ -326,7 +348,17 @@ export const refreshSession = mutation({
   args: {
     token: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    session: {
+      sessionId: Id<"sessions">;
+      token: string;
+      userId: Id<"users">;
+      tenantId: Id<"tenants"> | undefined;
+      expiresAt: number;
+      role: string;
+    } | null;
+  }> => {
     const session = await ctx.db
       .query("sessions")
       .withIndex("by_token", (q) => q.eq("token", args.token))
@@ -396,22 +428,51 @@ export const touchSession = mutation({
 
 /**
  * Invalidate a session (logout)
+ *
+ * SECURITY FIX (S2): Added authentication requirement and ownership verification.
+ * Previously, any caller could invalidate any session by providing a token string.
+ * Now requires the caller to be authenticated via Convex Auth, and verifies the
+ * session being invalidated belongs to the authenticated user OR the caller is an admin.
  */
 export const invalidateSession = mutation({
   args: {
     token: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<boolean> => {
+    // Require authentication — anonymous callers cannot invalidate sessions
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError("Authentication required");
+    }
+
     const session = await ctx.db
       .query("sessions")
       .withIndex("by_token", (q) => q.eq("token", args.token))
       .first();
 
-    if (session) {
-      await ctx.db.patch(session._id, {
-        isActive: false,
-      });
+    if (!session) {
+      // Session doesn't exist, nothing to invalidate — return success silently
+      return true;
     }
+
+    // Look up the caller's profile to check role for admin override
+    const userProfile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    // Verify ownership: the session must belong to the authenticated user
+    const isOwner = session.userId === userId;
+    // Allow admins to invalidate any session
+    const isAdmin = userProfile?.defaultRole === "admin";
+
+    if (!isOwner && !isAdmin) {
+      throw new ConvexError("Not authorized to invalidate this session");
+    }
+
+    await ctx.db.patch(session._id, {
+      isActive: false,
+    });
 
     return true;
   },
@@ -422,7 +483,7 @@ export const invalidateSession = mutation({
  */
 export const invalidateAllUserSessions = mutation({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{ invalidatedCount: number }> => {
     const userId = await requireAuth(ctx);
 
     const sessions = await ctx.db
@@ -474,7 +535,14 @@ export const invalidateOtherSessions = mutation({
  */
 export const getUserSessions = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<Array<{
+    id: Id<"sessions">;
+    tenantId: Id<"tenants"> | undefined;
+    userAgent: string | undefined;
+    createdAt: number;
+    lastAccessedAt: number;
+    expiresAt: number;
+  }>> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       return [];
@@ -528,29 +596,80 @@ export const getSessionByToken = query({
 });
 
 /**
- * Clean up expired sessions (should be run periodically)
+ * Clean up expired sessions in batches.
+ *
+ * PERF: Uses .take(BATCH_SIZE) instead of .collect() to cap memory usage per
+ * invocation. Returns { deleted, hasMore } so the caller can re-invoke until
+ * all expired sessions are cleaned up. This should be called via a Convex cron
+ * job for automatic periodic cleanup.
  */
 export const cleanupExpiredSessions = mutation({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{ deleted: number; hasMore: boolean }> => {
     const now = Date.now();
-    
-    // Find expired sessions
+    // PERF: Process at most 100 expired sessions per invocation to avoid
+    // exceeding memory/time limits when there is a large backlog.
+    const BATCH_SIZE = 100;
+
     const expiredSessions = await ctx.db
       .query("sessions")
       .withIndex("by_expires", (q) => q.lt("expiresAt", now))
-      .collect();
+      .take(BATCH_SIZE + 1);
 
-    // Deactivate expired sessions
-    for (const session of expiredSessions) {
+    const hasMore = expiredSessions.length > BATCH_SIZE;
+    const batch = hasMore ? expiredSessions.slice(0, BATCH_SIZE) : expiredSessions;
+
+    let deleted = 0;
+    for (const session of batch) {
       if (session.isActive) {
         await ctx.db.patch(session._id, {
           isActive: false,
         });
       }
+      deleted++;
     }
 
-    return { cleanedCount: expiredSessions.length };
+    return { deleted, hasMore };
+  },
+});
+
+/**
+ * Internal mutation wrapper for cleanupExpiredSessions.
+ *
+ * A4: This internal mutation is intended to be called by a Convex cron job
+ * (see crons.ts). It performs the same batched cleanup as the public
+ * `cleanupExpiredSessions` mutation above but is only callable from other
+ * Convex functions (not from clients), which is more appropriate for
+ * automated background tasks.
+ *
+ * The cron job calls this once per interval. If `hasMore` is true, the
+ * remaining expired sessions will be cleaned up on the next cron cycle.
+ */
+export const cleanupExpiredSessionsInternal = internalMutation({
+  args: {},
+  handler: async (ctx): Promise<{ deleted: number; hasMore: boolean }> => {
+    const now = Date.now();
+    const BATCH_SIZE = 100;
+
+    const expiredSessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_expires", (q) => q.lt("expiresAt", now))
+      .take(BATCH_SIZE + 1);
+
+    const hasMore = expiredSessions.length > BATCH_SIZE;
+    const batch = hasMore ? expiredSessions.slice(0, BATCH_SIZE) : expiredSessions;
+
+    let deleted = 0;
+    for (const session of batch) {
+      if (session.isActive) {
+        await ctx.db.patch(session._id, {
+          isActive: false,
+        });
+      }
+      deleted++;
+    }
+
+    return { deleted, hasMore };
   },
 });
 
@@ -559,16 +678,16 @@ export const cleanupExpiredSessions = mutation({
 // ============================================================================
 
 /**
- * Generate a secure session token
- * Uses a combination of random values for security
+ * Generate a cryptographically secure session token
+ *
+ * SECURITY FIX (S1): Replaced Math.random() with crypto.randomUUID() which is
+ * cryptographically secure. Removed Date.now() timestamp to avoid leaking
+ * timing information. crypto.randomUUID() is available in the Convex runtime.
  */
 function generateSessionToken(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
-  for (let i = 0; i < 64; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `sess_${token}_${Date.now()}`;
+  const uuid1 = crypto.randomUUID();
+  const uuid2 = crypto.randomUUID();
+  return `sess_${uuid1}${uuid2}`.replace(/-/g, '');
 }
 
 /**

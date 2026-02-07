@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthPageWrapper } from "@createconomy/ui/components/auth";
 import { SignUpForm } from "@/components/auth/sign-up-form";
 import type { Metadata } from "next";
 
@@ -9,31 +10,21 @@ export const metadata: Metadata = {
 
 export default function SignUpPage() {
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="mx-auto max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Join the community
-          </h1>
-          <p className="text-muted-foreground">
-            Create an account to start participating in discussions
-          </p>
-        </div>
+    <AuthPageWrapper
+      title="Join the community"
+      subtitle="Create an account to start participating in discussions"
+    >
+      <SignUpForm />
 
-        <div className="rounded-lg border bg-card p-6">
-          <SignUpForm />
-
-          {/* Sign In Link */}
-          <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">
-              Already have an account?{" "}
-            </span>
-            <Link href="/auth/signin" className="text-primary hover:underline">
-              Sign in
-            </Link>
-          </div>
-        </div>
+      {/* Sign In Link */}
+      <div className="mt-4 text-center text-sm">
+        <span className="text-muted-foreground">
+          Already have an account?{" "}
+        </span>
+        <Link href="/auth/signin" className="text-primary hover:underline">
+          Sign in
+        </Link>
       </div>
-    </div>
+    </AuthPageWrapper>
   );
 }

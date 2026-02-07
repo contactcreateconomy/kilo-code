@@ -61,7 +61,7 @@ export function AdminHeader() {
           <div className="hidden md:block">
             <p className="text-sm font-medium">{user?.name || 'Admin'}</p>
             <p className="text-xs text-muted-foreground">
-              {user?.role || 'Administrator'}
+              {user?.profile?.defaultRole || 'Administrator'}
             </p>
           </div>
           <button className="rounded-md p-1 hover:bg-muted">

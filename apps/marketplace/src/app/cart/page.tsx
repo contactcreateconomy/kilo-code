@@ -39,6 +39,9 @@ function CartItemsList() {
     price: number;
     image: string;
     seller: string;
+    quantity: number;
+    slug?: string;
+    variant?: string;
   }> = [];
 
   if (items.length === 0) {

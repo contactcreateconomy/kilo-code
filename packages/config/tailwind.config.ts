@@ -2,7 +2,9 @@ import type { Config } from "tailwindcss";
 
 /**
  * Shared Tailwind CSS v4 configuration for Createconomy monorepo
- * This config is designed to work with Shadcn/ui components
+ *
+ * Works with the OKLCH color system defined in @createconomy/ui/globals.css.
+ * Colors use `var(--*)` directly — no `hsl()` wrapper needed for OKLCH values.
  */
 const config: Config = {
   darkMode: "class",
@@ -25,53 +27,63 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // Shadcn/ui CSS variable-based colors
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        // OKLCH CSS variable-based colors (no hsl wrapper)
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
         },
-        // Custom Createconomy brand colors
-        brand: {
-          50: "hsl(var(--brand-50))",
-          100: "hsl(var(--brand-100))",
-          200: "hsl(var(--brand-200))",
-          300: "hsl(var(--brand-300))",
-          400: "hsl(var(--brand-400))",
-          500: "hsl(var(--brand-500))",
-          600: "hsl(var(--brand-600))",
-          700: "hsl(var(--brand-700))",
-          800: "hsl(var(--brand-800))",
-          900: "hsl(var(--brand-900))",
-          950: "hsl(var(--brand-950))",
+        // Semantic status colors
+        success: {
+          DEFAULT: "var(--success)",
+          foreground: "var(--success-foreground)",
+        },
+        warning: {
+          DEFAULT: "var(--warning)",
+          foreground: "var(--warning-foreground)",
+        },
+        info: {
+          DEFAULT: "var(--info)",
+          foreground: "var(--info-foreground)",
+        },
+        // Sidebar colors
+        sidebar: {
+          DEFAULT: "var(--sidebar)",
+          foreground: "var(--sidebar-foreground)",
+          primary: "var(--sidebar-primary)",
+          "primary-foreground": "var(--sidebar-primary-foreground)",
+          accent: "var(--sidebar-accent)",
+          "accent-foreground": "var(--sidebar-accent-foreground)",
+          border: "var(--sidebar-border)",
+          ring: "var(--sidebar-ring)",
         },
       },
       borderRadius: {
@@ -82,6 +94,11 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
+      },
+      boxShadow: {
+        glow: "0 0 20px var(--glow-color)",
+        "glow-strong": "0 0 30px var(--glow-color-strong)",
+        "glow-sm": "0 0 10px var(--glow-color-sm)",
       },
       keyframes: {
         "accordion-down": {
@@ -120,6 +137,18 @@ const config: Config = {
           from: { transform: "rotate(0deg)" },
           to: { transform: "rotate(360deg)" },
         },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 20px var(--glow-color)" },
+          "50%": { boxShadow: "0 0 30px var(--glow-color-strong)" },
+        },
+        "slide-up": {
+          "0%": { transform: "translateY(10px)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "slide-down": {
+          "0%": { transform: "translateY(-10px)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -131,6 +160,9 @@ const config: Config = {
         "slide-in-from-left": "slide-in-from-left 0.3s ease-out",
         "slide-in-from-right": "slide-in-from-right 0.3s ease-out",
         "spin-slow": "spin-slow 3s linear infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "slide-up": "slide-up 0.3s ease-out",
+        "slide-down": "slide-down 0.3s ease-out",
       },
     },
   },

@@ -21,6 +21,8 @@ const mockCategory = {
   slug: 'digital-art',
   description: 'Digital artwork and illustrations',
   image: null,
+  parentId: null as string | null,
+  status: 'active',
   productCount: 125,
   order: 1,
   isActive: true,
@@ -45,7 +47,7 @@ export default async function CategoryDetailPage({ params }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href={`${process.env.NEXT_PUBLIC_MARKETPLACE_URL}/categories/${category.slug}`}
+            href={`${process.env['NEXT_PUBLIC_MARKETPLACE_URL']}/categories/${category.slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"

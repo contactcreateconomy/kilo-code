@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as functions_admin from "../functions/admin.js";
 import type * as functions_cart from "../functions/cart.js";
 import type * as functions_categories from "../functions/categories.js";
@@ -23,6 +24,11 @@ import type * as functions_webhooks from "../functions/webhooks.js";
 import type * as helpers_multitenancy from "../helpers/multitenancy.js";
 import type * as helpers_validation from "../helpers/validation.js";
 import type * as http from "../http.js";
+import type * as lib_cleanup from "../lib/cleanup.js";
+import type * as lib_constants from "../lib/constants.js";
+import type * as lib_errors from "../lib/errors.js";
+import type * as lib_middleware from "../lib/middleware.js";
+import type * as lib_orderUtils from "../lib/orderUtils.js";
 import type * as lib_security from "../lib/security.js";
 import type * as lib_stripe from "../lib/stripe.js";
 
@@ -34,6 +40,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  crons: typeof crons;
   "functions/admin": typeof functions_admin;
   "functions/cart": typeof functions_cart;
   "functions/categories": typeof functions_categories;
@@ -48,6 +55,11 @@ declare const fullApi: ApiFromModules<{
   "helpers/multitenancy": typeof helpers_multitenancy;
   "helpers/validation": typeof helpers_validation;
   http: typeof http;
+  "lib/cleanup": typeof lib_cleanup;
+  "lib/constants": typeof lib_constants;
+  "lib/errors": typeof lib_errors;
+  "lib/middleware": typeof lib_middleware;
+  "lib/orderUtils": typeof lib_orderUtils;
   "lib/security": typeof lib_security;
   "lib/stripe": typeof lib_stripe;
 }>;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, createContext, useContext } from 'react';
+import { useState, createContext, use } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { AnimatedSearch } from './animated-search';
@@ -17,7 +17,7 @@ interface MobileNavContextType {
 const MobileNavContext = createContext<MobileNavContextType | null>(null);
 
 export function useMobileNav() {
-  const context = useContext(MobileNavContext);
+  const context = use(MobileNavContext);
   if (!context) {
     // Return a default value if not within provider
     return { isOpen: false, setIsOpen: () => {} };

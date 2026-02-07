@@ -1,5 +1,5 @@
-import { QueryCtx, MutationCtx } from "../_generated/server";
-import { Id } from "../_generated/dataModel";
+import type { QueryCtx, MutationCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 
 /**
  * Multi-tenancy Helpers
@@ -110,7 +110,7 @@ export async function resolveTenant(
 
   // Check if it's a subdomain (e.g., store.createconomy.com)
   if (parts.length >= 3) {
-    const subdomain = parts[0];
+    const subdomain = parts[0]!;
     const tenant = await getTenantBySubdomain(ctx, subdomain);
     if (tenant && tenant.isActive) {
       return tenant;
@@ -298,16 +298,22 @@ export async function removeUserFromTenant(
  * Create a tenant-scoped query filter
  * Use this to ensure queries only return data for the specified tenant
  *
+ * @deprecated This function is not currently used by any callers. Prefer
+ * using `.withIndex("by_tenant", ...)` directly in queries for better
+ * performance and type safety. If you need a reusable tenant filter,
+ * apply it inline with proper Convex filter builder types.
+ *
  * @param tenantId - Tenant ID to filter by
- * @returns Filter function for use with Convex queries
+ * @returns Filter function for use with Convex `.filter()` queries
  */
 export function tenantFilter(tenantId: Id<"tenants"> | null | undefined) {
-  return (q: any) => {
+  return (q: { eq: (a: unknown, b: unknown) => unknown; field: (name: string) => unknown }) => {
     if (tenantId) {
       return q.eq(q.field("tenantId"), tenantId);
     }
-    // If no tenant specified, return all (for global queries)
-    return true;
+    // Return a tautological expression instead of `true` — Convex .filter()
+    // expects a filter expression, not a raw boolean.
+    return q.eq(1, 1);
   };
 }
 
@@ -478,6 +484,12 @@ export async function deactivateTenant(
 /**
  * Get tenant statistics
  *
+ * PERF: Uses index-scoped queries (by_tenant_status) to avoid collecting all
+ * orders/products for a tenant and filtering in memory. Each status is queried
+ * independently via its composite index, so Convex only scans matching rows.
+ * Future improvement: maintain pre-computed per-tenant counters updated via
+ * mutations to avoid .collect() entirely.
+ *
  * @param ctx - Query context
  * @param tenantId - Tenant ID
  * @returns Tenant statistics
@@ -486,36 +498,88 @@ export async function getTenantStats(
   ctx: QueryCtx,
   tenantId: Id<"tenants">
 ) {
-  // Count users
+  // PERF: userTenants has no by_tenant_role index, so we still collect
+  // all active members for this tenant. The set is bounded by tenant size.
   const userTenants = await ctx.db
     .query("userTenants")
     .withIndex("by_tenant", (q) => q.eq("tenantId", tenantId))
     .filter((q) => q.eq(q.field("isActive"), true))
     .collect();
 
-  // Count products
-  const products = await ctx.db
+  // PERF: Use by_tenant_status index to count only active products directly,
+  // instead of collecting ALL tenant products and filtering in memory.
+  const activeProducts = await ctx.db
     .query("products")
-    .withIndex("by_tenant", (q) => q.eq("tenantId", tenantId))
+    .withIndex("by_tenant_status", (q) =>
+      q.eq("tenantId", tenantId).eq("status", "active")
+    )
     .filter((q) => q.eq(q.field("isDeleted"), false))
     .collect();
 
-  // Count orders
-  const orders = await ctx.db
-    .query("orders")
-    .withIndex("by_tenant", (q) => q.eq("tenantId", tenantId))
-    .collect();
+  // PERF: Use by_tenant_status index to query order counts per status,
+  // instead of collecting ALL tenant orders and filtering in memory.
+  const [
+    pendingOrders,
+    confirmedOrders,
+    processingOrders,
+    shippedOrders,
+    deliveredOrders,
+    cancelledOrders,
+  ] = await Promise.all([
+    ctx.db
+      .query("orders")
+      .withIndex("by_tenant_status", (q) =>
+        q.eq("tenantId", tenantId).eq("status", "pending")
+      )
+      .collect(),
+    ctx.db
+      .query("orders")
+      .withIndex("by_tenant_status", (q) =>
+        q.eq("tenantId", tenantId).eq("status", "confirmed")
+      )
+      .collect(),
+    ctx.db
+      .query("orders")
+      .withIndex("by_tenant_status", (q) =>
+        q.eq("tenantId", tenantId).eq("status", "processing")
+      )
+      .collect(),
+    ctx.db
+      .query("orders")
+      .withIndex("by_tenant_status", (q) =>
+        q.eq("tenantId", tenantId).eq("status", "shipped")
+      )
+      .collect(),
+    ctx.db
+      .query("orders")
+      .withIndex("by_tenant_status", (q) =>
+        q.eq("tenantId", tenantId).eq("status", "delivered")
+      )
+      .collect(),
+    ctx.db
+      .query("orders")
+      .withIndex("by_tenant_status", (q) =>
+        q.eq("tenantId", tenantId).eq("status", "cancelled")
+      )
+      .collect(),
+  ]);
 
-  // Calculate revenue
-  const completedOrders = orders.filter(
-    (o) => o.status === "delivered" || o.status === "shipped"
-  );
+  // PERF: Revenue from already-fetched shipped + delivered orders — no extra scan
+  const completedOrders = [...shippedOrders, ...deliveredOrders];
   const totalRevenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
+
+  const orderCount =
+    pendingOrders.length +
+    confirmedOrders.length +
+    processingOrders.length +
+    shippedOrders.length +
+    deliveredOrders.length +
+    cancelledOrders.length;
 
   return {
     userCount: userTenants.length,
-    productCount: products.filter((p) => p.status === "active").length,
-    orderCount: orders.length,
+    productCount: activeProducts.length,
+    orderCount,
     totalRevenue,
     roleBreakdown: {
       customers: userTenants.filter((ut) => ut.role === "customer").length,

@@ -3,9 +3,9 @@
 > A production-ready digital e-commerce marketplace platform connecting creators with consumers.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org)
-[![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9.0.0-orange)](https://pnpm.io)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D24.0.0-brightgreen)](https://nodejs.org)
+[![pnpm](https://img.shields.io/badge/pnpm-%3E%3D10.0.0-orange)](https://pnpm.io)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org)
 
 ---
 
@@ -52,22 +52,24 @@ Createconomy is a comprehensive digital marketplace platform that combines a rob
 ## Tech Stack
 
 ### Frontend
-- **Framework**: [Next.js 15](https://nextjs.org) with App Router
-- **Language**: [TypeScript 5.7](https://www.typescriptlang.org)
+- **Framework**: [Next.js 16](https://nextjs.org) with App Router
+- **Language**: [TypeScript 5.9+](https://www.typescriptlang.org)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com)
 - **UI Components**: [Radix UI](https://www.radix-ui.com) primitives
 - **State Management**: React Server Components + Convex
 
 ### Backend
-- **Database & Functions**: [Convex](https://convex.dev)
+- **Database & Functions**: [Convex 1.31+](https://convex.dev)
 - **Authentication**: [Convex Auth](https://labs.convex.dev/auth) with OAuth providers
 - **Payments**: [Stripe](https://stripe.com) with Connect
 
 ### Infrastructure
 - **Monorepo**: [Turborepo](https://turbo.build)
-- **Package Manager**: [pnpm](https://pnpm.io)
+- **Package Manager**: [pnpm 10+](https://pnpm.io)
 - **Deployment**: [Vercel](https://vercel.com)
 - **CI/CD**: GitHub Actions
+
+📖 Full details → [docs/tech-stack.md](./docs/tech-stack.md)
 
 ---
 
@@ -113,8 +115,8 @@ graph TD
 
 ### Prerequisites
 
-- **Node.js** >= 20.0.0
-- **pnpm** >= 9.0.0
+- **Node.js** >= 24.0.0
+- **pnpm** >= 10.0.0
 - **Convex Account** - [Sign up](https://convex.dev)
 - **Stripe Account** - [Sign up](https://stripe.com)
 
@@ -311,23 +313,28 @@ cd packages/convex
 npx convex deploy
 ```
 
-### Docker Development
-
-For local development with Docker:
-
-```bash
-docker-compose up
-```
-
----
-
 ## Documentation
 
-- [Architecture Overview](./docs/architecture.md)
-- [API Reference](./docs/api-reference.md)
-- [Security Guide](./docs/security.md)
-- [Contributing Guide](./docs/contributing.md)
-- [Troubleshooting](./docs/troubleshooting.md)
+All detailed documentation lives in the [`docs/`](./docs/) folder:
+
+| Document | Description |
+|----------|-------------|
+| [Tech Stack](./docs/tech-stack.md) | Complete technology versions and details |
+| [Architecture](./docs/architecture.md) | System diagrams, data flow, auth flow, payment flow |
+| [Key Files](./docs/key-files.md) | Important file locations and entry points |
+| [Data Models](./docs/data-models.md) | Full database schema reference |
+| [Conventions](./docs/conventions.md) | Naming, imports, React/Convex patterns, rules |
+| [Pitfalls](./docs/pitfalls.md) | Common mistakes and known issues |
+| [Commands](./docs/commands.md) | CLI commands reference |
+| [Environment](./docs/environment.md) | Environment variables and config files |
+| [API Reference](./docs/api-reference.md) | Convex functions, HTTP endpoints, error codes |
+| [Security](./docs/security.md) | Auth, CSRF, rate limiting, headers, payment security |
+| [Deployment](./docs/deployment.md) | Vercel setup, CI/CD, branch protection |
+| [Local Development](./docs/local-development.md) | Setup guide, debugging, IDE config |
+| [Contributing](./docs/contributing.md) | Branch naming, commits, PR process, coding standards |
+| [Troubleshooting](./docs/troubleshooting.md) | Common issues and solutions |
+
+See also: [AGENTS.md](./AGENTS.md) for AI agent quick reference.
 
 ---
 

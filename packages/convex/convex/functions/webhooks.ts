@@ -1,7 +1,7 @@
-import { internalMutation, internalAction } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
+import type { Id } from "../_generated/dataModel";
+import { metadataValidator } from "../schema";
 
 /**
  * Stripe Webhook Event Handlers
@@ -27,7 +27,7 @@ export const handleCheckoutCompleted = internalMutation({
     amountTotal: v.number(),
     currency: v.string(),
     paymentStatus: v.string(),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -67,8 +67,8 @@ export const handleCheckoutCompleted = internalMutation({
     // Try to find user from metadata or customer email
     let userId: Id<"users"> | undefined;
 
-    if (args.metadata?.userId) {
-      userId = args.metadata.userId as Id<"users">;
+    if (args.metadata?.["userId"]) {
+      userId = args.metadata["userId"] as Id<"users">;
     } else if (args.customerEmail) {
       const user = await ctx.db
         .query("users")
@@ -78,7 +78,7 @@ export const handleCheckoutCompleted = internalMutation({
     }
 
     if (!userId) {
-      console.log("Could not find user for checkout session:", args.sessionId);
+      console.warn("Could not find user for checkout session:", args.sessionId);
       return { error: "User not found" };
     }
 
@@ -180,7 +180,7 @@ export const handlePaymentSucceeded = internalMutation({
       .first();
 
     if (!payment) {
-      console.log("Payment not found for intent:", args.paymentIntentId);
+      console.warn("Payment not found for intent:", args.paymentIntentId);
       return { success: false, error: "Payment not found" };
     }
 
@@ -228,7 +228,7 @@ export const handlePaymentFailed = internalMutation({
       .first();
 
     if (!payment) {
-      console.log("Payment not found for intent:", args.paymentIntentId);
+      console.warn("Payment not found for intent:", args.paymentIntentId);
       return { success: false, error: "Payment not found" };
     }
 
@@ -295,7 +295,7 @@ export const handleRefundCreated = internalMutation({
       .first();
 
     if (!payment) {
-      console.log("Payment not found for refund:", args.paymentIntentId);
+      console.warn("Payment not found for refund:", args.paymentIntentId);
       return { success: false, error: "Payment not found" };
     }
 
@@ -349,7 +349,7 @@ export const handleConnectAccountUpdated = internalMutation({
       .first();
 
     if (!account) {
-      console.log("Connect account not found:", args.accountId);
+      console.warn("Connect account not found:", args.accountId);
       return { success: false, error: "Account not found" };
     }
 
@@ -456,7 +456,7 @@ export const handleDisputeCreated = internalMutation({
     }
 
     if (!payment) {
-      console.log("Payment not found for dispute:", args.disputeId);
+      console.warn("Payment not found for dispute:", args.disputeId);
       return { success: false, error: "Payment not found" };
     }
 
@@ -584,14 +584,14 @@ export const handleCustomerCreated = internalMutation({
   args: {
     customerId: v.string(),
     email: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
   },
   handler: async (ctx, args) => {
     // Try to find user by email or metadata
     let userId: Id<"users"> | undefined;
 
-    if (args.metadata?.userId) {
-      userId = args.metadata.userId as Id<"users">;
+    if (args.metadata?.["userId"]) {
+      userId = args.metadata["userId"] as Id<"users">;
     } else if (args.email) {
       const user = await ctx.db
         .query("users")
@@ -601,7 +601,7 @@ export const handleCustomerCreated = internalMutation({
     }
 
     if (!userId) {
-      console.log("Could not find user for customer:", args.customerId);
+      console.warn("Could not find user for customer:", args.customerId);
       return { success: false, error: "User not found" };
     }
 

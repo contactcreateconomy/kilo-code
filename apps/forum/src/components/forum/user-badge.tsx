@@ -59,7 +59,7 @@ function getAvatarColor(username: string): string {
     hash = username.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  return colors[Math.abs(hash) % colors.length];
+  return colors[Math.abs(hash) % colors.length] ?? "bg-blue-500";
 }
 
 export function UserBadge({
@@ -98,7 +98,7 @@ export function UserBadge({
           {showRole && role && (
             <span
               className={`text-xs px-1.5 py-0.5 rounded border w-fit ${
-                roleColors[role] || roleColors.member
+                roleColors[role] || roleColors['member']
               }`}
             >
               {role}

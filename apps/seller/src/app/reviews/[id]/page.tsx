@@ -33,7 +33,7 @@ export default function ReviewDetailPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Response submitted:", response);
+    // TODO: Submit review response via Convex mutation
     setIsEditing(false);
   };
 

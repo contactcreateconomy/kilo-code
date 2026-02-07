@@ -2,7 +2,7 @@
 
 import {
   createContext,
-  useContext,
+  use,
   useEffect,
   useState,
   useCallback,
@@ -124,6 +124,9 @@ export function AuthProvider({
 
   // Get the HTTP URL for auth endpoints
   const authBaseUrl = useMemo(() => {
+    if (!convexUrl) {
+      return "";
+    }
     // Convert Convex URL to HTTP URL
     // e.g., https://xxx.convex.cloud -> https://xxx.convex.site
     return convexUrl.replace(".convex.cloud", ".convex.site");
@@ -399,7 +402,7 @@ export function AuthProvider({
  * @throws Error if used outside AuthProvider
  */
 export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
+  const context = use(AuthContext);
 
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");

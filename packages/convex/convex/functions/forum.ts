@@ -1,8 +1,7 @@
 import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
-import { forumPostStatusValidator } from "../schema";
+import type { Doc } from "../_generated/dataModel";
 
 /**
  * Forum Management Functions
@@ -47,8 +46,12 @@ export const listForumCategories = query({
     const rootCategories = categories.filter((c) => !c.parentId);
     const childCategories = categories.filter((c) => c.parentId);
 
-    function buildTree(parent: (typeof categories)[0]): any {
-      const children: any[] = childCategories
+    interface ForumCategoryTreeNode extends Doc<"forumCategories"> {
+      children?: ForumCategoryTreeNode[];
+    }
+
+    function buildTree(parent: (typeof categories)[0]): ForumCategoryTreeNode {
+      const children: ForumCategoryTreeNode[] = childCategories
         .filter((c) => c.parentId === parent._id)
         .map((child) => buildTree(child));
 
@@ -182,7 +185,7 @@ export const listThreads = query({
       pinned: threadsWithAuthors.filter((t) => t.isPinned),
       threads: threadsWithAuthors.filter((t) => !t.isPinned),
       hasMore,
-      nextCursor: hasMore ? threads[threads.length - 1]._id : null,
+      nextCursor: hasMore ? threads[threads.length - 1]?._id ?? null : null,
     };
   },
 });
@@ -377,7 +380,12 @@ export const getPostComments = query({
     const rootComments = commentsWithAuthors.filter((c) => !c.parentId);
     const childComments = commentsWithAuthors.filter((c) => c.parentId);
 
-    const buildTree = (parent: (typeof commentsWithAuthors)[0]): any => {
+    type CommentWithAuthor = (typeof commentsWithAuthors)[0];
+    interface CommentTreeNode extends CommentWithAuthor {
+      replies?: CommentTreeNode[];
+    }
+
+    const buildTree = (parent: CommentWithAuthor): CommentTreeNode => {
       const children = childComments
         .filter((c) => c.parentId === parent._id)
         .map((child) => buildTree(child));
@@ -944,5 +952,734 @@ export const incrementThreadViewCount = mutation({
     await ctx.db.patch(args.threadId, {
       viewCount: thread.viewCount + 1,
     });
+  },
+});
+
+// ============================================================================
+// Feed & Discovery Queries (for forum homepage)
+// ============================================================================
+
+/**
+ * Helper to format counts like "24.5K", "1.2M"
+ */
+function formatCount(count: number): string {
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  return count.toString();
+}
+
+/**
+ * List discussions for the homepage feed
+ *
+ * Fetches threads across ALL categories with author + category info.
+ * Supports sorting by "top" (upvotes), "hot" (engagement × recency), "new" (creation time).
+ *
+ * @param sortBy - Sort order
+ * @param limit - Max results
+ * @returns Enriched discussions with hasMore flag
+ */
+export const listDiscussions = query({
+  args: {
+    sortBy: v.optional(
+      v.union(v.literal("top"), v.literal("hot"), v.literal("new"))
+    ),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 20;
+    const sortBy = args.sortBy ?? "new";
+
+    // Fetch recent threads (cap at limit*2 to allow in-memory sorting)
+    const threads = await ctx.db
+      .query("forumThreads")
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .order("desc")
+      .take(limit * 2);
+
+    // Sort based on sortBy
+    let sorted = [...threads];
+    if (sortBy === "top") {
+      sorted.sort((a, b) => (b.upvoteCount ?? 0) - (a.upvoteCount ?? 0));
+    } else if (sortBy === "hot") {
+      sorted.sort((a, b) => {
+        const scoreA =
+          (a.upvoteCount ?? 0) + a.postCount * 2;
+        const scoreB =
+          (b.upvoteCount ?? 0) + b.postCount * 2;
+        const ageA = (Date.now() - a.createdAt) / 3600000;
+        const ageB = (Date.now() - b.createdAt) / 3600000;
+        return (
+          scoreB * Math.pow(0.95, ageB / 24) -
+          scoreA * Math.pow(0.95, ageA / 24)
+        );
+      });
+    }
+    // "new" is already sorted desc by creation time
+
+    const result = sorted.slice(0, limit);
+
+    // Enrich with author + category
+    const enriched = await Promise.all(
+      result.map(async (thread) => {
+        const author = await ctx.db.get(thread.authorId);
+        const authorProfile = author
+          ? await ctx.db
+              .query("userProfiles")
+              .withIndex("by_user", (q) => q.eq("userId", author._id))
+              .first()
+          : null;
+        const category = await ctx.db.get(thread.categoryId);
+
+        return {
+          _id: thread._id,
+          title: thread.title,
+          slug: thread.slug,
+          aiSummary: thread.aiSummary ?? null,
+          imageUrl: thread.imageUrl ?? null,
+          isPinned: thread.isPinned,
+          upvoteCount: thread.upvoteCount ?? 0,
+          postCount: thread.postCount,
+          viewCount: thread.viewCount,
+          createdAt: thread.createdAt,
+          author: author
+            ? {
+                id: author._id,
+                name:
+                  authorProfile?.displayName ?? author.name ?? "Anonymous",
+                username: authorProfile?.username ?? author._id,
+                avatarUrl: authorProfile?.avatarUrl ?? null,
+              }
+            : null,
+          category: category
+            ? {
+                id: category._id,
+                name: category.name,
+                slug: category.slug,
+                icon: category.icon ?? null,
+                color: category.color ?? null,
+              }
+            : null,
+        };
+      })
+    );
+
+    return {
+      discussions: enriched,
+      hasMore: threads.length > limit,
+    };
+  },
+});
+
+/**
+ * Get leaderboard — top users by points
+ *
+ * Uses indexed queries on userPoints table.
+ *
+ * @param limit - Max entries
+ * @param period - "weekly" | "monthly" | "allTime"
+ * @returns Ranked leaderboard entries with user info
+ */
+export const getLeaderboard = query({
+  args: {
+    limit: v.optional(v.number()),
+    period: v.optional(
+      v.union(
+        v.literal("weekly"),
+        v.literal("monthly"),
+        v.literal("allTime")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 10;
+    const period = args.period ?? "weekly";
+
+    let entries;
+    if (period === "weekly") {
+      entries = await ctx.db
+        .query("userPoints")
+        .withIndex("by_weekly_points")
+        .order("desc")
+        .take(limit);
+    } else if (period === "allTime") {
+      entries = await ctx.db
+        .query("userPoints")
+        .withIndex("by_total_points")
+        .order("desc")
+        .take(limit);
+    } else {
+      // monthly — no dedicated index, fetch and sort
+      const all = await ctx.db
+        .query("userPoints")
+        .order("desc")
+        .take(limit * 3);
+      all.sort((a, b) => b.monthlyPoints - a.monthlyPoints);
+      entries = all.slice(0, limit);
+    }
+
+    // Enrich with user data
+    const leaderboard = await Promise.all(
+      entries.map(async (entry, index) => {
+        const user = await ctx.db.get(entry.userId);
+        const profile = user
+          ? await ctx.db
+              .query("userProfiles")
+              .withIndex("by_user", (q) => q.eq("userId", user._id))
+              .first()
+          : null;
+
+        const rank = index + 1;
+        const badge: "gold" | "silver" | "bronze" =
+          rank <= 3 ? "gold" : rank <= 6 ? "silver" : "bronze";
+        const points =
+          period === "weekly"
+            ? entry.weeklyPoints
+            : period === "monthly"
+              ? entry.monthlyPoints
+              : entry.totalPoints;
+
+        return {
+          rank,
+          badge,
+          points,
+          user: user
+            ? {
+                id: user._id,
+                name:
+                  profile?.displayName ?? user.name ?? "Anonymous",
+                username: profile?.username ?? user._id,
+                avatarUrl: profile?.avatarUrl ?? null,
+              }
+            : null,
+        };
+      })
+    );
+
+    return leaderboard.filter((e) => e.user !== null);
+  },
+});
+
+/**
+ * Get community stats — aggregate counts
+ *
+ * Uses denormalized counts from forumCategories to avoid scanning posts table.
+ *
+ * @returns Formatted community statistics
+ */
+export const getCommunityStats = query({
+  args: {},
+  handler: async (ctx) => {
+    // Count user profiles (bounded)
+    const profiles = await ctx.db.query("userProfiles").take(100000);
+    const memberCount = profiles.length;
+
+    // Count non-deleted threads (bounded)
+    const threads = await ctx.db
+      .query("forumThreads")
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .take(100000);
+    const threadCount = threads.length;
+
+    // Sum post counts from categories (denormalized)
+    const categories = await ctx.db.query("forumCategories").collect();
+    const postCount = categories.reduce(
+      (sum, cat) => sum + cat.postCount,
+      0
+    );
+
+    return {
+      members: formatCount(memberCount),
+      discussions: formatCount(threadCount),
+      comments: formatCount(postCount),
+    };
+  },
+});
+
+/**
+ * Get trending topics — most active recent threads
+ *
+ * Scores recent threads by engagement and recency.
+ *
+ * @param limit - Max results (default 5)
+ * @returns Trending topics with category and trend indicator
+ */
+export const getTrendingTopics = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 5;
+
+    // Get recent threads (scan 50 most recent)
+    const recentThreads = await ctx.db
+      .query("forumThreads")
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .order("desc")
+      .take(50);
+
+    // Score by engagement × recency
+    const scored = recentThreads.map((thread) => {
+      const upvotes = thread.upvoteCount ?? 0;
+      const posts = thread.postCount;
+      const views = thread.viewCount;
+      const ageHours = (Date.now() - thread.createdAt) / 3600000;
+      const score =
+        (upvotes * 3 + posts * 2 + views * 0.1) *
+        Math.pow(0.95, ageHours / 24);
+      return { thread, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const topThreads = scored.slice(0, limit);
+
+    // Enrich with category info
+    const trending = await Promise.all(
+      topThreads.map(async ({ thread, score }) => {
+        const category = await ctx.db.get(thread.categoryId);
+        return {
+          id: thread._id,
+          title: thread.title,
+          category: category?.name ?? "General",
+          posts: thread.postCount,
+          trend: (score > 50 ? "hot" : "rising") as "hot" | "rising",
+        };
+      })
+    );
+
+    return trending;
+  },
+});
+
+/**
+ * Get the currently active campaign
+ *
+ * Uses the by_active index for O(1) lookup.
+ *
+ * @returns Active campaign data or null
+ */
+export const getActiveCampaign = query({
+  args: {},
+  handler: async (ctx) => {
+    const campaign = await ctx.db
+      .query("forumCampaigns")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .first();
+
+    if (!campaign) return null;
+
+    return {
+      id: campaign._id,
+      title: campaign.title,
+      description: campaign.description,
+      prize: campaign.prize,
+      endDate: campaign.endDate,
+      progress: campaign.currentProgress,
+      targetPoints: campaign.targetPoints,
+      participantCount: campaign.participantCount,
+    };
+  },
+});
+
+/**
+ * Toggle a reaction (upvote/bookmark) on a thread, post, or comment
+ *
+ * Maintains denormalized upvoteCount on threads.
+ *
+ * @param targetType - "thread" | "post" | "comment"
+ * @param targetId - ID of the target document
+ * @param reactionType - "upvote" | "bookmark"
+ * @returns { action: "added" | "removed" }
+ */
+export const toggleReaction = mutation({
+  args: {
+    targetType: v.union(
+      v.literal("thread"),
+      v.literal("post"),
+      v.literal("comment")
+    ),
+    targetId: v.string(),
+    reactionType: v.union(
+      v.literal("upvote"),
+      v.literal("downvote"),
+      v.literal("bookmark")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Authentication required");
+
+    // Check existing reaction
+    const existing = await ctx.db
+      .query("forumReactions")
+      .withIndex("by_user_target", (q) =>
+        q
+          .eq("userId", userId)
+          .eq("targetType", args.targetType)
+          .eq("targetId", args.targetId)
+      )
+      .first();
+
+    if (existing && existing.reactionType === args.reactionType) {
+      // Toggle off — remove reaction
+      await ctx.db.delete(existing._id);
+
+      // Update denormalized count on thread
+      if (
+        args.targetType === "thread" &&
+        args.reactionType === "upvote"
+      ) {
+        const thread = await ctx.db.get(
+          args.targetId as never
+        );
+        if (thread) {
+          await ctx.db.patch(
+            args.targetId as never,
+            {
+              upvoteCount: Math.max(
+                0,
+                ((thread as Doc<"forumThreads">).upvoteCount ?? 0) - 1
+              ),
+            }
+          );
+        }
+      }
+
+      return { action: "removed" as const };
+    }
+
+    // If different reaction type exists, remove it first
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      if (
+        args.targetType === "thread" &&
+        existing.reactionType === "upvote"
+      ) {
+        const thread = await ctx.db.get(
+          args.targetId as never
+        );
+        if (thread) {
+          await ctx.db.patch(
+            args.targetId as never,
+            {
+              upvoteCount: Math.max(
+                0,
+                ((thread as Doc<"forumThreads">).upvoteCount ?? 0) - 1
+              ),
+            }
+          );
+        }
+      }
+    }
+
+    // Add new reaction
+    await ctx.db.insert("forumReactions", {
+      userId,
+      targetType: args.targetType,
+      targetId: args.targetId,
+      reactionType: args.reactionType,
+      createdAt: Date.now(),
+    });
+
+    // Update denormalized count
+    if (
+      args.targetType === "thread" &&
+      args.reactionType === "upvote"
+    ) {
+      const thread = await ctx.db.get(
+        args.targetId as never
+      );
+      if (thread) {
+        await ctx.db.patch(
+          args.targetId as never,
+          {
+            upvoteCount:
+              ((thread as Doc<"forumThreads">).upvoteCount ?? 0) + 1,
+          }
+        );
+      }
+    }
+
+    return { action: "added" as const };
+  },
+});
+
+/**
+ * Get the current user's reactions for a set of targets
+ *
+ * Returns a map of targetId → reactionType for the authenticated user.
+ *
+ * @param targetType - "thread" | "post" | "comment"
+ * @param targetIds - Array of target IDs to check
+ * @returns Record<targetId, reactionType>
+ */
+export const getUserReactions = query({
+  args: {
+    targetType: v.union(
+      v.literal("thread"),
+      v.literal("post"),
+      v.literal("comment")
+    ),
+    targetIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return {};
+
+    const reactions: Record<string, string> = {};
+    for (const targetId of args.targetIds) {
+      const reaction = await ctx.db
+        .query("forumReactions")
+        .withIndex("by_user_target", (q) =>
+          q
+            .eq("userId", userId)
+            .eq("targetType", args.targetType)
+            .eq("targetId", targetId)
+        )
+        .first();
+      if (reaction) {
+        reactions[targetId] = reaction.reactionType;
+      }
+    }
+
+    return reactions;
+  },
+});
+
+/**
+ * Get a public user profile by username
+ *
+ * @param username - Username to look up
+ * @returns User profile with stats
+ */
+export const getUserProfile = query({
+  args: {
+    username: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (!profile) return null;
+
+    const user = await ctx.db.get(profile.userId);
+
+    // Get thread count
+    const threads = await ctx.db
+      .query("forumThreads")
+      .withIndex("by_author", (q) => q.eq("authorId", profile.userId))
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .take(10000);
+
+    // Get post count
+    const posts = await ctx.db
+      .query("forumPosts")
+      .withIndex("by_author", (q) => q.eq("authorId", profile.userId))
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .take(10000);
+
+    // Get points
+    const points = await ctx.db
+      .query("userPoints")
+      .withIndex("by_user", (q) => q.eq("userId", profile.userId))
+      .first();
+
+    return {
+      username: profile.username,
+      displayName: profile.displayName ?? user?.name ?? "Anonymous",
+      avatarUrl: profile.avatarUrl ?? null,
+      bio: profile.bio ?? null,
+      role: profile.defaultRole,
+      joinedAt: profile.createdAt,
+      threadCount: threads.length,
+      postCount: posts.length,
+      reputation: points?.totalPoints ?? 0,
+    };
+  },
+});
+
+/**
+ * Get a forum category by slug
+ *
+ * @param slug - Category slug
+ * @returns Category data or null
+ */
+export const getCategoryBySlug = query({
+  args: {
+    slug: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const category = await ctx.db
+      .query("forumCategories")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+
+    if (!category || !category.isActive) return null;
+
+    return {
+      id: category._id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description ?? "",
+      icon: category.icon ?? "💬",
+      color: category.color ?? null,
+      threadCount: category.threadCount,
+      postCount: category.postCount,
+    };
+  },
+});
+
+/**
+ * List threads in a category by slug
+ *
+ * Accepts a slug instead of a category ID for convenience in URL-based lookups.
+ *
+ * @param slug - Category slug
+ * @param limit - Max threads
+ * @param sort - "recent" | "popular" | "unanswered"
+ * @returns Category + threads + hasMore flag
+ */
+export const listThreadsBySlug = query({
+  args: {
+    slug: v.string(),
+    limit: v.optional(v.number()),
+    sort: v.optional(
+      v.union(
+        v.literal("recent"),
+        v.literal("popular"),
+        v.literal("unanswered")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const category = await ctx.db
+      .query("forumCategories")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+
+    if (!category || !category.isActive) return null;
+
+    const limit = args.limit ?? 20;
+
+    const threads = await ctx.db
+      .query("forumThreads")
+      .withIndex("by_category", (q) =>
+        q.eq("categoryId", category._id)
+      )
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = threads.length > limit;
+    const result = hasMore ? threads.slice(0, limit) : threads;
+
+    // Sort if needed
+    if (args.sort === "popular") {
+      result.sort(
+        (a, b) => (b.upvoteCount ?? 0) - (a.upvoteCount ?? 0)
+      );
+    }
+
+    // Enrich with author info
+    const enriched = await Promise.all(
+      result.map(async (thread) => {
+        const author = await ctx.db.get(thread.authorId);
+        const profile = author
+          ? await ctx.db
+              .query("userProfiles")
+              .withIndex("by_user", (q) =>
+                q.eq("userId", author._id)
+              )
+              .first()
+          : null;
+
+        return {
+          ...thread,
+          author: author
+            ? {
+                id: author._id,
+                name:
+                  profile?.displayName ??
+                  author.name ??
+                  "Anonymous",
+                username: profile?.username ?? author._id,
+                avatarUrl: profile?.avatarUrl ?? null,
+              }
+            : null,
+        };
+      })
+    );
+
+    return {
+      category: {
+        id: category._id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description ?? "",
+        icon: category.icon ?? "💬",
+        threadCount: category.threadCount,
+      },
+      threads: enriched,
+      hasMore,
+    };
+  },
+});
+
+/**
+ * Get threads by a specific user (by username)
+ *
+ * @param username - Username
+ * @param limit - Max threads
+ * @returns List of threads with category info
+ */
+export const getUserThreads = query({
+  args: {
+    username: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 10;
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (!profile) return [];
+
+    const threads = await ctx.db
+      .query("forumThreads")
+      .withIndex("by_author", (q) =>
+        q.eq("authorId", profile.userId)
+      )
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .order("desc")
+      .take(limit);
+
+    // Enrich with category
+    return Promise.all(
+      threads.map(async (thread) => {
+        const category = await ctx.db.get(thread.categoryId);
+        return {
+          id: thread._id,
+          title: thread.title,
+          slug: thread.slug,
+          createdAt: thread.createdAt,
+          postCount: thread.postCount,
+          viewCount: thread.viewCount,
+          upvoteCount: thread.upvoteCount ?? 0,
+          isPinned: thread.isPinned,
+          isLocked: thread.isLocked,
+          category: category
+            ? {
+                name: category.name,
+                slug: category.slug,
+                icon: category.icon ?? null,
+              }
+            : null,
+        };
+      })
+    );
   },
 });

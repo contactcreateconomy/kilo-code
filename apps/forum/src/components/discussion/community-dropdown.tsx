@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Loader2 } from 'lucide-react';
 import { cn, Button } from '@createconomy/ui';
 import {
   DropdownMenu,
@@ -9,19 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@createconomy/ui';
-
-// Community items from Discover section
-export const communityItems = [
-  { label: 'News', slug: 'news', emoji: '📰' },
-  { label: 'Review', slug: 'review', emoji: '⭐' },
-  { label: 'Compare', slug: 'compare', emoji: '⚖️' },
-  { label: 'List', slug: 'list', emoji: '📋' },
-  { label: 'Help', slug: 'help', emoji: '❓' },
-  { label: 'Showcase', slug: 'showcase', emoji: '✨' },
-  { label: 'Tutorial', slug: 'tutorial', emoji: '📚' },
-  { label: 'Debate', slug: 'debate', emoji: '💬' },
-  { label: 'Launch', slug: 'launch', emoji: '🚀' },
-];
+import { useCategories } from '@/hooks/use-forum';
 
 interface CommunityDropdownProps {
   value: string;
@@ -31,11 +19,25 @@ interface CommunityDropdownProps {
 
 /**
  * CommunityDropdown - Dropdown to select a community for the discussion
- * Populated with items from the Discover section
+ * Populated with real categories from Convex via useCategories hook.
  */
 export function CommunityDropdown({ value, onChange, className }: CommunityDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  
+  const { categories, isLoading } = useCategories();
+
+  // Map categories to items with emoji fallback
+  const communityItems = (categories as Array<{
+    _id: string;
+    slug: string;
+    name: string;
+    icon?: string;
+  }>).map((cat) => ({
+    id: cat._id,
+    slug: cat.slug,
+    label: cat.name,
+    emoji: cat.icon ?? '💬',
+  }));
+
   const selectedCommunity = communityItems.find(item => item.slug === value);
 
   return (
@@ -49,7 +51,9 @@ export function CommunityDropdown({ value, onChange, className }: CommunityDropd
           )}
         >
           <div className="flex items-center gap-2">
-            {selectedCommunity ? (
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : selectedCommunity ? (
               <>
                 <span className="text-base">{selectedCommunity.emoji}</span>
                 <span className="font-medium">{selectedCommunity.label}</span>
@@ -74,25 +78,35 @@ export function CommunityDropdown({ value, onChange, className }: CommunityDropd
         className="w-[250px] bg-card border-border"
         sideOffset={4}
       >
-        {communityItems.map((item) => (
-          <DropdownMenuItem
-            key={item.slug}
-            onClick={() => {
-              onChange(item.slug);
-              setIsOpen(false);
-            }}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 cursor-pointer',
-              value === item.slug && 'bg-primary/10'
-            )}
-          >
-            <span className="text-lg">{item.emoji}</span>
-            <span className="flex-1 font-medium">{item.label}</span>
-            {value === item.slug && (
-              <Check className="h-4 w-4 text-primary" />
-            )}
-          </DropdownMenuItem>
-        ))}
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : communityItems.length === 0 ? (
+          <div className="px-3 py-2 text-sm text-muted-foreground">
+            No communities available
+          </div>
+        ) : (
+          communityItems.map((item) => (
+            <DropdownMenuItem
+              key={item.slug}
+              onClick={() => {
+                onChange(item.slug);
+                setIsOpen(false);
+              }}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 cursor-pointer',
+                value === item.slug && 'bg-primary/10'
+              )}
+            >
+              <span className="text-lg">{item.emoji}</span>
+              <span className="flex-1 font-medium">{item.label}</span>
+              {value === item.slug && (
+                <Check className="h-4 w-4 text-primary" />
+              )}
+            </DropdownMenuItem>
+          ))
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

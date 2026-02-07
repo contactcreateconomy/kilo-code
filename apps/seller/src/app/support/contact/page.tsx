@@ -12,7 +12,7 @@ export default function ContactSupportPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Support ticket submitted:", { subject, category, message, orderId, priority });
+    // TODO: Submit support ticket via Convex mutation
   };
 
   return (

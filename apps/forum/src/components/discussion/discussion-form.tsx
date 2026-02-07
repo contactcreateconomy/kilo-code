@@ -7,6 +7,7 @@ import { Plus, X } from 'lucide-react';
 import { cn, Button, Input, Badge } from '@createconomy/ui';
 import { CommunityDropdown } from './community-dropdown';
 import { EditorToolbar } from './editor-toolbar';
+import { useForum, useCategories } from '@/hooks/use-forum';
 
 interface DiscussionFormProps {
   className?: string;
@@ -15,10 +16,14 @@ interface DiscussionFormProps {
 /**
  * DiscussionForm - Main form for creating a new discussion
  * Includes community selector, title, tags, and rich text editor
+ *
+ * Submits to Convex via useForum().createThread mutation.
  */
 export function DiscussionForm({ className }: DiscussionFormProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { createThread } = useForum();
+  const { categories } = useCategories();
   
   const [community, setCommunity] = useState('');
   const [title, setTitle] = useState('');
@@ -121,11 +126,18 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem('discussion-draft', JSON.stringify(draft));
-    // Show success feedback (could be a toast)
     alert('Draft saved!');
   };
 
-  // Submit form
+  // Find category ID from slug
+  const getCategoryIdFromSlug = (slug: string): string | null => {
+    const cat = (categories as Array<{ _id: string; slug: string }>).find(
+      (c) => c.slug === slug
+    );
+    return cat?._id ?? null;
+  };
+
+  // Submit form — calls Convex createThread mutation
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -140,22 +152,33 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
       return;
     }
 
+    const categoryId = getCategoryIdFromSlug(community);
+    if (!categoryId) {
+      setError('Invalid community selected.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // In production, this would call a Convex mutation
-      // const discussionId = await createDiscussion({ community, title, body, tags });
-      // router.push(`/t/${discussionId}`);
+      const threadId = await createThread({
+        title: title.trim(),
+        content: body || title.trim(),
+        categoryId,
+      });
 
-      // Simulated success
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
       // Clear draft
       localStorage.removeItem('discussion-draft');
-      
-      router.push(`/c/${community}`);
-    } catch {
-      setError('Failed to create discussion. Please try again.');
+
+      // Navigate to the new thread
+      if (threadId) {
+        router.push(`/t/${threadId}`);
+      } else {
+        router.push(`/c/${community}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create discussion. Please try again.';
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

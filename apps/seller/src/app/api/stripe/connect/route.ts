@@ -8,10 +8,12 @@ import Stripe from "stripe";
  * POST /api/stripe/connect - Create Connect account and get onboarding URL
  */
 
-// Initialize Stripe
-const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"]!, {
-  apiVersion: "2026-01-28.clover",
-});
+// Lazy-initialize Stripe to avoid build-time errors when env vars are not yet available
+function getStripe() {
+  return new Stripe(process.env['STRIPE_SECRET_KEY']!, {
+    apiVersion: '2026-01-28.clover',
+  });
+}
 
 /**
  * Create Stripe Connect account and return onboarding URL
@@ -30,10 +32,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get base URL for return/refresh URLs
-    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || request.headers.get("origin") || "http://localhost:3003";
+    const baseUrl = process.env['NEXT_PUBLIC_APP_URL'] || request.headers.get("origin") || "http://localhost:3003";
 
     // Create Express Connect account
-    const account = await stripe.accounts.create({
+    const account = await getStripe().accounts.create({
       type: "express",
       email,
       business_type: businessType as Stripe.AccountCreateParams.BusinessType,
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create account link for onboarding
-    const accountLink = await stripe.accountLinks.create({
+    const accountLink = await getStripe().accountLinks.create({
       account: account.id,
       refresh_url: `${baseUrl}/payouts?refresh=true`,
       return_url: `${baseUrl}/payouts?success=true`,
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const account = await stripe.accounts.retrieve(accountId);
+    const account = await getStripe().accounts.retrieve(accountId);
 
     return NextResponse.json({
       hasAccount: true,

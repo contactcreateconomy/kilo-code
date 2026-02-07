@@ -1,123 +1,40 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { FeedTabs } from './feed-tabs';
 import { DiscussionCard } from './discussion-card';
 import { FeaturedSlider } from './featured-slider';
+import { useDiscussionFeed } from '@/hooks/use-discussion-feed';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
-import type { Discussion, FeedTabType } from '@/types/forum';
+import type { FeedTabType } from '@/types/forum';
 
 interface DiscussionFeedProps {
-  initialDiscussions: Discussion[];
   className?: string;
   showFeaturedSlider?: boolean;
 }
 
 /**
- * DiscussionFeed - Main feed component with tabs, featured slider, and infinite scroll
+ * DiscussionFeed - Main feed component with tabs, featured slider, and live data
+ *
+ * Fetches discussions from Convex via useDiscussionFeed hook.
+ * Sorting is done server-side; tabs control the sortBy parameter.
  */
 export function DiscussionFeed({
-  initialDiscussions,
   className,
-  showFeaturedSlider = true
+  showFeaturedSlider = true,
 }: DiscussionFeedProps) {
   const [activeTab, setActiveTab] = useState<FeedTabType>('top');
-  const [discussions, setDiscussions] = useState<Discussion[]>(initialDiscussions);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const { discussions, isLoading } = useDiscussionFeed(activeTab, 30);
 
-  // Sort/filter discussions based on active tab
-  const sortedDiscussions = [...discussions]
-    .filter((d) => {
-      // For 'fav' tab, only show bookmarked discussions
-      if (activeTab === 'fav') {
-        return d.isBookmarked;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      switch (activeTab) {
-        case 'hot':
-          // Hot: combination of upvotes and recency
-          const aScore = a.upvotes + (Date.now() - new Date(a.createdAt).getTime()) / 3600000;
-          const bScore = b.upvotes + (Date.now() - new Date(b.createdAt).getTime()) / 3600000;
-          return bScore - aScore;
-        case 'new':
-          // New: most recent first
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'top':
-          // Top: highest upvotes first
-          return b.upvotes - a.upvotes;
-        case 'fav':
-          // Fav: most recent bookmarked first
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        default:
-          return 0;
-      }
-    });
-
-  // Get featured discussions (pinned or high engagement)
-  const featuredDiscussions = sortedDiscussions.filter(
-    d => d.isPinned || d.upvotes > 100
-  ).slice(0, 5);
-
-  // Simulate loading more discussions
-  const loadMore = useCallback(async () => {
-    if (isLoading || !hasMore) return;
-    
-    setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // In a real app, this would fetch more discussions from the API
-    // For now, we'll just duplicate existing discussions with new IDs
-    const newDiscussions = initialDiscussions.map((d, i) => ({
-      ...d,
-      id: `${d.id}-${discussions.length + i}`,
-      createdAt: new Date(Date.now() - Math.random() * 86400000 * 7), // Random date within last week
-    }));
-    
-    setDiscussions(prev => [...prev, ...newDiscussions]);
-    
-    // Stop after 3 loads for demo purposes
-    if (discussions.length >= initialDiscussions.length * 3) {
-      setHasMore(false);
-    }
-    
-    setIsLoading(false);
-  }, [isLoading, hasMore, discussions.length, initialDiscussions]);
-
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasMore && !isLoading) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const currentRef = loadMoreRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, [loadMore, hasMore, isLoading]);
-
-  // Reset discussions when tab changes
-  useEffect(() => {
-    setDiscussions(initialDiscussions);
-    setHasMore(true);
-  }, [activeTab, initialDiscussions]);
+  // Featured: pinned or high-engagement discussions
+  const featuredDiscussions = useMemo(
+    () =>
+      discussions
+        .filter((d) => d.isPinned || d.upvotes > 50)
+        .slice(0, 5),
+    [discussions]
+  );
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
@@ -133,25 +50,28 @@ export function DiscussionFeed({
 
       {/* Discussion Cards */}
       <div className="flex flex-col gap-4">
-        {sortedDiscussions.map((discussion, index) => (
-          <DiscussionCard key={discussion.id} discussion={discussion} index={index} />
-        ))}
-      </div>
-
-      {/* Infinite Scroll Trigger */}
-      <div ref={loadMoreRef} className="flex justify-center py-8">
-        {isLoading && (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Loading more discussions...</span>
+        {isLoading && discussions.length === 0 ? (
+          <div className="flex justify-center py-12">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Loading discussions...</span>
+            </div>
           </div>
-        )}
-        {!hasMore && discussions.length > initialDiscussions.length && (
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              🎉 You've reached the end! No more discussions to load.
+        ) : discussions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-lg font-medium text-foreground">No discussions yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Be the first to start a conversation!
             </p>
           </div>
+        ) : (
+          discussions.map((discussion, index) => (
+            <DiscussionCard
+              key={discussion.id}
+              discussion={discussion}
+              index={index}
+            />
+          ))
         )}
       </div>
     </div>

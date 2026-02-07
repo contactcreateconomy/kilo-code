@@ -1,3 +1,7 @@
+'use client';
+
+'use client';
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;

@@ -8,10 +8,12 @@ import Stripe from "stripe";
  * POST /api/checkout
  */
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-});
+// Lazy-initialize Stripe to avoid build-time errors when env vars are not yet available
+function getStripe() {
+  return new Stripe(process.env['STRIPE_SECRET_KEY']!, {
+    apiVersion: '2026-01-28.clover',
+  });
+}
 
 // Rate limiting map (simple in-memory implementation)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -108,10 +110,10 @@ export async function POST(request: NextRequest) {
     }));
 
     // Get base URL for success/cancel URLs
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get("origin") || "http://localhost:3000";
+    const baseUrl = process.env['NEXT_PUBLIC_APP_URL'] || request.headers.get("origin") || "http://localhost:3000";
 
     // Create Stripe Checkout session
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       line_items: lineItems,
@@ -177,7 +179,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId, {
       expand: ["line_items", "payment_intent"],
     });
 
@@ -190,7 +192,7 @@ export async function GET(request: NextRequest) {
         amountTotal: session.amount_total,
         currency: session.currency,
         metadata: session.metadata,
-        lineItems: session.line_items?.data.map((item) => ({
+        lineItems: session.line_items?.data.map((item: Stripe.LineItem) => ({
           name: item.description,
           quantity: item.quantity,
           amount: item.amount_total,

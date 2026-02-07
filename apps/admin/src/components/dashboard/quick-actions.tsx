@@ -3,29 +3,29 @@ import Link from 'next/link';
 const quickActions = [
   {
     name: 'Add Product',
-    href: '/products/new',
+    href: '/products/new' as const,
     icon: '➕',
     description: 'Create a new product listing',
   },
   {
     name: 'View Orders',
-    href: '/orders',
+    href: '/orders' as const,
     icon: '📋',
     description: 'Manage customer orders',
   },
   {
     name: 'Pending Reviews',
-    href: '/moderation/reviews',
+    href: '/moderation/reviews' as const,
     icon: '⭐',
     description: 'Approve product reviews',
   },
   {
     name: 'Seller Applications',
-    href: '/sellers/pending',
+    href: '/sellers/pending' as const,
     icon: '🏪',
     description: 'Review new sellers',
   },
-];
+] as const;
 
 export function QuickActions() {
   return (

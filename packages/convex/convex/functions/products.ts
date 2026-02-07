@@ -1,8 +1,10 @@
 import { query, mutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
+import type { Id } from "../_generated/dataModel";
 import { productStatusValidator } from "../schema";
+import { createError, ErrorCode } from "../lib/errors";
+import { PRODUCT_LIMITS, SLUG_PATTERN } from "../lib/constants";
 
 /**
  * Product Management Functions
@@ -24,6 +26,7 @@ import { productStatusValidator } from "../schema";
  * @param sellerId - Optional seller filter
  * @param cursor - Pagination cursor
  * @param limit - Number of items per page
+ * @param includeDetails - When true, enrich with seller name and category name (default: false)
  * @returns Paginated list of products
  */
 export const listProducts = query({
@@ -34,6 +37,9 @@ export const listProducts = query({
     sellerId: v.optional(v.id("users")),
     cursor: v.optional(v.string()),
     limit: v.optional(v.number()),
+    // PERF: Allow callers to opt-in to enrichment. List pages that only need
+    // product cards can skip the extra N queries for seller/category info.
+    includeDetails: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
@@ -77,8 +83,11 @@ export const listProducts = query({
     const hasMore = products.length > limit;
     const items = hasMore ? products.slice(0, limit) : products;
 
-    // Get primary images for each product
-    const productsWithImages = await Promise.all(
+    // PERF: Primary image uses the compound index "by_product_primary" with
+    // .first(), so each lookup is a single indexed read — not a full scan.
+    // This is an N+1 pattern (1 query per product) but each sub-query is
+    // O(1) via the index. Promise.all parallelizes the lookups.
+    const productsWithDetails = await Promise.all(
       items.map(async (product) => {
         const primaryImage = await ctx.db
           .query("productImages")
@@ -87,17 +96,42 @@ export const listProducts = query({
           )
           .first();
 
+        // PERF: Only fetch seller and category info when includeDetails is
+        // true. For list pages (cards/grids), callers should pass false or
+        // omit this flag to avoid 2 extra queries per product (N*2 savings).
+        let sellerName: string | null = null;
+        let categoryName: string | null = null;
+
+        if (args.includeDetails) {
+          const seller = await ctx.db.get(product.sellerId) as {
+            _id: Id<"users">;
+            name?: string;
+          } | null;
+          sellerName = seller?.name ?? null;
+
+          if (product.categoryId) {
+            const category = await ctx.db.get(product.categoryId) as {
+              _id: Id<"productCategories">;
+              name: string;
+            } | null;
+            categoryName = category?.name ?? null;
+          }
+        }
+
         return {
           ...product,
           primaryImage: primaryImage?.url,
+          ...(args.includeDetails
+            ? { sellerName, categoryName }
+            : {}),
         };
       })
     );
 
     return {
-      items: productsWithImages,
+      items: productsWithDetails,
       hasMore,
-      nextCursor: hasMore ? items[items.length - 1]._id : null,
+      nextCursor: hasMore && items.length > 0 ? items[items.length - 1]!._id : null,
     };
   },
 });
@@ -271,7 +305,10 @@ export const getProductsBySeller = query({
       .filter((q) => q.eq(q.field("isDeleted"), false))
       .take(limit);
 
-    // Get primary images
+    // PERF: Primary image lookup uses "by_product_primary" compound index with
+    // .first() — each is an O(1) indexed read, parallelized via Promise.all.
+    // For seller list pages this is acceptable; for heavier pages consider
+    // denormalizing the primary image URL onto the product record.
     const productsWithImages = await Promise.all(
       products.map(async (product) => {
         const primaryImage = await ctx.db
@@ -327,7 +364,7 @@ export const searchProducts = query({
 
     const products = await searchQuery.take(limit);
 
-    // Get primary images
+    // PERF: Same indexed .first() pattern as listProducts — O(1) per product.
     const productsWithImages = await Promise.all(
       products.map(async (product) => {
         const primaryImage = await ctx.db
@@ -407,9 +444,58 @@ export const createProduct = mutation({
       throw new Error("Seller role required");
     }
 
-    // Validate price
-    if (args.price < 0) {
-      throw new Error("Price must be non-negative");
+    // A5: Validate slug format
+    if (!SLUG_PATTERN.test(args.slug)) {
+      throw createError(
+        ErrorCode.INVALID_INPUT,
+        'Slug must be lowercase alphanumeric characters separated by hyphens (e.g. "my-product")',
+        { field: 'slug' }
+      );
+    }
+
+    // A5: Validate slug uniqueness — check the same index used by getProductBySlug
+    if (args.tenantId) {
+      const existingByTenantSlug = await ctx.db
+        .query("products")
+        .withIndex("by_tenant_slug", (q) =>
+          q.eq("tenantId", args.tenantId).eq("slug", args.slug)
+        )
+        .first();
+      if (existingByTenantSlug && !existingByTenantSlug.isDeleted) {
+        throw createError(
+          ErrorCode.ALREADY_EXISTS,
+          `A product with slug "${args.slug}" already exists in this tenant`,
+          { field: 'slug' }
+        );
+      }
+    } else {
+      const existingBySlug = await ctx.db
+        .query("products")
+        .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+        .first();
+      if (existingBySlug && !existingBySlug.isDeleted) {
+        throw createError(
+          ErrorCode.ALREADY_EXISTS,
+          `A product with slug "${args.slug}" already exists`,
+          { field: 'slug' }
+        );
+      }
+    }
+
+    // A5: Validate price range using shared constants
+    if (args.price < PRODUCT_LIMITS.MIN_PRICE_CENTS) {
+      throw createError(
+        ErrorCode.INVALID_INPUT,
+        `Price must be at least ${PRODUCT_LIMITS.MIN_PRICE_CENTS} cents ($${(PRODUCT_LIMITS.MIN_PRICE_CENTS / 100).toFixed(2)})`,
+        { field: 'price', min: PRODUCT_LIMITS.MIN_PRICE_CENTS }
+      );
+    }
+    if (args.price > PRODUCT_LIMITS.MAX_PRICE_CENTS) {
+      throw createError(
+        ErrorCode.INVALID_INPUT,
+        `Price must not exceed ${PRODUCT_LIMITS.MAX_PRICE_CENTS} cents ($${(PRODUCT_LIMITS.MAX_PRICE_CENTS / 100).toFixed(2)})`,
+        { field: 'price', max: PRODUCT_LIMITS.MAX_PRICE_CENTS }
+      );
     }
 
     const now = Date.now();
@@ -444,7 +530,7 @@ export const createProduct = mutation({
     // Create images
     if (args.images && args.images.length > 0) {
       for (let i = 0; i < args.images.length; i++) {
-        const image = args.images[i];
+        const image = args.images[i]!;
         await ctx.db.insert("productImages", {
           productId,
           url: image.url,
@@ -512,7 +598,7 @@ export const updateProduct = mutation({
       throw new Error("Price must be non-negative");
     }
 
-    const { productId, ...updates } = args;
+    const { productId: _productId, ...updates } = args;
 
     await ctx.db.patch(args.productId, {
       ...updates,
@@ -630,7 +716,7 @@ export const addProductImages = mutation({
 
     // Add new images
     for (let i = 0; i < args.images.length; i++) {
-      const image = args.images[i];
+      const image = args.images[i]!;
       await ctx.db.insert("productImages", {
         productId: args.productId,
         url: image.url,
@@ -692,17 +778,67 @@ export const removeProductImage = mutation({
 /**
  * Increment product view count
  *
+ * PERF: Rate-limited to one counted view per viewer per product per hour.
+ * If a viewerId is provided, checks the productViews table for a recent
+ * view before incrementing. Anonymous views (no viewerId) still increment
+ * unconditionally as a fallback, but callers should pass a session token
+ * or userId whenever possible.
+ *
+ * A3 NOTE: View count throttling is already handled via the productViews table
+ * with a 1-hour deduplication window per viewer. Database-backed rate limiting
+ * (checkRateLimitWithDb) is NOT applied here because the existing
+ * per-viewer-per-product dedup is more granular and appropriate for view
+ * counting. Generic rate limiting would be too coarse (it would limit total
+ * views across all products for a single user).
+ *
  * @param productId - Product ID
+ * @param viewerId - Optional viewer identifier (userId or anonymous session token)
  */
 export const incrementViewCount = mutation({
   args: {
     productId: v.id("products"),
+    viewerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.productId);
     if (!product || product.isDeleted) {
       return;
     }
+
+    const now = Date.now();
+    // PERF: 1-hour throttle window — same viewer seeing the same product
+    // within this window won't inflate the count.
+    const VIEW_THROTTLE_MS = 60 * 60 * 1000; // 1 hour
+
+    if (args.viewerId) {
+      // Check for a recent view from this viewer
+      const recentView = await ctx.db
+        .query("productViews")
+        .withIndex("by_product_viewer", (q) =>
+          q.eq("productId", args.productId).eq("viewerId", args.viewerId!)
+        )
+        .first();
+
+      if (recentView && now - recentView.viewedAt < VIEW_THROTTLE_MS) {
+        // PERF: Viewer already counted within the throttle window — skip.
+        return;
+      }
+
+      if (recentView) {
+        // Update existing record's timestamp instead of creating a new row
+        await ctx.db.patch(recentView._id, { viewedAt: now });
+      } else {
+        // First view from this viewer — create tracking record
+        await ctx.db.insert("productViews", {
+          productId: args.productId,
+          viewerId: args.viewerId!,
+          viewedAt: now,
+        });
+      }
+    }
+    // PERF: If no viewerId is provided, we still increment (backward compat)
+    // but this path has no dedup protection. Callers should always provide
+    // a viewerId (user ID or session token) for accurate counting.
 
     await ctx.db.patch(args.productId, {
       viewCount: product.viewCount + 1,

@@ -1,10 +1,40 @@
-import { v } from "convex/values";
+// ============================================================================
+// Re-exports from lib/security.ts (single source of truth)
+//
+// The following were previously duplicated in this file. They now live in
+// lib/security.ts and are re-exported here for backward compatibility.
+// ============================================================================
+
+export {
+  // Rate limiting
+  type RateLimitConfig,
+  type RateLimitResult,
+  checkRateLimit,
+  checkRateLimitWithDb,
+  rateLimitConfigs as rateLimits,
+
+  // Injection detection
+  hasSqlInjectionPatterns,
+  hasNoSqlInjectionPatterns,
+
+  // Database sanitization
+  sanitizeForDatabase,
+} from "../lib/security";
+
+import {
+  hasSqlInjectionPatterns as _hasSqlInjectionPatterns,
+  hasNoSqlInjectionPatterns as _hasNoSqlInjectionPatterns,
+} from "../lib/security";
 
 /**
  * Input Validation Helpers
  *
  * Utility functions for validating and sanitizing user input
  * in the Createconomy platform.
+ *
+ * Security-related utilities (rate limiting, injection detection,
+ * database sanitization) are maintained in lib/security.ts and
+ * re-exported above for backward compatibility.
  */
 
 // ============================================================================
@@ -297,66 +327,32 @@ export function assertRequired<T>(
   }
 }
 
-// ============================================================================
-// Rate Limiting Helpers
-// ============================================================================
-
 /**
- * Rate limit configuration
- */
-export interface RateLimitConfig {
-  maxRequests: number;
-  windowMs: number;
-}
-
-/**
- * Default rate limit configurations
- */
-export const rateLimits = {
-  // Standard API calls
-  standard: { maxRequests: 100, windowMs: 60 * 1000 } as RateLimitConfig,
-
-  // Authentication attempts
-  auth: { maxRequests: 5, windowMs: 15 * 60 * 1000 } as RateLimitConfig,
-
-  // Content creation (posts, reviews)
-  content: { maxRequests: 10, windowMs: 60 * 1000 } as RateLimitConfig,
-
-  // Search queries
-  search: { maxRequests: 30, windowMs: 60 * 1000 } as RateLimitConfig,
-
-  // File uploads
-  upload: { maxRequests: 5, windowMs: 60 * 1000 } as RateLimitConfig,
-};
-
-/**
- * Check if a request should be rate limited
- * Note: This is a helper for implementing rate limiting in your application.
- * Actual rate limiting should be implemented with a proper store (Redis, etc.)
+ * Validate input is safe for database operations
  *
- * @param key - Unique key for the rate limit (e.g., userId + action)
- * @param timestamps - Array of previous request timestamps
- * @param config - Rate limit configuration
- * @returns Object with allowed status and remaining requests
+ * Re-exports injection checks from lib/security.ts and wraps them
+ * in a ValidationError throw for backward compatibility.
+ *
+ * @param input - Input to validate
+ * @param fieldName - Field name for error messages
+ * @throws ValidationError if input contains injection patterns
  */
-export function checkRateLimit(
-  key: string,
-  timestamps: number[],
-  config: RateLimitConfig
-): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  const windowStart = now - config.windowMs;
+export function assertSafeForDatabase(input: string, fieldName: string): void {
+  if (_hasSqlInjectionPatterns(input)) {
+    throw new ValidationError(
+      fieldName,
+      "Input contains potentially dangerous patterns",
+      "INJECTION_DETECTED"
+    );
+  }
 
-  // Filter timestamps within the window
-  const recentTimestamps = timestamps.filter((t) => t > windowStart);
-
-  const allowed = recentTimestamps.length < config.maxRequests;
-  const remaining = Math.max(0, config.maxRequests - recentTimestamps.length);
-  const resetAt = recentTimestamps.length > 0
-    ? Math.min(...recentTimestamps) + config.windowMs
-    : now + config.windowMs;
-
-  return { allowed, remaining, resetAt };
+  if (_hasNoSqlInjectionPatterns(input)) {
+    throw new ValidationError(
+      fieldName,
+      "Input contains potentially dangerous patterns",
+      "INJECTION_DETECTED"
+    );
+  }
 }
 
 // ============================================================================
@@ -367,6 +363,8 @@ export function checkRateLimit(
  * User roles in order of privilege
  */
 export const roleHierarchy = ["customer", "seller", "moderator", "admin"] as const;
+
+type UserRole = typeof roleHierarchy[number];
 
 /**
  * Check if a role has at least the specified privilege level
@@ -379,8 +377,8 @@ export function hasMinimumRole(
   userRole: string,
   requiredRole: string
 ): boolean {
-  const userIndex = roleHierarchy.indexOf(userRole as any);
-  const requiredIndex = roleHierarchy.indexOf(requiredRole as any);
+  const userIndex = roleHierarchy.indexOf(userRole as UserRole);
+  const requiredIndex = roleHierarchy.indexOf(requiredRole as UserRole);
 
   if (userIndex === -1 || requiredIndex === -1) {
     return false;
@@ -699,112 +697,6 @@ export function validateFile(
   }
 
   return { valid: true };
-}
-
-// ============================================================================
-// SQL Injection Prevention
-// ============================================================================
-
-/**
- * SQL injection patterns to detect
- */
-const sqlInjectionPatterns = [
-  // Basic SQL keywords
-  /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|EXEC|EXECUTE)\b)/i,
-  // UNION-based injection
-  /(\bUNION\b.*\bSELECT\b)/i,
-  // Comment-based injection
-  /(--|#|\/\*|\*\/)/,
-  // Boolean-based injection
-  /(\bOR\b|\bAND\b)\s*[\d\w'"=]+\s*[=<>]/i,
-  // Quote-based injection
-  /['"]\s*(OR|AND)\s*['"]/i,
-  // Stacked queries
-  /;\s*(SELECT|INSERT|UPDATE|DELETE|DROP)/i,
-  // Time-based injection
-  /(\bWAITFOR\b|\bSLEEP\b|\bBENCHMARK\b)/i,
-  // System procedures
-  /(\bxp_|\bsp_)/i,
-];
-
-/**
- * Check if input contains SQL injection patterns
- *
- * @param input - Input to check
- * @returns True if suspicious patterns found
- */
-export function hasSqlInjectionPatterns(input: string): boolean {
-  return sqlInjectionPatterns.some((pattern) => pattern.test(input));
-}
-
-/**
- * NoSQL injection patterns to detect
- */
-const noSqlInjectionPatterns = [
-  // MongoDB operators
-  /\$where/i,
-  /\$gt|\$lt|\$gte|\$lte|\$ne|\$eq/i,
-  /\$regex/i,
-  /\$or|\$and|\$not|\$nor/i,
-  /\$exists|\$type/i,
-  // JSON injection
-  /\{\s*['"]\$\w+['"]\s*:/,
-  // JavaScript injection in MongoDB
-  /function\s*\(/i,
-  /\bthis\./i,
-];
-
-/**
- * Check if input contains NoSQL injection patterns
- *
- * @param input - Input to check
- * @returns True if suspicious patterns found
- */
-export function hasNoSqlInjectionPatterns(input: string): boolean {
-  return noSqlInjectionPatterns.some((pattern) => pattern.test(input));
-}
-
-/**
- * Sanitize input for database queries
- *
- * @param input - Input to sanitize
- * @returns Sanitized input
- */
-export function sanitizeForDatabase(input: string): string {
-  return input
-    .replace(/['"`;\\]/g, "") // Remove quotes and special chars
-    .replace(/--/g, "") // Remove SQL comments
-    .replace(/\/\*/g, "") // Remove block comment start
-    .replace(/\*\//g, "") // Remove block comment end
-    .replace(/\$/g, "") // Remove MongoDB operators
-    .replace(/\{/g, "") // Remove JSON object start
-    .replace(/\}/g, "") // Remove JSON object end
-    .trim();
-}
-
-/**
- * Validate input is safe for database operations
- *
- * @param input - Input to validate
- * @param fieldName - Field name for error messages
- * @throws ValidationError if input contains injection patterns
- */
-export function assertSafeForDatabase(input: string, fieldName: string): void {
-  if (hasSqlInjectionPatterns(input)) {
-    throw new ValidationError(
-      fieldName,
-      "Input contains potentially dangerous patterns",
-      "INJECTION_DETECTED"
-    );
-  }
-
-  if (hasNoSqlInjectionPatterns(input)) {
-    throw new ValidationError(
-      fieldName,
-      "Input contains potentially dangerous patterns",
-      "INJECTION_DETECTED"
-    );
-  }
 }
 
 // ============================================================================

@@ -1,7 +1,7 @@
 import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
+import type { Id } from "../_generated/dataModel";
 
 /**
  * Review Management Functions
@@ -279,6 +279,14 @@ export const canReviewProduct = query({
 
 /**
  * Create a review for a product
+ *
+ * A3 TODO: Add database-backed rate limiting here to prevent review spam.
+ * Suggested config: rateLimitConfigs.reviewSubmission (5 per day).
+ * Example:
+ *   await checkRateLimitWithDb(ctx, `createReview:${userId}`, rateLimitConfigs.reviewSubmission);
+ * Deferred because the existing "one review per product per user" check
+ * already provides strong deduplication; rate limiting would add a global
+ * daily cap across all products.
  *
  * @param productId - Product ID
  * @param rating - Rating (1-5)

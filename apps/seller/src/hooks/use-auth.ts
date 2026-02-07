@@ -1,58 +1,79 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
-import { useConvexAuth } from "convex/react";
+import { useCallback } from "react";
+import { useConvexAuth, useQuery } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { api } from "@createconomy/convex";
 
 interface User {
   _id: string;
-  email: string;
+  email?: string;
   name?: string;
-  role: "user" | "seller" | "admin";
+  image?: string;
+  profile?: {
+    defaultRole?: string;
+  } | null;
 }
 
-interface AuthState {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  user: User | null;
-  isSeller: boolean;
-  signOut: () => Promise<void>;
-}
+/**
+ * useAuth - Authentication hook for the seller app.
+ *
+ * Provides authentication state and methods using Convex Auth.
+ * Includes seller-specific role checks.
+ */
+export function useAuth() {
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  const { signIn: convexSignIn, signOut: convexSignOut } = useAuthActions();
 
-export function useAuth(): AuthState {
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const user = useQuery(
+    api.functions.users.getCurrentUser,
+    isAuthenticated ? {} : "skip"
+  ) as User | null | undefined;
 
-  // TODO: Replace with actual Convex query
-  // const currentUser = useQuery(api.users.current);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      await convexSignIn("password", { email, password, flow: "signIn" });
+    },
+    [convexSignIn]
+  );
 
-  useEffect(() => {
-    if (!authLoading) {
-      // Simulated user fetch - replace with actual Convex query
-      if (isAuthenticated) {
-        // setUser(currentUser);
-        setUser(null); // Placeholder
-      } else {
-        setUser(null);
-      }
-      setIsLoading(false);
-    }
-  }, [authLoading, isAuthenticated]);
+  const signUp = useCallback(
+    async (email: string, password: string, username: string) => {
+      await convexSignIn("password", {
+        email,
+        password,
+        username,
+        flow: "signUp",
+      });
+    },
+    [convexSignIn]
+  );
 
-  const signOut = async () => {
-    // TODO: Replace with actual sign out logic
-    // This would typically call a Convex mutation or auth provider's signOut
-    console.log("Signing out...");
-    setUser(null);
-  };
+  const signInWithGoogle = useCallback(async () => {
+    await convexSignIn("google");
+  }, [convexSignIn]);
+
+  const signInWithGitHub = useCallback(async () => {
+    await convexSignIn("github");
+  }, [convexSignIn]);
+
+  const signOut = useCallback(async () => {
+    await convexSignOut();
+  }, [convexSignOut]);
+
+  const role = user?.profile?.defaultRole;
 
   return {
+    user: user ?? null,
+    isLoading,
     isAuthenticated,
-    isLoading: isLoading || authLoading,
-    user,
-    isSeller: user?.role === "seller" || user?.role === "admin",
+    isSeller: role === "seller" || role === "admin",
+    signIn,
+    signUp,
+    signInWithGoogle,
+    signInWithGitHub,
     signOut,
   };
 }

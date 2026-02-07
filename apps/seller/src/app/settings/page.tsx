@@ -14,7 +14,7 @@ export default function StoreSettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Store settings updated");
+    // TODO: Save store settings via Convex mutation
   };
 
   return (

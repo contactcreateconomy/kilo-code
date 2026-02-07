@@ -12,3 +12,5 @@ export {
   NavbarSkeleton,
 } from './skeletons';
 export { ToastProvider, useToast } from './toast';
+export { ErrorBoundary } from './error-boundary';
+export { WidgetErrorFallback } from './widget-error-fallback';

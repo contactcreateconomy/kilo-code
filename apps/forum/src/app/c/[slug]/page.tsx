@@ -1,84 +1,14 @@
-import { Suspense } from "react";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ThreadList } from "@/components/forum/thread-list";
-import { Sidebar } from "@/components/layout/sidebar";
-import { SearchBar } from "@/components/forum/search-bar";
-import { Button, Skeleton } from "@createconomy/ui";
-import type { Metadata } from "next";
+'use client';
 
-// Mock function - in production, this would fetch from Convex
-async function getCategory(slug: string) {
-  // Simulated category data
-  const categories: Record<
-    string,
-    { name: string; description: string; icon: string; threadCount: number }
-  > = {
-    general: {
-      name: "General Discussion",
-      description: "General conversations about anything related to Createconomy",
-      icon: "💬",
-      threadCount: 156,
-    },
-    "product-help": {
-      name: "Product Help",
-      description: "Get help with digital products you've purchased",
-      icon: "❓",
-      threadCount: 89,
-    },
-    "creator-tools": {
-      name: "Creator Tools",
-      description: "Discuss tools and resources for creators",
-      icon: "🛠️",
-      threadCount: 67,
-    },
-    announcements: {
-      name: "Announcements",
-      description: "Official announcements from the Createconomy team",
-      icon: "📢",
-      threadCount: 23,
-    },
-    feedback: {
-      name: "Feedback & Suggestions",
-      description: "Share your ideas to improve Createconomy",
-      icon: "💡",
-      threadCount: 45,
-    },
-    showcase: {
-      name: "Showcase",
-      description: "Show off your creations and get feedback",
-      icon: "🎨",
-      threadCount: 112,
-    },
-  };
-
-  return categories[slug] || null;
-}
-
-type Props = {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string; sort?: string }>;
-};
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const category = await getCategory(slug);
-
-  if (!category) {
-    return {
-      title: "Category Not Found",
-    };
-  }
-
-  return {
-    title: category.name,
-    description: category.description,
-    openGraph: {
-      title: `${category.name} | Createconomy Forum`,
-      description: category.description,
-    },
-  };
-}
+import { Suspense } from 'react';
+import Link from 'next/link';
+import { useParams, useSearchParams } from 'next/navigation';
+import { ThreadList } from '@/components/forum/thread-list';
+import { Sidebar } from '@/components/layout/sidebar';
+import { SearchBar } from '@/components/forum/search-bar';
+import { Button, Skeleton } from '@createconomy/ui';
+import { useCategoryThreads } from '@/hooks/use-category-threads';
+import { Loader2 } from 'lucide-react';
 
 function ThreadListSkeleton() {
   return (
@@ -97,16 +27,44 @@ function ThreadListSkeleton() {
   );
 }
 
-export default async function CategoryPage({ params, searchParams }: Props) {
-  const { slug } = await params;
-  const { page = "1", sort = "recent" } = await searchParams;
-  const category = await getCategory(slug);
+/**
+ * CategoryPage - Category detail page
+ *
+ * Fetches category and its threads from Convex via useCategoryThreads hook.
+ */
+export default function CategoryPage() {
+  const params = useParams<{ slug: string }>();
+  const searchParams = useSearchParams();
+  const slug = params.slug;
+  const page = searchParams.get('page') ?? '1';
+  const sort = (searchParams.get('sort') ?? 'recent') as 'recent' | 'popular' | 'unanswered';
+  const currentPage = parseInt(page, 10);
 
-  if (!category) {
-    notFound();
+  const { category, threads, isLoading } = useCategoryThreads(slug, sort);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
   }
 
-  const currentPage = parseInt(page, 10);
+  if (!category) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="text-2xl font-bold mb-2">Category Not Found</h1>
+        <p className="text-muted-foreground mb-4">
+          This category doesn&apos;t exist or has been removed.
+        </p>
+        <Button asChild>
+          <Link href="/c">Browse Categories</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -130,7 +88,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           <div className="mb-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <span className="text-4xl">{category.icon}</span>
+                <span className="text-4xl">{category.icon ?? '💬'}</span>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
                     {category.name}
@@ -149,10 +107,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                 <span>{category.threadCount} threads</span>
               </div>
               <div className="flex items-center gap-4">
-                <SearchBar
-                  placeholder={`Search in ${category.name}...`}
-                  className="w-64"
-                />
+                <div className="w-64">
+                  <SearchBar
+                    placeholder={`Search in ${category.name}...`}
+                  />
+                </div>
                 <select
                   className="rounded-md border bg-background px-3 py-2 text-sm"
                   defaultValue={sort}
@@ -166,13 +125,20 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </div>
 
           {/* Thread List */}
-          <Suspense fallback={<ThreadListSkeleton />}>
-            <ThreadList
-              categorySlug={slug}
-              page={currentPage}
-              sort={sort}
-            />
-          </Suspense>
+          {threads.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-lg font-medium text-foreground">No threads yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Be the first to start a discussion in {category.name}!
+              </p>
+            </div>
+          ) : (
+            <Suspense fallback={<ThreadListSkeleton />}>
+              <ThreadList
+                emptyMessage={`No threads found in ${category.name}`}
+              />
+            </Suspense>
+          )}
 
           {/* Pagination */}
           <div className="mt-8 flex justify-center gap-2">
@@ -186,7 +152,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                   Previous
                 </Link>
               ) : (
-                "Previous"
+                'Previous'
               )}
             </Button>
             <span className="flex items-center px-4 text-sm text-muted-foreground">
@@ -202,7 +168,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
         {/* Sidebar */}
         <aside className="w-full lg:w-80">
-          <Sidebar categorySlug={slug} />
+          <Sidebar currentCategory={slug} />
         </aside>
       </div>
     </div>

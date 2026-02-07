@@ -1,22 +1,17 @@
 import { query, mutation, action, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
-import { paymentStatusValidator } from "../schema";
+import { paymentStatusValidator, metadataValidator } from "../schema";
 import Stripe from "stripe";
 import {
   getStripeClient,
   buildStripeLineItems,
-  calculatePlatformFee,
-  buildPaymentMetadata,
   getConnectCapabilities,
-  isAccountOnboarded,
-  getAccountOnboardingStatus,
   dollarsToCents,
-  formatPrice,
   type CheckoutLineItem,
 } from "../lib/stripe";
+import { generateOrderNumber } from "../lib/orderUtils";
 
 /**
  * Stripe Integration Functions
@@ -335,7 +330,7 @@ export const upsertStripeCustomer = mutation({
     email: v.optional(v.string()),
     defaultPaymentMethodId: v.optional(v.string()),
     tenantId: v.optional(v.id("tenants")),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -400,7 +395,7 @@ export const createPaymentRecord = mutation({
     currency: v.string(),
     orderId: v.optional(v.id("orders")),
     tenantId: v.optional(v.id("tenants")),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -463,7 +458,7 @@ export const updatePaymentStatus = internalMutation({
     }
 
     if (!payment) {
-      console.log("Payment not found for update");
+      console.warn("Payment not found for update");
       return null;
     }
 
@@ -502,7 +497,7 @@ export const recordWebhookEvent = internalMutation({
   args: {
     stripeEventId: v.string(),
     type: v.string(),
-    payload: v.optional(v.any()),
+    payload: v.optional(v.string()), // Security fix (S5): replaced v.any(); payload is JSON-serialized
   },
   handler: async (ctx, args) => {
     const existingEvent = await ctx.db
@@ -592,7 +587,7 @@ export const updateConnectAccountStatus = internalMutation({
       .first();
 
     if (!account) {
-      console.log("Connect account not found:", args.stripeAccountId);
+      console.warn("Connect account not found:", args.stripeAccountId);
       return null;
     }
 
@@ -634,13 +629,14 @@ export const createOrderFromCheckout = internalMutation({
     amountTotal: v.number(),
     currency: v.string(),
     customerEmail: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: metadataValidator, // Security fix (S5): replaced v.any()
   },
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    // Generate order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    // BUG FIX B5: Use shared crypto-secure order number generator
+    // instead of inline Math.random() which is not cryptographically secure
+    const orderNumber = generateOrderNumber();
 
     // Create the order
     const orderId = await ctx.db.insert("orders", {

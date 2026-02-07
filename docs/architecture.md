@@ -89,9 +89,9 @@
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Frontend** | Next.js 15 | Server-side rendering, routing |
+| **Frontend** | Next.js 16 | Server-side rendering, routing |
 | **UI** | React 19, Tailwind CSS 4 | Component library, styling |
-| **Backend** | Convex | Database, serverless functions |
+| **Backend** | Convex 1.31+ | Database, serverless functions |
 | **Auth** | Convex Auth | Authentication, session management |
 | **Payments** | Stripe | Payment processing, Connect |
 | **Deployment** | Vercel | Hosting, edge functions |
@@ -568,6 +568,9 @@ const securityHeaders = [
 
 ## Related Documentation
 
+- [Tech Stack](./tech-stack.md)
+- [Key Files](./key-files.md)
+- [Data Models](./data-models.md)
 - [API Reference](./api-reference.md)
 - [Security Guide](./security.md)
 - [Contributing Guide](./contributing.md)

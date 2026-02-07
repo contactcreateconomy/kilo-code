@@ -159,7 +159,7 @@ function FeaturedCard({ discussion }: FeaturedCardProps) {
 
         {/* Summary */}
         <p className="text-sm text-white/80 line-clamp-2 mb-3">
-          {discussion.summary}
+          {discussion.aiSummary}
         </p>
 
         {/* Author & Stats */}

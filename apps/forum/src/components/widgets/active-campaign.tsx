@@ -3,36 +3,49 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlowButton } from '@/components/ui/glow-button';
-import { mockCampaign } from '@/data/mock-data';
-import type { Campaign } from '@/types/forum';
-
-interface ActiveCampaignWidgetProps {
-  campaign?: Campaign;
-}
+import { useActiveCampaign } from '@/hooks/use-campaign';
+import { Loader2 } from 'lucide-react';
 
 /**
  * ActiveCampaignWidget - Featured campaign with countdown and progress
+ *
+ * Fetches real campaign data from Convex via useActiveCampaign hook.
  */
-export function ActiveCampaignWidget({
-  campaign = mockCampaign,
-}: ActiveCampaignWidgetProps) {
+export function ActiveCampaignWidget() {
+  const { campaign, isLoading } = useActiveCampaign();
   const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
     setMounted(true);
-    setTimeLeft(calculateTimeLeft(campaign.endDate));
-  }, [campaign.endDate]);
+  }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!campaign) return;
+    setTimeLeft(calculateTimeLeft(campaign.endDate));
+  }, [campaign]);
+
+  useEffect(() => {
+    if (!mounted || !campaign) return;
     
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft(campaign.endDate));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [campaign.endDate, mounted]);
+  }, [campaign, mounted]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!campaign) {
+    return null; // No active campaign — hide the widget
+  }
 
   return (
     <motion.div
@@ -90,7 +103,7 @@ export function ActiveCampaignWidget({
         {/* Progress Bar */}
         <div className="mb-4">
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>{campaign.totalParticipants} participants</span>
+            <span>{campaign.participantCount} participants</span>
             <span>{campaign.progress}% complete</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">

@@ -18,7 +18,7 @@
 export default {
   providers: [
     {
-      domain: process.env.CONVEX_SITE_URL,
+      domain: process.env["CONVEX_SITE_URL"],
       applicationID: "convex",
     },
   ],
@@ -97,6 +97,19 @@ export const CORS_CONFIG = {
 };
 
 /**
+ * Allowed localhost origins for development mode.
+ * Security fix (S7): Instead of allowing any origin with credentials in
+ * development, restrict to the specific localhost ports for the four apps:
+ *   - :3000 marketplace, :3001 forum, :3002 admin, :3003 seller
+ */
+const DEV_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://localhost:3003",
+];
+
+/**
  * Get CORS headers for a request
  * @param origin - The request origin
  * @returns CORS headers object
@@ -104,12 +117,17 @@ export const CORS_CONFIG = {
 export function getCorsHeaders(origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {};
 
-  // Check if origin is allowed
+  // Check if origin is in the production allowed list
   if (origin && CORS_CONFIG.allowedOrigins.includes(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   } else if (process.env.NODE_ENV === "development") {
-    // In development, allow localhost origins
-    headers["Access-Control-Allow-Origin"] = origin || "*";
+    // Security fix (S7): Only allow specific localhost origins in development.
+    // Never pair Access-Control-Allow-Credentials: true with wildcard (*).
+    if (origin && DEV_ALLOWED_ORIGINS.includes(origin)) {
+      headers["Access-Control-Allow-Origin"] = origin;
+    }
+    // If origin doesn't match any known dev origin, no Allow-Origin header
+    // is set, which will cause the browser to block the request.
   }
 
   headers["Access-Control-Allow-Methods"] = CORS_CONFIG.allowedMethods.join(", ");

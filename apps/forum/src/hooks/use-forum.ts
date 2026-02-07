@@ -1,46 +1,12 @@
 "use client";
 
 import { useCallback } from "react";
-import { useMutation, useQuery, usePaginatedQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@createconomy/convex";
 
-// Types
-interface Category {
-  _id: string;
-  name: string;
-  slug: string;
-  description: string;
-  icon?: string;
-  color?: string;
-  threadCount: number;
-  postCount: number;
-}
-
-interface Thread {
-  _id: string;
-  title: string;
-  content: string;
-  excerpt?: string;
-  categoryId: string;
-  authorId: string;
-  isPinned: boolean;
-  isLocked: boolean;
-  viewCount: number;
-  replyCount: number;
-  createdAt: number;
-  updatedAt: number;
-}
-
-interface Post {
-  _id: string;
-  threadId: string;
-  authorId: string;
-  content: string;
-  likeCount: number;
-  createdAt: number;
-  updatedAt: number;
-}
-
+/**
+ * Hook for forum mutations (create, update, delete threads and posts)
+ */
 export function useForum() {
   // Mutations
   const createThread = useMutation(api.functions.forum.createThread);
@@ -49,9 +15,7 @@ export function useForum() {
   const createPost = useMutation(api.functions.forum.createPost);
   const updatePost = useMutation(api.functions.forum.updatePost);
   const deletePost = useMutation(api.functions.forum.deletePost);
-  const likePost = useMutation(api.functions.forum.likePost);
-  const unlikePost = useMutation(api.functions.forum.unlikePost);
-  const incrementViewCount = useMutation(api.functions.forum.incrementViewCount);
+  const incrementViewCount = useMutation(api.functions.forum.incrementThreadViewCount);
 
   // Create a new thread
   const handleCreateThread = useCallback(
@@ -59,9 +23,13 @@ export function useForum() {
       title: string;
       content: string;
       categoryId: string;
-      tags?: string[];
     }) => {
-      return await createThread(data);
+      // categoryId must be a valid Id<"forumCategories"> at runtime
+      return await createThread({
+        title: data.title,
+        content: data.content,
+        categoryId: data.categoryId as never,
+      });
     },
     [createThread]
   );
@@ -72,12 +40,11 @@ export function useForum() {
       threadId: string,
       data: {
         title?: string;
-        content?: string;
         isPinned?: boolean;
         isLocked?: boolean;
       }
     ) => {
-      return await updateThread({ threadId, ...data });
+      return await updateThread({ threadId: threadId as never, ...data });
     },
     [updateThread]
   );
@@ -85,15 +52,18 @@ export function useForum() {
   // Delete a thread
   const handleDeleteThread = useCallback(
     async (threadId: string) => {
-      return await deleteThread({ threadId });
+      return await deleteThread({ threadId: threadId as never });
     },
     [deleteThread]
   );
 
   // Create a post/reply
   const handleCreatePost = useCallback(
-    async (data: { threadId: string; content: string; replyToId?: string }) => {
-      return await createPost(data);
+    async (data: { threadId: string; content: string }) => {
+      return await createPost({
+        threadId: data.threadId as never,
+        content: data.content,
+      });
     },
     [createPost]
   );
@@ -101,7 +71,7 @@ export function useForum() {
   // Update a post
   const handleUpdatePost = useCallback(
     async (postId: string, content: string) => {
-      return await updatePost({ postId, content });
+      return await updatePost({ postId: postId as never, content });
     },
     [updatePost]
   );
@@ -109,31 +79,15 @@ export function useForum() {
   // Delete a post
   const handleDeletePost = useCallback(
     async (postId: string) => {
-      return await deletePost({ postId });
+      return await deletePost({ postId: postId as never });
     },
     [deletePost]
-  );
-
-  // Like a post
-  const handleLikePost = useCallback(
-    async (postId: string) => {
-      return await likePost({ postId });
-    },
-    [likePost]
-  );
-
-  // Unlike a post
-  const handleUnlikePost = useCallback(
-    async (postId: string) => {
-      return await unlikePost({ postId });
-    },
-    [unlikePost]
   );
 
   // Track thread view
   const handleViewThread = useCallback(
     async (threadId: string) => {
-      return await incrementViewCount({ threadId });
+      return await incrementViewCount({ threadId: threadId as never });
     },
     [incrementViewCount]
   );
@@ -149,77 +103,83 @@ export function useForum() {
     createPost: handleCreatePost,
     updatePost: handleUpdatePost,
     deletePost: handleDeletePost,
-    likePost: handleLikePost,
-    unlikePost: handleUnlikePost,
   };
 }
 
-// Hook to get categories
-export function useCategories() {
-  const categories = useQuery(api.functions.forum.getCategories);
+/**
+ * Hook to get categories
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useCategories(): { categories: any[]; isLoading: boolean } {
+  const categories = useQuery(api.functions.forum.listForumCategories, {});
   return {
-    categories: categories ?? [],
+    categories: (categories ?? []) as unknown[],
     isLoading: categories === undefined,
   };
 }
 
-// Hook to get a single category
-export function useCategory(slug: string) {
-  const category = useQuery(api.functions.forum.getCategoryBySlug, { slug });
+/**
+ * Hook to get a single category by ID
+ */
+export function useCategory(categoryId: string | undefined) {
+  const category = useQuery(
+    api.functions.forum.getForumCategory,
+    categoryId ? { categoryId: categoryId as never } : "skip"
+  );
   return {
     category: category ?? null,
     isLoading: category === undefined,
   };
 }
 
-// Hook to get threads with pagination
-export function useThreads(options?: {
-  categoryId?: string;
-  authorId?: string;
-  isPinned?: boolean;
-}) {
-  const { results, status, loadMore } = usePaginatedQuery(
-    api.functions.forum.getThreads,
-    options ?? {},
-    { initialNumItems: 20 }
+/**
+ * Hook to get threads in a category
+ */
+export function useThreads(categoryId: string | undefined) {
+  const result = useQuery(
+    api.functions.forum.listThreads,
+    categoryId ? { categoryId: categoryId as never } : "skip"
   );
-
   return {
-    threads: results ?? [],
-    isLoading: status === "LoadingFirstPage",
-    isLoadingMore: status === "LoadingMore",
-    canLoadMore: status === "CanLoadMore",
-    loadMore: () => loadMore(20),
+    threads: result?.threads ?? [],
+    pinnedThreads: result?.pinned ?? [],
+    hasMore: result?.hasMore ?? false,
+    isLoading: result === undefined,
   };
 }
 
-// Hook to get a single thread
-export function useThread(threadId: string) {
-  const thread = useQuery(api.functions.forum.getThread, { threadId });
+/**
+ * Hook to get a single thread
+ */
+export function useThread(threadId: string | undefined) {
+  const thread = useQuery(
+    api.functions.forum.getThread,
+    threadId ? { threadId: threadId as never } : "skip"
+  );
   return {
     thread: thread ?? null,
     isLoading: thread === undefined,
   };
 }
 
-// Hook to get posts for a thread
-export function usePosts(threadId: string) {
-  const { results, status, loadMore } = usePaginatedQuery(
-    api.functions.forum.getPosts,
-    { threadId },
-    { initialNumItems: 20 }
+/**
+ * Hook to get comments for a post
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function usePostComments(postId: string | undefined): { comments: any[]; isLoading: boolean } {
+  const comments = useQuery(
+    api.functions.forum.getPostComments,
+    postId ? { postId: postId as never } : "skip"
   );
-
   return {
-    posts: results ?? [],
-    isLoading: status === "LoadingFirstPage",
-    isLoadingMore: status === "LoadingMore",
-    canLoadMore: status === "CanLoadMore",
-    loadMore: () => loadMore(20),
+    comments: (comments ?? []) as unknown[],
+    isLoading: comments === undefined,
   };
 }
 
-// Hook to search threads
+/**
+ * Hook to search threads
+ */
 export function useSearchThreads(query: string) {
   const results = useQuery(
     api.functions.forum.searchThreads,

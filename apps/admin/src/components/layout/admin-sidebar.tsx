@@ -4,16 +4,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: '📊' },
-  { name: 'Users', href: '/users', icon: '👥' },
-  { name: 'Products', href: '/products', icon: '📦' },
-  { name: 'Categories', href: '/categories', icon: '📁' },
-  { name: 'Orders', href: '/orders', icon: '🛒' },
-  { name: 'Sellers', href: '/sellers', icon: '🏪' },
-  { name: 'Moderation', href: '/moderation', icon: '🛡️' },
-  { name: 'Analytics', href: '/analytics', icon: '📈' },
-  { name: 'Settings', href: '/settings', icon: '⚙️' },
-];
+  { name: 'Dashboard', href: '/' as const, icon: '📊' },
+  { name: 'Users', href: '/users' as const, icon: '👥' },
+  { name: 'Products', href: '/products' as const, icon: '📦' },
+  { name: 'Categories', href: '/categories' as const, icon: '📁' },
+  { name: 'Orders', href: '/orders' as const, icon: '🛒' },
+  { name: 'Sellers', href: '/sellers' as const, icon: '🏪' },
+  { name: 'Moderation', href: '/moderation' as const, icon: '🛡️' },
+  { name: 'Analytics', href: '/analytics' as const, icon: '📈' },
+  { name: 'Settings', href: '/settings' as const, icon: '⚙️' },
+] as const;
 
 export function AdminSidebar() {
   const pathname = usePathname();

@@ -4,31 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Plus, Activity, Code, Palette, Rocket, Brain, Gamepad2, BookOpen,
+  Plus, Activity,
   Newspaper, Star, Scale, List, HelpCircle, Sparkles, GraduationCap,
-  Crown, Lock
+  Crown, Lock, Rocket, Loader2
 } from 'lucide-react';
 import { cn, Button, Badge, Separator, Card, CardContent } from '@createconomy/ui';
-import { mockCategories } from '@/data/mock-data';
+import { useCategories } from '@/hooks/use-forum';
+import { useActiveCampaign } from '@/hooks/use-campaign';
 
-// Icon mapping for categories
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Code,
-  Palette,
-  Rocket,
-  Brain,
-  Gamepad2,
-  BookOpen,
-  Newspaper,
-  Star,
-  Scale,
-  List,
-  HelpCircle,
-  Sparkles,
-  GraduationCap,
-};
-
-// DISCOVER section items
+// DISCOVER section items — static navigation structure
 const discoverItems = [
   { icon: Newspaper, label: 'News', slug: 'news', emoji: '📰' },
   { icon: Star, label: 'Review', slug: 'review', emoji: '⭐' },
@@ -54,12 +38,15 @@ interface LeftSidebarProps {
 /**
  * LeftSidebar - Redesigned left sidebar with DISCOVER and PREMIUM sections
  * Features: New Discussion button, DISCOVER categories, PREMIUM section, My Activity
+ *
+ * Campaign card now fetches live data from Convex via useActiveCampaign hook.
  */
 export function LeftSidebar({ className }: LeftSidebarProps) {
   const pathname = usePathname();
   const currentCategory = pathname.startsWith('/c/') ? pathname.split('/')[2] ?? null : null;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(currentCategory);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const { campaign, isLoading: campaignLoading } = useActiveCampaign();
 
   return (
     <aside className={cn('flex flex-col gap-4 p-4', className)}>
@@ -129,7 +116,7 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
           Premium
         </h3>
         <div className="space-y-1">
-          {premiumItems.map((item, index) => {
+          {premiumItems.map((item) => {
             const IconComponent = item.icon;
             const isSelected = selectedCategory === item.slug;
             const isHovered = hoveredCategory === item.slug;
@@ -177,27 +164,42 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
         </div>
       </div>
 
-      {/* Active Campaign Card */}
-      <Card className="mt-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg">🏆</span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-              Active Campaign
-            </span>
-          </div>
-          <h4 className="text-sm font-bold mb-1">Win Claude Pro!</h4>
-          <p className="text-xs text-muted-foreground mb-3">
-            Top contributors win 3 months free
-          </p>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full w-[49%] transition-all duration-1000" />
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            2,450 / 5,000 pts
-          </p>
-        </CardContent>
-      </Card>
+      {/* Active Campaign Card — Live Data */}
+      {campaignLoading ? (
+        <Card className="mt-4">
+          <CardContent className="flex justify-center py-6">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      ) : campaign ? (
+        <Card className="mt-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">🏆</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Active Campaign
+              </span>
+            </div>
+            <h4 className="text-sm font-bold mb-1">{campaign.title}</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              {campaign.description}
+            </p>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-1000"
+                style={{
+                  width: `${Math.round(
+                    (campaign.progress / campaign.targetPoints) * 100
+                  )}%`,
+                }}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {campaign.progress.toLocaleString()} / {campaign.targetPoints.toLocaleString()} pts
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* My Activity */}
       <div className="mt-auto pt-4">

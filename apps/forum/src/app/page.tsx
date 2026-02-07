@@ -6,8 +6,9 @@ import { LeftSidebar } from '@/components/layout/left-sidebar';
 import { RightSidebar } from '@/components/layout/right-sidebar';
 import { DiscussionFeed } from '@/components/feed/discussion-feed';
 import { GoogleOneTap } from '@/components/auth/google-one-tap';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { WidgetErrorFallback } from '@/components/ui/widget-error-fallback';
 import { useAuth } from '@/hooks/use-auth';
-import { mockDiscussions } from '@/data/mock-data';
 import { cn } from '@/lib/utils';
 
 /**
@@ -24,7 +25,7 @@ export default function ForumHomePage() {
       {!isAuthenticated && !isLoading && (
         <GoogleOneTap
           onSuccess={() => {
-            console.log('Successfully signed in via Google One Tap');
+            console.debug('Successfully signed in via Google One Tap');
           }}
           onError={(error) => {
             console.error('Google One Tap error:', error);
@@ -46,7 +47,9 @@ export default function ForumHomePage() {
           {/* Left Sidebar - Desktop */}
           <div className="hidden w-[250px] shrink-0 lg:block">
             <div className="sticky top-24">
-              <LeftSidebar className="rounded-lg border border-border bg-card shadow-sm" />
+              <ErrorBoundary fallback={<WidgetErrorFallback label="Sidebar" />}>
+                <LeftSidebar className="rounded-lg border border-border bg-card shadow-sm" />
+              </ErrorBoundary>
             </div>
           </div>
 
@@ -71,19 +74,33 @@ export default function ForumHomePage() {
             )}
           >
             <div className="h-full overflow-y-auto pt-20">
-              <LeftSidebar />
+              <ErrorBoundary fallback={<WidgetErrorFallback label="Sidebar" />}>
+                <LeftSidebar />
+              </ErrorBoundary>
             </div>
           </div>
 
           {/* Center Feed */}
           <main className="min-w-0 flex-1">
-            <DiscussionFeed initialDiscussions={mockDiscussions} />
+            <ErrorBoundary
+              fallback={
+                <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-card p-12 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    The discussion feed couldn&apos;t load. Please try refreshing the page.
+                  </p>
+                </div>
+              }
+            >
+              <DiscussionFeed />
+            </ErrorBoundary>
           </main>
 
           {/* Right Sidebar - Desktop & Tablet */}
           <div className="hidden w-[300px] shrink-0 xl:block">
             <div className="sticky top-24">
-              <RightSidebar />
+              <ErrorBoundary fallback={<WidgetErrorFallback label="Sidebar" />}>
+                <RightSidebar />
+              </ErrorBoundary>
             </div>
           </div>
         </div>

@@ -66,3 +66,45 @@ export {
   type LoginRedirectProps,
   type RedirectAfterLoginProps,
 } from "./login-redirect";
+
+// ---------- Auth Form Components ----------
+
+// Icons
+export { GoogleIcon, GitHubIcon, SpinnerIcon } from "./auth-icons";
+
+// Error Alert
+export { AuthErrorAlert, type AuthErrorAlertProps } from "./auth-error-alert";
+
+// OAuth Divider
+export { OAuthDivider, type OAuthDividerProps } from "./oauth-divider";
+
+// Social Login Grid
+export {
+  SocialLoginGrid,
+  type SocialLoginGridProps,
+} from "./social-login-grid";
+
+// Shared Sign-In Form
+export {
+  SharedSignInForm,
+  type SharedSignInFormProps,
+} from "./sign-in-form";
+
+// Shared Sign-Up Form
+export {
+  SharedSignUpForm,
+  type SharedSignUpFormProps,
+  type SignUpData,
+} from "./sign-up-form";
+
+// Admin Sign-In Form (Google-only)
+export {
+  AdminSignInForm,
+  type AdminSignInFormProps,
+} from "./admin-sign-in-form";
+
+// Auth Page Wrapper
+export {
+  AuthPageWrapper,
+  type AuthPageWrapperProps,
+} from "./auth-page-wrapper";

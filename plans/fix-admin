@@ -1,0 +1,39 @@
+# Phase 02: Verify Environment Variables on Vercel
+
+## Required Environment Variables
+
+The admin app requires `NEXT_PUBLIC_CONVEX_URL` to be set in the Vercel project settings. While the code fixes in Phase 01 prevent the build from crashing, the app will not function correctly at runtime without this variable.
+
+## Check Current Vercel Environment Variables
+
+Use the Vercel dashboard or CLI to verify these are set for the `kilo-code-admin` project:
+
+| Variable | Required | Scope | Example Value |
+|----------|----------|-------|---------------|
+| `NEXT_PUBLIC_CONVEX_URL` | **Yes** | All environments | `https://your-deployment.convex.cloud` |
+| `CONVEX_DEPLOYMENT` | Recommended | All environments | `your-deployment-name` |
+
+## How to Set
+
+1. Go to Vercel Dashboard > kilo-code-admin > Settings > Environment Variables
+2. Add `NEXT_PUBLIC_CONVEX_URL` with the value from your Convex dashboard
+3. Ensure it is available for **Preview** and **Production** environments
+4. Variables prefixed with `NEXT_PUBLIC_` are inlined at build time, so they must be set BEFORE the build runs
+
+## Important Note on NEXT_PUBLIC_ Variables
+
+Unlike server-only env vars, `NEXT_PUBLIC_*` variables are:
+- **Inlined at build time** into the JavaScript bundle
+- **Not available at runtime** if not present during build
+- Required in the Vercel project settings, not just in `.env.local`
+
+This is the most common reason why apps work locally but fail on Vercel — the `.env.local` file is not committed to git and not present in the Vercel build environment.
+
+## Other Apps
+
+The same pattern applies to all apps in the monorepo. Ensure each Vercel project has its own `NEXT_PUBLIC_CONVEX_URL` set:
+
+- `kilo-code-marketplace` — needs `NEXT_PUBLIC_CONVEX_URL`
+- `kilo-code-forum` — needs `NEXT_PUBLIC_CONVEX_URL`
+- `kilo-code-admin` — needs `NEXT_PUBLIC_CONVEX_URL`
+- `kilo-code-seller` — needs `NEXT_PUBLIC_CONVEX_URL`

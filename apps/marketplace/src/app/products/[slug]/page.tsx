@@ -133,13 +133,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Product Images */}
           <div className="space-y-4">
             <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
-              <Image
-                src={product.images[0]}
-                alt={product.name}
-                fill
-                className="object-cover"
-                priority
-              />
+              {product.images[0] && (
+                <Image
+                  src={product.images[0]}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              )}
             </div>
             {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
@@ -191,7 +193,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <p className="text-muted-foreground">{product.description}</p>
 
             <div className="flex items-center gap-4">
-              <AddToCartButton productId={product.id} className="flex-1" />
+              <AddToCartButton
+                productId={product.id}
+                productName={product.name}
+                productPrice={product.price}
+                productImage={product.images[0] ?? ""}
+                productSlug={product.slug}
+                className="flex-1"
+              />
               <Button variant="outline" size="icon">
                 <HeartIcon className="h-5 w-5" />
               </Button>

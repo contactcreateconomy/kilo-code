@@ -142,7 +142,7 @@ export function GoogleOneTap({
     (notification: PromptNotification) => {
       if (notification.isNotDisplayed()) {
         const reason = notification.getNotDisplayedReason();
-        console.log('Google One Tap not displayed:', reason);
+        console.debug('Google One Tap not displayed:', reason);
         
         // Common reasons:
         // - 'browser_not_supported'
@@ -155,16 +155,16 @@ export function GoogleOneTap({
         if (reason === 'opt_out_or_no_session') {
           // User is not signed into Chrome with Google
           // They can still use the Sign In button
-          console.log('User not signed into Chrome with Google account');
+          console.debug('User not signed into Chrome with Google account');
         }
       }
       
       if (notification.isSkippedMoment()) {
-        console.log('Google One Tap skipped:', notification.getSkippedReason());
+        console.debug('Google One Tap skipped:', notification.getSkippedReason());
       }
       
       if (notification.isDismissedMoment()) {
-        console.log('Google One Tap dismissed:', notification.getDismissedReason());
+        console.debug('Google One Tap dismissed:', notification.getDismissedReason());
       }
     },
     []

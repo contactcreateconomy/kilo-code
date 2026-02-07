@@ -13,6 +13,7 @@ interface CartState {
   clearCart: () => void;
   toggleCart: () => void;
   setCartOpen: (open: boolean) => void;
+  isInCart: (productId: string) => boolean;
 }
 
 const TAX_RATE = 0.08; // 8% tax rate
@@ -71,6 +72,10 @@ export const useCartStore = create<CartState>()(
 
       setCartOpen: (open) => {
         set({ isOpen: open });
+      },
+
+      isInCart: (productId) => {
+        return get().items.some((item) => item.id === productId);
       },
     }),
     {

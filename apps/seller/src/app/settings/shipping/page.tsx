@@ -16,7 +16,7 @@ export default function ShippingSettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Shipping settings updated");
+    // TODO: Save shipping settings via Convex mutation
   };
 
   return (

@@ -1,24 +1,29 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { ProductCard } from "../../components/products/product-card";
+import { ProductCard } from "../components/products/product-card";
 
-// Mock product data
+// Mock product data matching the Product type
 const mockProduct = {
-  _id: "product_123",
+  id: "product_123",
   slug: "digital-art-pack",
   name: "Digital Art Pack",
   description: "A collection of digital art assets",
   price: 29.99,
   images: ["https://example.com/image.jpg"],
   rating: 4.5,
+  reviewCount: 42,
+  salesCount: 150,
+  category: {
+    id: "category_123",
+    name: "Digital Art",
+    slug: "digital-art",
+  },
   seller: {
-    _id: "seller_123",
+    id: "seller_123",
     name: "Creative Studio",
   },
-  categoryId: "category_123",
-  status: "active" as const,
-  createdAt: Date.now(),
-  updatedAt: Date.now(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 describe("ProductCard", () => {
