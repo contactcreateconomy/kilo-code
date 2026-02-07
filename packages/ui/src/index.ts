@@ -56,3 +56,17 @@ export { ThemeProvider, useTheme } from "./providers/theme-provider";
 
 // Hooks
 export { useMobile } from "./hooks/use-mobile";
+export {
+  useAuthForm,
+  type UseAuthFormOptions,
+  type UseAuthFormReturn,
+} from "./hooks/use-auth-form";
+export {
+  validateSignUpForm,
+  validateSignInForm,
+  type ValidationRules,
+  type ValidationResult,
+} from "./hooks/use-auth-validation";
+
+// Auth form components available via "@createconomy/ui/components/auth"
+// See packages/ui/src/components/auth/index.ts for full list

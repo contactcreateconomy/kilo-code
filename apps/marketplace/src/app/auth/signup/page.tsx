@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AuthPageWrapper } from "@createconomy/ui/components/auth";
 import { SignUpForm } from "@/components/auth/sign-up-form";
 
 export const metadata: Metadata = {
@@ -9,39 +10,21 @@ export const metadata: Metadata = {
 
 export default function SignUpPage() {
   return (
-    <div className="container flex min-h-[calc(100vh-16rem)] items-center justify-center py-8">
-      <div className="mx-auto w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Create an account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Join Createconomy to discover and purchase digital products
-          </p>
-        </div>
+    <AuthPageWrapper
+      title="Join the community"
+      subtitle="Create an account to discover and purchase digital products"
+    >
+      <SignUpForm />
 
-        <SignUpForm />
-
-        <p className="text-center text-sm text-muted-foreground">
+      {/* Sign In Link */}
+      <div className="mt-4 text-center text-sm">
+        <span className="text-muted-foreground">
           Already have an account?{" "}
-          <Link
-            href="/auth/signin"
-            className="font-medium text-primary hover:underline"
-          >
-            Sign in
-          </Link>
-        </p>
-
-        <p className="text-center text-xs text-muted-foreground">
-          By creating an account, you agree to our{" "}
-          <Link href="/terms" className="underline hover:text-primary">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline hover:text-primary">
-            Privacy Policy
-          </Link>
-          .
-        </p>
+        </span>
+        <Link href="/auth/signin" className="text-primary hover:underline">
+          Sign in
+        </Link>
       </div>
-    </div>
+    </AuthPageWrapper>
   );
 }
