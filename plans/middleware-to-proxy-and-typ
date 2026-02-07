@@ -1,0 +1,84 @@
+# Phase 06: Production Build Validation
+
+## Objective
+
+Run a full production build for each of the four applications, verify zero TypeScript errors, zero build failures, and zero deprecation warnings.
+
+## Execution Order
+
+Per the local build rules, builds must be done **sequentially** with Node.js processes killed between each run. Packages that apps depend on must be built first:
+
+### Step 1: Clean all build caches
+
+```bash
+# Delete all .next directories across all apps
+rmdir /S /Q apps\admin\.next
+rmdir /S /Q apps\forum\.next
+rmdir /S /Q apps\marketplace\.next
+rmdir /S /Q apps\seller\.next
+```
+
+### Step 2: Build packages in dependency order
+
+```bash
+# packages/config has no build step (raw TS consumed directly)
+# packages/convex has no build step (consumed via workspace protocol)
+# packages/ui has no build step (consumed via workspace protocol)
+```
+
+### Step 3: Build apps sequentially
+
+For each app, kill Node processes, build, then move to next:
+
+```bash
+# 1. Admin
+taskkill /F /IM node.exe /T 2>nul
+pnpm --filter @createconomy/admin build
+
+# 2. Forum
+taskkill /F /IM node.exe /T 2>nul
+pnpm --filter @createconomy/forum build
+
+# 3. Marketplace
+taskkill /F /IM node.exe /T 2>nul
+pnpm --filter @createconomy/marketplace build
+
+# 4. Seller
+taskkill /F /IM node.exe /T 2>nul
+pnpm --filter @createconomy/seller build
+
+# Final cleanup
+taskkill /F /IM node.exe /T 2>nul
+```
+
+## Success Criteria
+
+For each app build:
+- [ ] Exit code 0
+- [ ] No TypeScript errors in build output
+- [ ] No deprecation warnings about `middleware` file convention
+- [ ] No `middleware.ts` referenced in build output — only `proxy.ts`
+- [ ] `.next` output directory generated successfully
+
+## Handling Build Failures
+
+If any app build fails:
+1. Capture the full error output
+2. Diagnose the root cause — is it a TypeScript type error, a missing import, a config issue?
+3. Fix the error in the appropriate source file
+4. Re-run the build for that specific app
+5. Continue to the next app
+
+Per local build rules, a single app's failure does not abort the entire sequence — all apps are attempted, and a consolidated summary is provided at the end.
+
+## Expected Warnings
+
+Some warnings that are **acceptable** and do not constitute failures:
+- Vercel analytics warnings in non-Vercel environments
+- Webpack bundle size warnings
+- Image optimization warnings for unoptimized images
+
+Warnings that are **NOT acceptable**:
+- `middleware` file convention deprecation warnings
+- TypeScript type errors
+- Missing module resolution errors
