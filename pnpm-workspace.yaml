@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Peer dependency settings (pnpm defaults, explicit for clarity)
+autoInstallPeers: true
+strictPeerDependencies: false
+
+# Hoisting settings
+shamefullyHoist: false
