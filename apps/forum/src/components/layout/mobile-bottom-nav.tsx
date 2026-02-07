@@ -102,10 +102,7 @@ export function MobileBottomNav() {
                 </>
               )}
 
-              {/* Notification badge for alerts */}
-              {item.id === 'notifications' && (
-                <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full" />
-              )}
+              {/* Notification badge — hidden until notifications system is implemented */}
             </Link>
           );
         })}

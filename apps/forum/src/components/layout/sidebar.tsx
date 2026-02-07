@@ -1,87 +1,24 @@
-import Link from "next/link";
-import { CategoryCard } from "@/components/forum/category-card";
+'use client';
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  threadCount: number;
-  postCount: number;
-  icon?: string;
-  color?: string;
-}
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { useCategories } from "@/hooks/use-forum";
+import { useCommunityStats } from "@/hooks/use-community-stats";
 
 interface SidebarProps {
-  categories?: Category[];
   currentCategory?: string;
 }
 
-// Default categories for when data isn't loaded
-const defaultCategories: Category[] = [
-  {
-    id: "1",
-    name: "General Discussion",
-    slug: "general",
-    description: "General topics and conversations",
-    threadCount: 0,
-    postCount: 0,
-    icon: "💬",
-    color: "blue",
-  },
-  {
-    id: "2",
-    name: "Announcements",
-    slug: "announcements",
-    description: "Official announcements and updates",
-    threadCount: 0,
-    postCount: 0,
-    icon: "📢",
-    color: "yellow",
-  },
-  {
-    id: "3",
-    name: "Feedback",
-    slug: "feedback",
-    description: "Share your feedback and suggestions",
-    threadCount: 0,
-    postCount: 0,
-    icon: "💡",
-    color: "green",
-  },
-  {
-    id: "4",
-    name: "Support",
-    slug: "support",
-    description: "Get help from the community",
-    threadCount: 0,
-    postCount: 0,
-    icon: "🆘",
-    color: "red",
-  },
-  {
-    id: "5",
-    name: "Marketplace",
-    slug: "marketplace",
-    description: "Discuss products and sellers",
-    threadCount: 0,
-    postCount: 0,
-    icon: "🛒",
-    color: "purple",
-  },
-  {
-    id: "6",
-    name: "Showcase",
-    slug: "showcase",
-    description: "Show off your creations",
-    threadCount: 0,
-    postCount: 0,
-    icon: "✨",
-    color: "pink",
-  },
-];
+/**
+ * Sidebar - Secondary sidebar with categories and community stats
+ *
+ * Fetches categories from Convex via useCategories hook.
+ * Displays live community stats from useCommunityStats hook.
+ */
+export function Sidebar({ currentCategory }: SidebarProps) {
+  const { categories, isLoading: categoriesLoading } = useCategories();
+  const { stats, isLoading: statsLoading } = useCommunityStats();
 
-export function Sidebar({ categories = defaultCategories, currentCategory }: SidebarProps) {
   return (
     <aside className="w-full lg:w-64 shrink-0">
       <div className="sticky top-24 space-y-6">
@@ -97,44 +34,56 @@ export function Sidebar({ categories = defaultCategories, currentCategory }: Sid
             </Link>
           </div>
           <nav className="space-y-1">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/c/${category.slug}`}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                  currentCategory === category.slug
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent"
-                }`}
-              >
-                <span>{category.icon}</span>
-                <span className="truncate">{category.name}</span>
-              </Link>
-            ))}
+            {categoriesLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : categories.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                No categories yet
+              </p>
+            ) : (
+              categories.map((category: { _id: string; slug: string; icon?: string; name: string }) => (
+                <Link
+                  key={category._id}
+                  href={`/c/${category.slug}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    currentCategory === category.slug
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-accent"
+                  }`}
+                >
+                  <span>{category.icon ?? "💬"}</span>
+                  <span className="truncate">{category.name}</span>
+                </Link>
+              ))
+            )}
           </nav>
         </div>
 
         {/* Quick Stats */}
         <div className="bg-card rounded-lg border p-4">
           <h2 className="font-semibold text-sm mb-4">Community Stats</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Members</span>
-              <span className="font-medium">--</span>
+          {statsLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Threads</span>
-              <span className="font-medium">--</span>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Members</span>
+                <span className="font-medium">{stats?.members ?? "--"}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Threads</span>
+                <span className="font-medium">{stats?.discussions ?? "--"}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Posts</span>
+                <span className="font-medium">{stats?.comments ?? "--"}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Posts</span>
-              <span className="font-medium">--</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Online</span>
-              <span className="font-medium text-green-500">--</span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Quick Links */}
@@ -172,7 +121,7 @@ export function Sidebar({ categories = defaultCategories, currentCategory }: Sid
           </nav>
         </div>
 
-        {/* Tags Cloud (Optional) */}
+        {/* Tags Cloud */}
         <div className="bg-card rounded-lg border p-4">
           <h2 className="font-semibold text-sm mb-4">Popular Tags</h2>
           <div className="flex flex-wrap gap-2">

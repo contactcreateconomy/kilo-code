@@ -1,0 +1,50 @@
+"use client";
+
+import { useCallback } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+
+type TargetType = "thread" | "post" | "comment";
+type ReactionType = "upvote" | "downvote" | "bookmark";
+
+/**
+ * useReactions — Manages upvote/bookmark reactions via Convex.
+ *
+ * Fetches existing reactions for a set of targets and provides a toggle function.
+ *
+ * @param targetType - "thread" | "post" | "comment"
+ * @param targetIds - Array of target IDs to check for existing reactions
+ */
+export function useReactions(targetType: TargetType, targetIds: string[]) {
+  const reactions = useQuery(
+    api.functions.forum.getUserReactions,
+    targetIds.length > 0 ? { targetType, targetIds } : "skip"
+  );
+
+  const toggleMutation = useMutation(api.functions.forum.toggleReaction);
+
+  const toggle = useCallback(
+    async (targetId: string, reactionType: ReactionType) => {
+      return await toggleMutation({ targetType, targetId, reactionType });
+    },
+    [toggleMutation, targetType]
+  );
+
+  /**
+   * Check if a specific target has a given reaction type from the current user.
+   */
+  const hasReaction = useCallback(
+    (targetId: string, reactionType: ReactionType): boolean => {
+      if (!reactions) return false;
+      return reactions[targetId] === reactionType;
+    },
+    [reactions]
+  );
+
+  return {
+    reactions: reactions ?? {},
+    toggle,
+    hasReaction,
+    isLoading: reactions === undefined,
+  };
+}

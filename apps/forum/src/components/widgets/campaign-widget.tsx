@@ -1,20 +1,33 @@
 'use client';
 
 import { useState } from 'react';
-import { Gift } from 'lucide-react';
-import { cn, Button, Card, CardContent } from '@createconomy/ui';
-import { mockCampaign } from '@/data/mock-data';
-import type { Campaign } from '@/types/forum';
-
-interface CampaignWidgetProps {
-  campaign?: Campaign;
-}
+import { Gift, Loader2 } from 'lucide-react';
+import { Button, Card, CardContent } from '@createconomy/ui';
+import { useActiveCampaign } from '@/hooks/use-campaign';
 
 /**
  * CampaignWidget - Active campaign widget with progress bar
+ *
+ * Fetches real campaign data from Convex via useActiveCampaign hook.
  */
-export function CampaignWidget({ campaign = mockCampaign }: CampaignWidgetProps) {
+export function CampaignWidget() {
   const [isJoined, setIsJoined] = useState(false);
+  const { campaign, isLoading } = useActiveCampaign();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!campaign) {
+    return null; // No active campaign — hide the widget
+  }
+
   const progressPercent = Math.round((campaign.progress / campaign.targetPoints) * 100);
 
   return (

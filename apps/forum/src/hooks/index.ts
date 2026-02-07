@@ -1,2 +1,10 @@
 export { useInfiniteScroll } from './use-infinite-scroll';
 export { useFeedFilter } from './use-feed-filter';
+export { useDiscussionFeed } from './use-discussion-feed';
+export { useLeaderboard } from './use-leaderboard';
+export { useCommunityStats } from './use-community-stats';
+export { useTrending } from './use-trending';
+export { useActiveCampaign } from './use-campaign';
+export { useReactions } from './use-reactions';
+export { useUserProfile, useUserThreads } from './use-user-profile';
+export { useCategoryBySlug, useCategoryThreads } from './use-category-threads';

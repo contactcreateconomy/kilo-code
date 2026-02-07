@@ -7,7 +7,6 @@ import { RightSidebar } from '@/components/layout/right-sidebar';
 import { DiscussionFeed } from '@/components/feed/discussion-feed';
 import { GoogleOneTap } from '@/components/auth/google-one-tap';
 import { useAuth } from '@/hooks/use-auth';
-import { mockDiscussions } from '@/data/mock-data';
 import { cn } from '@/lib/utils';
 
 /**
@@ -77,7 +76,7 @@ export default function ForumHomePage() {
 
           {/* Center Feed */}
           <main className="min-w-0 flex-1">
-            <DiscussionFeed initialDiscussions={mockDiscussions} />
+            <DiscussionFeed />
           </main>
 
           {/* Right Sidebar - Desktop & Tablet */}

@@ -7,7 +7,6 @@ import { ArrowBigUp, MessageCircle, Bookmark, Sparkles, MoreVertical, Share2, Fl
 import {
   cn,
   Button,
-  Badge,
   Avatar,
   AvatarImage,
   AvatarFallback,
@@ -16,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@createconomy/ui';
+import { useReactions } from '@/hooks/use-reactions';
 import type { Discussion } from '@/types/forum';
 
 interface DiscussionCardProps {
@@ -33,23 +33,17 @@ const categoryColors: Record<string, string> = {
   'Learning': 'bg-cyan-500 text-white hover:bg-cyan-600',
 };
 
-// Mock participant avatars for avatar stack
-const mockParticipants = [
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-];
-
 /**
  * DiscussionCard - Redesigned discussion card matching reference design
- * Features: AI summary, colored category badge, hover glow effect, three-dot menu, avatar stack
+ * Features: AI summary, colored category badge, hover glow effect, three-dot menu
+ *
+ * Upvote and bookmark actions are persisted to Convex via useReactions.
  */
 export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
-  const [isUpvoted, setIsUpvoted] = useState(discussion.isUpvoted || false);
-  const [upvotes, setUpvotes] = useState(discussion.upvotes);
-  const [isBookmarked, setIsBookmarked] = useState(discussion.isBookmarked || false);
+  const { hasReaction, toggle } = useReactions('thread', [discussion.id]);
+  const isUpvoted = hasReaction(discussion.id, 'upvote');
+  const isBookmarked = hasReaction(discussion.id, 'bookmark');
+
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLElement>(null);
 
@@ -70,25 +64,27 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
     return () => card.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const handleUpvote = (e: React.MouseEvent) => {
+  const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isUpvoted) {
-      setUpvotes(upvotes - 1);
-    } else {
-      setUpvotes(upvotes + 1);
+    try {
+      await toggle(discussion.id, 'upvote');
+    } catch {
+      // User may not be authenticated — silently ignore
     }
-    setIsUpvoted(!isUpvoted);
   };
 
-  const handleBookmark = (e: React.MouseEvent) => {
+  const handleBookmark = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsBookmarked(!isBookmarked);
+    try {
+      await toggle(discussion.id, 'bookmark');
+    } catch {
+      // User may not be authenticated — silently ignore
+    }
   };
 
   const timeAgo = getTimeAgo(discussion.createdAt);
-  const categoryColor = categoryColors[discussion.category.name] || 'bg-gray-500 text-white';
 
   return (
     <Link href={`/t/${discussion.id}`}>
@@ -154,10 +150,12 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
         </h3>
 
         {/* AI Summary */}
-        <div className="mb-4 flex items-start gap-2 rounded-lg bg-muted/50 p-3">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <p className="line-clamp-2 text-sm text-muted-foreground">{discussion.aiSummary}</p>
-        </div>
+        {discussion.aiSummary && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg bg-muted/50 p-3">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <p className="line-clamp-2 text-sm text-muted-foreground">{discussion.aiSummary}</p>
+          </div>
+        )}
 
         {/* Preview Image */}
         {discussion.imageUrl && (
@@ -191,7 +189,7 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
               )}
             />
             <span className={cn('transition-all duration-200', isUpvoted && 'font-bold')}>
-              {upvotes}
+              {discussion.upvotes}
             </span>
           </Button>
 
@@ -200,21 +198,6 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
             <MessageCircle className="h-4 w-4" />
             <span>{discussion.comments}</span>
           </Button>
-
-          {/* Avatar Stack - Participants */}
-          <div className="flex items-center ml-2">
-            <div className="flex -space-x-2">
-              {mockParticipants.slice(0, 5).map((avatarUrl, i) => (
-                <Avatar
-                  key={i}
-                  className="h-6 w-6 ring-2 ring-card transition-transform hover:scale-110 hover:z-10"
-                >
-                  <AvatarImage src={avatarUrl} alt={`Participant ${i + 1}`} />
-                  <AvatarFallback className="text-[10px]">U{i + 1}</AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-          </div>
 
           {/* Bookmark */}
           <Button
