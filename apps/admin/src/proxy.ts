@@ -9,36 +9,18 @@ const SESSION_COOKIE_NAME = "createconomy_session";
 /**
  * Routes that don't require authentication
  */
-const publicRoutes = [
-  "/auth/signin",
-  "/auth/signup",
-  "/auth/signout",
-  "/auth/pending",
-  "/auth/callback",
-];
+const publicRoutes = ["/auth/signin", "/auth/unauthorized", "/auth/callback"];
 
 /**
- * Routes that require seller approval (not just authentication)
- */
-const approvedSellerRoutes = [
-  "/products",
-  "/orders",
-  "/analytics",
-  "/payouts",
-  "/reviews",
-  "/settings",
-];
-
-/**
- * Middleware for the seller app
+ * Proxy for the admin app (migrated from middleware for Next.js 16+)
  *
  * Handles:
- * - Session validation for all routes (seller portal requires auth)
- * - Security headers
+ * - Session validation for all routes (admin requires auth)
+ * - Security headers (strict for admin)
  * - CORS for cross-subdomain requests
  * - Prevents search engine indexing
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get("Origin");
 
@@ -48,7 +30,7 @@ export function middleware(request: NextRequest) {
   // Create response
   const response = NextResponse.next();
 
-  // Add security headers for seller dashboard
+  // Add strict security headers for admin dashboard
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -57,10 +39,10 @@ export function middleware(request: NextRequest) {
     "camera=(), microphone=(), geolocation=()"
   );
 
-  // Prevent search engine indexing for seller portal
+  // Prevent search engine indexing for admin
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
 
-  // Content Security Policy for seller portal
+  // Content Security Policy for admin
   response.headers.set(
     "Content-Security-Policy",
     [
@@ -122,12 +104,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(signinUrl);
   }
 
-  // Note: Seller role and approval status verification happens in the API route
-  // and client-side SellerGuard component. Middleware only checks for session presence.
-  // This is because middleware runs on the edge and cannot make database calls.
-
-  // For approved seller routes, the client-side will verify seller status
-  // and redirect to /auth/pending if the seller is not yet approved
+  // Note: Admin role verification happens in the API route and client-side
+  // AdminGuard component. Proxy only checks for session presence.
+  // This is because proxy runs on the edge and cannot make database calls.
 
   return response;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Button } from "../button";
 import { Input } from "../input";
 import { Label } from "../label";
@@ -240,13 +239,13 @@ export function SharedSignUpForm({
           />
           <label htmlFor="terms" className="text-sm text-muted-foreground">
             I agree to the{" "}
-            <Link href={termsUrl} className="text-primary hover:underline">
+            <a href={termsUrl} className="text-primary hover:underline">
               Terms of Service
-            </Link>{" "}
+            </a>{" "}
             and{" "}
-            <Link href={privacyUrl} className="text-primary hover:underline">
+            <a href={privacyUrl} className="text-primary hover:underline">
               Privacy Policy
-            </Link>
+            </a>
           </label>
         </div>
 
