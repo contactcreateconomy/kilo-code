@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+.turbo/
+
+# Generated files
+convex/_generated/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Cache
+.cache/
+*.cache
+
+# Version control
+.git/
+
+# Lock files (large)
+pnpm-lock.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Convex
+.convex/
+
+# Vercel
+.vercel/
+
+
