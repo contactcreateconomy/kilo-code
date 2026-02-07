@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "fetch": {
-      "command": "npx",
+      "command": "pnpm",
       "args": [
-        "-y",
-        "@anthropic-ai/mcp-fetch"
+        "dlx",
+        "@smithery/mcp-fetch"
       ],
       "alwaysAllow": [
         "fetch"
@@ -39,26 +39,30 @@
       ]
     },
     "convex": {
-      "command": "npx",
+      "command": "pnpm",
       "args": [
-        "-y",
+        "dlx",
         "convex@latest",
         "mcp",
         "start"
       ],
+      "cwd": "E:\\Github\\kilo-code\\packages\\convex",
+      "env": {},
       "alwaysAllow": [
         "status",
         "data",
         "tables",
         "functionSpec",
         "run",
-        "runOneoffQuery",
         "envList",
         "envGet",
         "envSet",
         "envRemove",
+        "runOneoffQuery",
         "logs"
-      ]
+      ],
+      "disabled": false,
+      "disabledTools": []
     },
     "vercel": {
       "command": "pnpm",
