@@ -11,7 +11,7 @@ import {
   dollarsToCents,
   type CheckoutLineItem,
 } from "../lib/stripe";
-import { generateOrderNumber } from "../lib/order-utils";
+import { generateOrderNumber } from "../lib/orderUtils";
 
 /**
  * Stripe Integration Functions

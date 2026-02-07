@@ -13,8 +13,10 @@ export function AdminGuard({
   children,
   requiredRole = 'moderator',
 }: AdminGuardProps) {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, isAdmin, isModerator, hasAdminAccess } = useAuth();
   const router = useRouter();
+
+  const hasRequiredAccess = requiredRole === 'admin' ? isAdmin : hasAdminAccess;
 
   useEffect(() => {
     if (!isLoading) {
@@ -23,14 +25,11 @@ export function AdminGuard({
         return;
       }
 
-      const allowedRoles =
-        requiredRole === 'admin' ? ['admin'] : ['admin', 'moderator'];
-
-      if (!user?.role || !allowedRoles.includes(user.role)) {
+      if (!hasRequiredAccess) {
         router.push('/auth/unauthorized');
       }
     }
-  }, [isLoading, isAuthenticated, user, requiredRole, router]);
+  }, [isLoading, isAuthenticated, hasRequiredAccess, router]);
 
   if (isLoading) {
     return (
@@ -47,10 +46,7 @@ export function AdminGuard({
     return null;
   }
 
-  const allowedRoles =
-    requiredRole === 'admin' ? ['admin'] : ['admin', 'moderator'];
-
-  if (!user?.role || !allowedRoles.includes(user.role)) {
+  if (!hasRequiredAccess) {
     return null;
   }
 

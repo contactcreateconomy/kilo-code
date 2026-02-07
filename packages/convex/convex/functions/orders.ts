@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { orderStatusValidator } from "../schema";
-import { generateOrderNumber } from "../lib/order-utils";
+import { generateOrderNumber } from "../lib/orderUtils";
 
 /**
  * Typed update object for order status changes.

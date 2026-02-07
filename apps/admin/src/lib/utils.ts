@@ -161,7 +161,10 @@ export function getRoleColor(role: string): string {
 export function downloadCSV(data: Record<string, unknown>[], filename: string) {
   if (data.length === 0) return;
 
-  const headers = Object.keys(data[0]);
+  const firstRow = data[0];
+  if (!firstRow) return;
+
+  const headers = Object.keys(firstRow);
   const csvContent = [
     headers.join(','),
     ...data.map((row) =>

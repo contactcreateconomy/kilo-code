@@ -7,6 +7,10 @@ import { cn } from "@createconomy/ui";
 
 interface AddToCartButtonProps {
   productId: string;
+  productName: string;
+  productPrice: number;
+  productImage: string;
+  productSlug?: string;
   size?: "default" | "sm" | "lg";
   variant?: "default" | "outline" | "secondary";
   className?: string;
@@ -14,6 +18,10 @@ interface AddToCartButtonProps {
 
 export function AddToCartButton({
   productId,
+  productName,
+  productPrice,
+  productImage,
+  productSlug,
   size = "default",
   variant = "default",
   className,
@@ -29,7 +37,13 @@ export function AddToCartButton({
 
     setIsLoading(true);
     try {
-      await addItem(productId);
+      await addItem({
+        id: productId,
+        name: productName,
+        price: productPrice,
+        image: productImage,
+        slug: productSlug,
+      });
       setIsAdded(true);
       setTimeout(() => setIsAdded(false), 2000);
     } catch (error) {

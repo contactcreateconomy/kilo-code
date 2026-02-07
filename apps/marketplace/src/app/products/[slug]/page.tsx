@@ -193,7 +193,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <p className="text-muted-foreground">{product.description}</p>
 
             <div className="flex items-center gap-4">
-              <AddToCartButton productId={product.id} className="flex-1" />
+              <AddToCartButton
+                productId={product.id}
+                productName={product.name}
+                productPrice={product.price}
+                productImage={product.images[0] ?? ""}
+                productSlug={product.slug}
+                className="flex-1"
+              />
               <Button variant="outline" size="icon">
                 <HeartIcon className="h-5 w-5" />
               </Button>
