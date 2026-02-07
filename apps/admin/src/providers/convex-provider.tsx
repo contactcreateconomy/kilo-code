@@ -48,7 +48,7 @@ export function ConvexProvider({ children }: ConvexProviderProps) {
     <ConvexProviderBase client={convex}>
       <ConvexAuthProvider client={convex}>
         <AuthProvider
-          convexUrl={process.env['NEXT_PUBLIC_CONVEX_URL']!}
+          convexUrl={process.env['NEXT_PUBLIC_CONVEX_URL'] ?? 'https://placeholder.convex.cloud'}
           onAuthError={handleAuthError}
         >
           <SessionSync onLogoutSync={handleLogoutSync} />

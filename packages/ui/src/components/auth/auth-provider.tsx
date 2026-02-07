@@ -124,6 +124,9 @@ export function AuthProvider({
 
   // Get the HTTP URL for auth endpoints
   const authBaseUrl = useMemo(() => {
+    if (!convexUrl) {
+      return "";
+    }
     // Convert Convex URL to HTTP URL
     // e.g., https://xxx.convex.cloud -> https://xxx.convex.site
     return convexUrl.replace(".convex.cloud", ".convex.site");
