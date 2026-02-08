@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button, Input } from '@createconomy/ui';
 import { Loader2, Trash2, Save } from 'lucide-react';
-import { useMyFlair, useFlairMutations } from '@/hooks/use-flairs';
+import { useMyFlair } from '@/hooks/use-flairs';
 
 /**
  * User Flair Customization Page
@@ -12,8 +12,7 @@ import { useMyFlair, useFlairMutations } from '@/hooks/use-flairs';
  * Accessible from /account/flair.
  */
 export default function UserFlairPage() {
-  const myFlair = useMyFlair();
-  const { setUserFlair, removeUserFlair } = useFlairMutations();
+  const { flair: myFlair, setFlair, removeFlair } = useMyFlair();
 
   const [text, setText] = useState('');
   const [emoji, setEmoji] = useState('');
@@ -23,9 +22,13 @@ export default function UserFlairPage() {
 
   // Initialize form from existing flair
   const initialized = myFlair !== undefined;
-  if (initialized && text === '' && myFlair?.text) {
-    setText(myFlair.text);
-    setEmoji(myFlair.emoji ?? '');
+  if (initialized && text === '' && myFlair) {
+    const flairText = (myFlair as Record<string, unknown>)['text'] as string | undefined;
+    const flairEmoji = (myFlair as Record<string, unknown>)['emoji'] as string | undefined;
+    if (flairText) {
+      setText(flairText);
+      setEmoji(flairEmoji ?? '');
+    }
   }
 
   const handleSave = async () => {
@@ -41,10 +44,7 @@ export default function UserFlairPage() {
     setSaving(true);
     setMessage(null);
     try {
-      await setUserFlair({
-        text: text.trim(),
-        emoji: emoji.trim() || undefined,
-      });
+      await setFlair(text.trim(), emoji.trim() || undefined);
       setMessage({ type: 'success', text: 'Flair updated successfully!' });
     } catch (error) {
       setMessage({
@@ -60,7 +60,7 @@ export default function UserFlairPage() {
     setRemoving(true);
     setMessage(null);
     try {
-      await removeUserFlair();
+      await removeFlair();
       setText('');
       setEmoji('');
       setMessage({ type: 'success', text: 'Flair removed' });

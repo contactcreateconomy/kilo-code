@@ -214,10 +214,12 @@ export default function ThreadPage() {
                   )}
                   {thread.flair && (
                     <FlairBadge
-                      displayName={thread.flair.displayName}
-                      backgroundColor={thread.flair.backgroundColor}
-                      textColor={thread.flair.textColor}
-                      emoji={thread.flair.emoji ?? undefined}
+                      flair={{
+                        displayName: thread.flair.displayName,
+                        backgroundColor: thread.flair.backgroundColor,
+                        textColor: thread.flair.textColor,
+                        emoji: thread.flair.emoji ?? undefined,
+                      }}
                     />
                   )}
                   <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">

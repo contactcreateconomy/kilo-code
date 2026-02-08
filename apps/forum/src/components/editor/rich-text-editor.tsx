@@ -1,6 +1,7 @@
 'use client';
 
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import LinkExtension from '@tiptap/extension-link';
@@ -108,7 +109,6 @@ export function RichTextEditor({
       <BubbleMenu
         editor={editor}
         className="flex gap-0.5 p-1 bg-card border border-border rounded-lg shadow-lg"
-        tippyOptions={{ duration: 100 }}
       >
         <BubbleButton
           onClick={() => editor.chain().focus().toggleBold().run()}

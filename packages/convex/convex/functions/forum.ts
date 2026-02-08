@@ -16,6 +16,32 @@ import { checkBanStatus, checkMuteStatus } from "./moderation";
  * in the Createconomy community forum.
  */
 
+interface ForumCategoryTreeNode extends Doc<"forumCategories"> {
+  children?: ForumCategoryTreeNode[];
+}
+
+interface CommentTreeNode {
+  _id: string;
+  _creationTime: number;
+  tenantId?: string;
+  postId: string;
+  authorId: string;
+  parentId?: string;
+  content: string;
+  likeCount: number;
+  isDeleted: boolean;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt?: number;
+  author: {
+    id: string;
+    name?: string;
+    displayName?: string;
+    avatarUrl?: string;
+  } | null;
+  replies?: CommentTreeNode[];
+}
+
 // ============================================================================
 // Category Queries
 // ============================================================================
@@ -51,10 +77,6 @@ export const listForumCategories = query({
     // Build tree structure
     const rootCategories = categories.filter((c) => !c.parentId);
     const childCategories = categories.filter((c) => c.parentId);
-
-    interface ForumCategoryTreeNode extends Doc<"forumCategories"> {
-      children?: ForumCategoryTreeNode[];
-    }
 
     function buildTree(parent: (typeof categories)[0]): ForumCategoryTreeNode {
       const children: ForumCategoryTreeNode[] = childCategories
@@ -387,9 +409,6 @@ export const getPostComments = query({
     const childComments = commentsWithAuthors.filter((c) => c.parentId);
 
     type CommentWithAuthor = (typeof commentsWithAuthors)[0];
-    interface CommentTreeNode extends CommentWithAuthor {
-      replies?: CommentTreeNode[];
-    }
 
     const buildTree = (parent: CommentWithAuthor): CommentTreeNode => {
       const children = childComments
@@ -1281,7 +1300,7 @@ export const listDiscussions = query({
     const sortBy = args.sortBy ?? "new";
 
     // Fetch threads — if cursor provided, filter to those created before cursor doc
-    let threads;
+    let threads: Doc<"forumThreads">[];
     if (args.cursor) {
       const cursorDoc = await ctx.db.get(args.cursor as never);
       if (cursorDoc) {
@@ -1364,7 +1383,7 @@ export const listDiscussions = query({
         // Phase 10: Fetch flair if set
         let flair = null;
         if (thread.flairId) {
-          const flairDoc = await ctx.db.get(thread.flairId);
+          const flairDoc = await ctx.db.get(thread.flairId) as Doc<"postFlairs"> | null;
           if (flairDoc && flairDoc.isActive) {
             flair = {
               _id: flairDoc._id,
@@ -1735,12 +1754,11 @@ export const toggleReaction = mutation({
 
     // Update denormalized counts on thread
     if (args.targetType === "thread" && (deltaUp !== 0 || deltaDown !== 0 || deltaBookmark !== 0)) {
-      const thread = await ctx.db.get(args.targetId as never);
+      const thread = await ctx.db.get(args.targetId as never) as Doc<"forumThreads"> | null;
       if (thread) {
-        const typedThread = thread as Doc<"forumThreads">;
-        const newUp = Math.max(0, (typedThread.upvoteCount ?? 0) + deltaUp);
-        const newDown = Math.max(0, (typedThread.downvoteCount ?? 0) + deltaDown);
-        const patchData: Record<string, number> = {};
+        const newUp = Math.max(0, (thread.upvoteCount ?? 0) + deltaUp);
+        const newDown = Math.max(0, (thread.downvoteCount ?? 0) + deltaDown);
+        const patchData: Partial<Doc<"forumThreads">> = {};
         if (deltaUp !== 0) {
           patchData.upvoteCount = newUp;
           patchData.score = newUp - newDown;
@@ -1750,9 +1768,9 @@ export const toggleReaction = mutation({
           patchData.score = newUp - newDown;
         }
         if (deltaBookmark !== 0) {
-          patchData.bookmarkCount = Math.max(0, (typedThread.bookmarkCount ?? 0) + deltaBookmark);
+          patchData.bookmarkCount = Math.max(0, (thread.bookmarkCount ?? 0) + deltaBookmark);
         }
-        await ctx.db.patch(args.targetId as never, patchData);
+        await ctx.db.patch(args.targetId as never, patchData as never);
 
         // --- Notification: Upvote milestone ---
         if (deltaUp > 0 && isUpvoteMilestone(newUp)) {
@@ -1764,8 +1782,8 @@ export const toggleReaction = mutation({
             upvoteActorProfile?.displayName ?? "Someone";
 
           await insertNotification(ctx, {
-            tenantId: typedThread.tenantId ?? undefined,
-            recipientId: typedThread.authorId,
+            tenantId: thread.tenantId ?? undefined,
+            recipientId: thread.authorId,
             actorId: userId,
             type: "upvote",
             targetType: "thread",
@@ -1944,7 +1962,7 @@ export const listThreadsBySlug = query({
 
     const limit = args.limit ?? 20;
 
-    let threads;
+    let threads: Doc<"forumThreads">[];
     if (args.cursor) {
       const cursorDoc = await ctx.db.get(args.cursor as never);
       if (cursorDoc) {
@@ -2018,7 +2036,7 @@ export const listThreadsBySlug = query({
         // Phase 10: Fetch flair if set
         let flair = null;
         if (thread.flairId) {
-          const flairDoc = await ctx.db.get(thread.flairId);
+          const flairDoc = await ctx.db.get(thread.flairId) as Doc<"postFlairs"> | null;
           if (flairDoc && flairDoc.isActive) {
             flair = {
               _id: flairDoc._id,

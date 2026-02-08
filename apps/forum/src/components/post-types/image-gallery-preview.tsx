@@ -40,8 +40,8 @@ export function ImageGalleryPreview({
       return (
         <div className="relative rounded-lg overflow-hidden bg-muted aspect-video">
           <img
-            src={images[0].url}
-            alt={images[0].caption ?? ''}
+            src={images[0]!.url}
+            alt={images[0]!.caption ?? ''}
             className="w-full h-full object-cover"
           />
         </div>
@@ -131,13 +131,13 @@ export function ImageGalleryPreview({
             ✕
           </button>
           <img
-            src={images[selectedIndex].url}
-            alt={images[selectedIndex].caption ?? ''}
+            src={images[selectedIndex]!.url}
+            alt={images[selectedIndex]!.caption ?? ''}
             className="max-w-[90vw] max-h-[90vh] object-contain"
           />
-          {images[selectedIndex].caption && (
+          {images[selectedIndex]!.caption && (
             <p className="absolute bottom-8 text-white text-sm bg-black/50 px-4 py-2 rounded">
-              {images[selectedIndex].caption}
+              {images[selectedIndex]!.caption}
             </p>
           )}
           {selectedIndex > 0 && (

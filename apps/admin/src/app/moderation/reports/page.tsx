@@ -216,14 +216,14 @@ export default function ReportsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                              reasonColors[report.reason] ?? reasonColors.other
+                              reasonColors[report.reason] ?? reasonColors['other']
                             }`}
                           >
                             {report.reason.replace('_', ' ')}
                           </span>
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                              statusColors[report.status] ?? statusColors.pending
+                              statusColors[report.status] ?? statusColors['pending']
                             }`}
                           >
                             {report.status}

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@createconomy/convex';
-import type { Id } from '@createconomy/convex';
+import type { Id } from '@createconomy/convex/dataModel';
 
 /**
  * Hook for searching tags (autocomplete).

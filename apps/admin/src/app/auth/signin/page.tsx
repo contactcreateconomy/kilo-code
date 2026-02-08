@@ -16,11 +16,11 @@ export default function SignInPage() {
       footer={
         <p>
           By signing in, you agree to our{' '}
-          <Link href="/terms" className="text-primary hover:underline">
+          <Link href={"/terms" as never} className="text-primary hover:underline">
             Terms of Service
           </Link>{' '}
           and{' '}
-          <Link href="/privacy" className="text-primary hover:underline">
+          <Link href={"/privacy" as never} className="text-primary hover:underline">
             Privacy Policy
           </Link>
         </p>

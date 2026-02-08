@@ -8,7 +8,7 @@ import { api } from "@createconomy/convex";
 /**
  * User interface matching the Convex getCurrentUser response
  */
-interface User {
+export interface User {
   id: string;
   email?: string;
   name?: string;

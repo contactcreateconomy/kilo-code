@@ -111,7 +111,7 @@ export default function NotificationsPage() {
     if (!localPrefs) return;
     const updated: NotificationPreferences = { ...localPrefs };
     for (const key of Object.keys(updated) as (keyof NotificationPreferences)[]) {
-      (updated as Record<string, boolean>)[key] = true;
+      (updated as unknown as Record<string, boolean>)[key] = true;
     }
     setLocalPrefs(updated);
     setSaveMessage(null);
@@ -121,7 +121,7 @@ export default function NotificationsPage() {
     if (!localPrefs) return;
     const updated: NotificationPreferences = { ...localPrefs };
     for (const key of Object.keys(updated) as (keyof NotificationPreferences)[]) {
-      (updated as Record<string, boolean>)[key] = false;
+      (updated as unknown as Record<string, boolean>)[key] = false;
     }
     setLocalPrefs(updated);
     setSaveMessage(null);

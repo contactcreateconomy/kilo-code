@@ -8,10 +8,12 @@ import type { Discussion, FeedTabType, PostType } from "@/types/forum";
 /**
  * Maps a Convex listDiscussions result item to the frontend Discussion type.
  */
+type DiscussionItem = NonNullable<
+  ReturnType<typeof useQuery<typeof api.functions.forum.listDiscussions>>
+>["discussions"][number];
+
 function mapDiscussion(
-  item: NonNullable<
-    ReturnType<typeof useQuery<typeof api.functions.forum.listDiscussions>>
-  >["discussions"][number]
+  item: DiscussionItem
 ): Discussion {
   return {
     id: item._id,
@@ -49,6 +51,9 @@ function mapDiscussion(
     images: item.images,
     pollOptions: item.pollOptions,
     pollEndsAt: item.pollEndsAt,
+    // Phase 10: Tags & Flairs
+    tags: item.tags ?? undefined,
+    flair: item.flair ?? undefined,
   };
 }
 
@@ -125,7 +130,7 @@ export function useDiscussionFeed(
   useEffect(() => {
     if (!result) return;
 
-    const mapped = result.discussions.map(mapDiscussion);
+    const mapped = (result.discussions as DiscussionItem[]).map(mapDiscussion);
     setHasMore(result.hasMore);
 
     if (!cursor) {

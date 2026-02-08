@@ -10,6 +10,7 @@ import { defineApp } from "convex/server";
  * where auth is set up directly in the auth.ts file using convexAuth()
  * rather than as a component in convex.config.ts
  */
-const app = defineApp();
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const app: ReturnType<typeof defineApp> = defineApp();
 
 export default app;

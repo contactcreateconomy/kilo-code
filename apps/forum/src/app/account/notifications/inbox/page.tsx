@@ -61,13 +61,13 @@ function groupByDate(
   for (const notification of notifications) {
     const date = new Date(notification.createdAt);
     if (date >= today) {
-      groups["Today"].push(notification);
+      groups["Today"]!.push(notification);
     } else if (date >= yesterday) {
-      groups["Yesterday"].push(notification);
+      groups["Yesterday"]!.push(notification);
     } else if (date >= weekAgo) {
-      groups["This Week"].push(notification);
+      groups["This Week"]!.push(notification);
     } else {
-      groups["Older"].push(notification);
+      groups["Older"]!.push(notification);
     }
   }
 

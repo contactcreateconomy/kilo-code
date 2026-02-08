@@ -155,7 +155,7 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
       };
 
       if (postType === 'link') {
-        threadArgs.linkUrl = linkUrl;
+        threadArgs['linkUrl'] = linkUrl;
       } else if (postType === 'poll') {
         const validOptions = pollOptions
           .map((o) => o.trim())
@@ -165,10 +165,10 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
           setIsSubmitting(false);
           return;
         }
-        threadArgs.pollOptions = validOptions;
-        threadArgs.pollEndsAt =
+        threadArgs['pollOptions'] = validOptions;
+        threadArgs['pollEndsAt'] =
           Date.now() + parseInt(pollDuration) * 24 * 60 * 60 * 1000;
-        threadArgs.pollMultiSelect = pollMultiSelect;
+        threadArgs['pollMultiSelect'] = pollMultiSelect;
       }
 
       const threadId = await createThread(threadArgs as Parameters<typeof createThread>[0]);

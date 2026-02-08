@@ -604,11 +604,39 @@ function commentControversy(comment: Doc<"comments">): number {
 /**
  * Enrich a comment with author info and first N replies (recursive).
  */
+/**
+ * Enriched comment shape returned by enrichComment.
+ */
+export interface EnrichedComment {
+  _id: string;
+  threadId: string;
+  parentId: string | null;
+  content: string;
+  depth: number;
+  upvoteCount: number;
+  downvoteCount: number;
+  score: number;
+  replyCount: number;
+  isCollapsed: boolean;
+  isDeleted: boolean;
+  editedAt: number | null;
+  createdAt: number;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    avatarUrl: string | null;
+  } | null;
+  replies: EnrichedComment[];
+  moreRepliesCount: number;
+  isTruncated: boolean;
+}
+
 async function enrichComment(
   ctx: QueryCtx,
   comment: Doc<"comments">,
   replyPreviewCount: number
-) {
+): Promise<EnrichedComment> {
   const author = await ctx.db.get(comment.authorId);
   const authorProfile = author
     ? await ctx.db

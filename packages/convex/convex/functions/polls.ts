@@ -44,7 +44,7 @@ export const getPollResults = query({
     const voteCounts = new Array<number>(options.length).fill(0);
     for (const vote of allVotes) {
       if (vote.optionIndex >= 0 && vote.optionIndex < options.length) {
-        voteCounts[vote.optionIndex]++;
+        voteCounts[vote.optionIndex] = (voteCounts[vote.optionIndex] ?? 0) + 1;
       }
     }
 

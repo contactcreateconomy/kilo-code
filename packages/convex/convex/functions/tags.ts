@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { Doc } from "../_generated/dataModel";
 
 // ============================================================================
 // Tag Queries
@@ -102,7 +103,7 @@ export const getThreadsByTag = query({
     const threads = (
       await Promise.all(threadTags.map((tt) => ctx.db.get(tt.threadId)))
     )
-      .filter((t) => t !== null && !t.isDeleted)
+      .filter((t): t is Doc<"forumThreads"> => t !== null && !t.isDeleted)
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, limit);
 

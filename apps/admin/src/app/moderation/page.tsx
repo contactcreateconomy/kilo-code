@@ -175,7 +175,7 @@ export default function ModerationPage() {
             Action History
           </Link>
           <Link
-            href="/moderation/bans"
+            href={"/moderation/bans" as never}
             className="rounded-md border px-4 py-3 text-sm font-medium hover:bg-muted text-center"
           >
             Manage Bans

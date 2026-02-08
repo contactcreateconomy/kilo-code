@@ -81,7 +81,7 @@ export function TagInput({
         addTag(input);
       }
     } else if (e.key === 'Backspace' && !input && value.length > 0) {
-      removeTag(value[value.length - 1]);
+      removeTag(value[value.length - 1]!);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHighlightIndex((prev) =>

@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@createconomy/convex";
-import type { Id } from "@createconomy/convex";
+import type { Id } from "@createconomy/convex/dataModel";
 
 /**
  * useFollow — Manages follow/unfollow state for a target user.
