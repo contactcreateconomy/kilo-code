@@ -5,6 +5,7 @@ import { ConvexClientProvider } from "@/providers/convex-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { GoogleOneTapWrapper } from "@/components/auth/google-one-tap-wrapper";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -85,6 +86,7 @@ export default function RootLayout({
             defaultTheme="system"
           >
             <div className="relative flex min-h-screen flex-col">
+              <GoogleOneTapWrapper />
               <Header />
               <main className="flex-1">{children}</main>
               <Footer />

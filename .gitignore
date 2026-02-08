@@ -66,4 +66,7 @@ convex/_generated/
 .cache/
 *.cache
 
+# Screenshots
+screenshots/
+
 

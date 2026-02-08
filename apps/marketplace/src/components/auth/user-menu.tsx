@@ -18,11 +18,8 @@ export function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/auth/signin">Sign In</Link>
-        </Button>
         <Button asChild size="sm">
-          <Link href="/auth/signup">Sign Up</Link>
+          <Link href="/auth/signin">Sign In</Link>
         </Button>
       </div>
     );
