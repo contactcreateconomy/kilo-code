@@ -1,17 +1,30 @@
 'use client';
 
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Navbar } from '@/components/navbar/navbar';
 import { LeftSidebar } from '@/components/layout/left-sidebar';
 import { DiscussionForm } from '@/components/discussion';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { cn } from '@/lib/utils';
 
 /**
- * NewDiscussionPage - Page for creating a new discussion
- * Features: Left sidebar navigation, discussion form spanning center + right
+ * NewDiscussionPage - Page for creating a new discussion.
+ *
+ * Requires authentication. Unauthenticated users are redirected to sign-in
+ * via useRequireAuth with a returnTo param pointing back here.
  */
 export default function NewDiscussionPage() {
+  const { isLoading, isAuthenticated } = useRequireAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="dot-grid-background min-h-screen bg-background font-sans">

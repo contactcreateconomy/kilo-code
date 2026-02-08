@@ -34,7 +34,11 @@ export default function RootLayout({
           defaultTheme="system"
           storageKey="admin-theme"
         >
-          <ConvexProvider>{children}</ConvexProvider>
+          <ConvexProvider>
+            <div className="dot-grid-background relative min-h-screen bg-background">
+              <div className="relative z-10">{children}</div>
+            </div>
+          </ConvexProvider>
         </ThemeProvider>
       </body>
     </html>

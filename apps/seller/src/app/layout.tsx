@@ -34,8 +34,10 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider defaultTheme="system" storageKey="seller-theme">
           <ConvexClientProvider>
-            <GoogleOneTapWrapper />
-            {children}
+            <div className="dot-grid-background relative min-h-screen bg-background">
+              <GoogleOneTapWrapper />
+              <div className="relative z-10">{children}</div>
+            </div>
           </ConvexClientProvider>
         </ThemeProvider>
       </body>

@@ -41,9 +41,11 @@ export default function SignInPage() {
       {/* New user info */}
       <div className="mt-4 text-center text-sm">
         <span className="text-muted-foreground">
-          Don&apos;t have an account? Sign in with Google or GitHub to create
-          one automatically.
+          Don&apos;t have an account?{" "}
         </span>
+        <Link href="/auth/signup" className="text-primary hover:underline">
+          Sign up
+        </Link>
       </div>
     </AuthPageWrapper>
   );

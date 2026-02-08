@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@createconomy/ui';
 import { useReactions } from '@/hooks/use-reactions';
+import { useAuthAction } from '@/hooks/use-auth-action';
 import type { Discussion } from '@/types/forum';
 
 interface DiscussionCardProps {
@@ -40,6 +41,7 @@ const categoryColors: Record<string, string> = {
  * Upvote and bookmark actions are persisted to Convex via useReactions.
  */
 export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
+  const { requireAuth } = useAuthAction();
   const { hasReaction, toggle } = useReactions('thread', [discussion.id]);
   const isUpvoted = hasReaction(discussion.id, 'upvote');
   const isBookmarked = hasReaction(discussion.id, 'bookmark');
@@ -67,21 +69,17 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
   const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
+    requireAuth(async () => {
       await toggle(discussion.id, 'upvote');
-    } catch {
-      // User may not be authenticated — silently ignore
-    }
+    });
   };
 
   const handleBookmark = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
+    requireAuth(async () => {
       await toggle(discussion.id, 'bookmark');
-    } catch {
-      // User may not be authenticated — silently ignore
-    }
+    });
   };
 
   const timeAgo = getTimeAgo(discussion.createdAt);
@@ -132,11 +130,21 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                requireAuth(() => {
+                  // TODO: implement report
+                });
+              }}>
                 <Flag className="h-4 w-4 mr-2" />
                 Report
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                requireAuth(() => {
+                  // TODO: implement not interested
+                });
+              }}>
                 <EyeOff className="h-4 w-4 mr-2" />
                 Not interested
               </DropdownMenuItem>

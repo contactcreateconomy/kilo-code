@@ -22,7 +22,7 @@ export default function HomePage() {
                 <Link href="/products">Browse Products</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link href="/auth/signin">Start Selling</Link>
+                <Link href="/auth/signup">Start Selling</Link>
               </Button>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function HomePage() {
               variant="secondary"
               className="mt-8"
             >
-              <Link href="/auth/signin">Create Your Store</Link>
+              <Link href="/auth/signup">Create Your Store</Link>
             </Button>
           </div>
         </div>

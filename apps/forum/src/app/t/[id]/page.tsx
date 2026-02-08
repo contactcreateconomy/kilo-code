@@ -9,6 +9,7 @@ import { UserBadge } from '@/components/forum/user-badge';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Button, Skeleton } from '@createconomy/ui';
 import { useThread, useForum } from '@/hooks/use-forum';
+import { useAuthAction } from '@/hooks/use-auth-action';
 import { Loader2 } from 'lucide-react';
 
 function PostListSkeleton() {
@@ -45,6 +46,7 @@ export default function ThreadPage() {
 
   const { thread, isLoading } = useThread(id);
   const { viewThread } = useForum();
+  const { requireAuth } = useAuthAction();
 
   // Track view
   useEffect(() => {
@@ -159,13 +161,17 @@ export default function ThreadPage() {
               </div>
               <div className="mt-6 pt-4 border-t flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => requireAuth(() => {
+                    // TODO: implement like action
+                  })}>
                     👍 Like
                   </Button>
                   <Button variant="ghost" size="sm">
                     🔗 Share
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => requireAuth(() => {
+                    // TODO: implement report action
+                  })}>
                     🚩 Report
                   </Button>
                 </div>

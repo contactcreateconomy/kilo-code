@@ -85,10 +85,10 @@ export default function RootLayout({
           <ThemeProvider
             defaultTheme="system"
           >
-            <div className="relative flex min-h-screen flex-col">
+            <div className="dot-grid-background relative flex min-h-screen flex-col bg-background">
               <GoogleOneTapWrapper />
               <Header />
-              <main className="flex-1">{children}</main>
+              <main className="relative z-10 flex-1">{children}</main>
               <Footer />
             </div>
           </ThemeProvider>
