@@ -8,6 +8,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { SearchBar } from '@/components/forum/search-bar';
 import { Button, Skeleton } from '@createconomy/ui';
 import { useCategoryThreads } from '@/hooks/use-category-threads';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import { Loader2 } from 'lucide-react';
 
 function ThreadListSkeleton() {
@@ -28,19 +29,30 @@ function ThreadListSkeleton() {
 }
 
 /**
- * CategoryPage - Category detail page
+ * CategoryPage - Category detail page with infinite scroll
  *
  * Fetches category and its threads from Convex via useCategoryThreads hook.
+ * Replaces page-based pagination with infinite scroll.
  */
 export default function CategoryPage() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const slug = params.slug;
-  const page = searchParams.get('page') ?? '1';
   const sort = (searchParams.get('sort') ?? 'recent') as 'recent' | 'popular' | 'unanswered';
-  const currentPage = parseInt(page, 10);
 
-  const { category, threads, isLoading } = useCategoryThreads(slug, sort);
+  const { category, threads, isLoading, hasMore, loadMore, isLoadingMore } =
+    useCategoryThreads(slug, sort);
+
+  const { ref: loadMoreRef } = useInfiniteScroll(
+    async () => {
+      await loadMore();
+    },
+    {
+      enabled: hasMore && !isLoadingMore,
+      threshold: 0.1,
+      rootMargin: '200px',
+    }
+  );
 
   if (isLoading) {
     return (
@@ -125,7 +137,7 @@ export default function CategoryPage() {
           </div>
 
           {/* Thread List */}
-          {threads.length === 0 ? (
+          {threads.length === 0 && !isLoading ? (
             <div className="py-12 text-center">
               <p className="text-lg font-medium text-foreground">No threads yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -140,30 +152,27 @@ export default function CategoryPage() {
             </Suspense>
           )}
 
-          {/* Pagination */}
-          <div className="mt-8 flex justify-center gap-2">
-            <Button
-              variant="outline"
-              disabled={currentPage <= 1}
-              asChild={currentPage > 1}
-            >
-              {currentPage > 1 ? (
-                <Link href={`/c/${slug}?page=${currentPage - 1}&sort=${sort}`}>
-                  Previous
-                </Link>
+          {/* Infinite scroll trigger */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="flex justify-center py-6 mt-4">
+              {isLoadingMore ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm">Loading more threads...</span>
+                </div>
               ) : (
-                'Previous'
+                <span className="text-sm text-muted-foreground">
+                  Scroll for more
+                </span>
               )}
-            </Button>
-            <span className="flex items-center px-4 text-sm text-muted-foreground">
-              Page {currentPage}
-            </span>
-            <Button variant="outline" asChild>
-              <Link href={`/c/${slug}?page=${currentPage + 1}&sort=${sort}`}>
-                Next
-              </Link>
-            </Button>
-          </div>
+            </div>
+          )}
+
+          {!hasMore && threads.length > 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              You&apos;ve reached the end!
+            </p>
+          )}
         </div>
 
         {/* Sidebar */}

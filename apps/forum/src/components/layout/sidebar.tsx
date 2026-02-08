@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useCategories } from "@/hooks/use-forum";
 import { useCommunityStats } from "@/hooks/use-community-stats";
+import { PopularTagsWidget } from "@/components/tags";
 
 interface SidebarProps {
   currentCategory?: string;
@@ -121,23 +122,8 @@ export function Sidebar({ currentCategory }: SidebarProps) {
           </nav>
         </div>
 
-        {/* Tags Cloud */}
-        <div className="bg-card rounded-lg border p-4">
-          <h2 className="font-semibold text-sm mb-4">Popular Tags</h2>
-          <div className="flex flex-wrap gap-2">
-            {["help", "question", "tutorial", "showcase", "feedback", "bug", "feature", "discussion"].map(
-              (tag) => (
-                <Link
-                  key={tag}
-                  href={`/search?tag=${tag}`}
-                  className="px-2 py-1 bg-accent rounded-md text-xs hover:bg-accent/80 transition-colors"
-                >
-                  #{tag}
-                </Link>
-              )
-            )}
-          </div>
-        </div>
+        {/* Popular Tags — live from database */}
+        <PopularTagsWidget limit={12} />
       </div>
     </aside>
   );

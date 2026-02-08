@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { ThreadList } from '@/components/forum/thread-list';
-import { Skeleton } from '@createconomy/ui';
+import { Skeleton, Button } from '@createconomy/ui';
 import { useUserProfile, useUserThreads } from '@/hooks/use-user-profile';
-import { Loader2 } from 'lucide-react';
+import { useFollow } from '@/hooks/use-follow';
+import { useAuth } from '@/hooks/use-auth';
+import { Loader2, UserPlus, UserCheck, Users } from 'lucide-react';
 
 function ActivitySkeleton() {
   return (
@@ -27,6 +29,7 @@ function ActivitySkeleton() {
  * UserProfilePage - Public user profile page
  *
  * Fetches user profile and threads from Convex via hooks.
+ * Includes follow/unfollow functionality and follower/following counts.
  */
 export default function UserProfilePage() {
   const params = useParams<{ username: string }>();
@@ -34,6 +37,14 @@ export default function UserProfilePage() {
 
   const { profile, isLoading } = useUserProfile(username);
   const { threads } = useUserThreads(username, 10);
+  const { user } = useAuth();
+
+  // Follow hook — pass the profile's userId (or undefined while loading)
+  const { isFollowing, isToggling, toggle } = useFollow(
+    profile?.userId as string | undefined
+  );
+
+  const isOwnProfile = user?.id === profile?.userId;
 
   const roleColors: Record<string, string> = {
     admin: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
@@ -106,6 +117,26 @@ export default function UserProfilePage() {
               >
                 {profile.role}
               </span>
+
+              {/* Follow Button */}
+              {!isOwnProfile && user && (
+                <Button
+                  onClick={toggle}
+                  variant={isFollowing ? "outline" : "default"}
+                  size="sm"
+                  disabled={isToggling}
+                  className="mt-3 w-full max-w-[180px]"
+                >
+                  {isToggling ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : isFollowing ? (
+                    <UserCheck className="mr-2 h-4 w-4" />
+                  ) : (
+                    <UserPlus className="mr-2 h-4 w-4" />
+                  )}
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Button>
+              )}
             </div>
 
             {/* Bio */}
@@ -114,6 +145,28 @@ export default function UserProfilePage() {
                 {profile.bio}
               </p>
             )}
+
+            {/* Follower / Following Counts */}
+            <div className="flex justify-center gap-6 mb-4">
+              <Link
+                href={`/u/${profile.username}/followers`}
+                className="text-center hover:text-primary transition-colors"
+              >
+                <span className="font-bold text-lg block">
+                  {profile.followerCount ?? 0}
+                </span>
+                <span className="text-xs text-muted-foreground">followers</span>
+              </Link>
+              <Link
+                href={`/u/${profile.username}/following`}
+                className="text-center hover:text-primary transition-colors"
+              >
+                <span className="font-bold text-lg block">
+                  {profile.followingCount ?? 0}
+                </span>
+                <span className="text-xs text-muted-foreground">following</span>
+              </Link>
+            </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 py-4 border-y">

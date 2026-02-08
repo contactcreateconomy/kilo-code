@@ -2,19 +2,54 @@
  * Forum-specific TypeScript types for the redesigned forum
  */
 
+export type PostType = 'text' | 'link' | 'image' | 'poll';
+
 export interface Discussion {
   id: string;
   title: string;
+  body?: string;
   aiSummary: string;
   author: User;
   category: Category;
   upvotes: number;
+  downvotes: number;
+  score: number;
   comments: number;
   createdAt: Date;
   imageUrl?: string;
   isPinned?: boolean;
   isUpvoted?: boolean;
+  isDownvoted?: boolean;
   isBookmarked?: boolean;
+  // Phase 3: Post type fields
+  postType: PostType;
+  linkUrl?: string | null;
+  linkDomain?: string | null;
+  linkTitle?: string | null;
+  linkDescription?: string | null;
+  linkImage?: string | null;
+  images?: Array<{
+    url: string;
+    caption?: string;
+    width?: number;
+    height?: number;
+  }> | null;
+  pollOptions?: string[] | null;
+  pollEndsAt?: number | null;
+  // Phase 10: Tags & Flairs
+  tags?: Array<{
+    _id: string;
+    name: string;
+    displayName: string;
+    color?: string | null;
+  }> | null;
+  flair?: {
+    _id: string;
+    displayName: string;
+    backgroundColor: string;
+    textColor: string;
+    emoji?: string | null;
+  } | null;
 }
 
 export interface User {
@@ -68,7 +103,7 @@ export interface TrendingTopic {
   trend: 'rising' | 'hot' | 'new';
 }
 
-export type FeedTabType = 'top' | 'hot' | 'new' | 'fav';
+export type FeedTabType = 'top' | 'hot' | 'new' | 'fav' | 'controversial' | 'following';
 
 export interface Notification {
   id: string;

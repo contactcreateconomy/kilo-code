@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Bell, Menu, X, User, Settings, FileText, LogOut, Moon, Sun, MessageSquare, Heart, AtSign, Users, Trophy } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Bell, Menu, X, User, Settings, FileText, LogOut, Moon, Sun, MessageSquare, Heart, AtSign, Users, Trophy, Pin, Lock, Shield } from 'lucide-react';
 import { cn } from '@createconomy/ui';
 import { Button } from '@createconomy/ui';
 import { Input } from '@createconomy/ui';
@@ -16,15 +17,12 @@ import {
   DropdownMenuTrigger,
 } from '@createconomy/ui';
 import { useAuth } from '@/hooks/use-auth';
+import { useNotifications, type NotificationItem } from '@/hooks/use-notifications';
 
 interface NavbarProps {
   onMobileMenuToggle: () => void;
   isMobileMenuOpen: boolean;
 }
-
-// Notifications are not yet backed by a database table.
-// Empty array until a notifications system is implemented.
-const notifications: Notification[] = [];
 
 /**
  * Navbar - Simplified navbar matching reference design
@@ -59,8 +57,6 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
       localStorage.setItem('theme', 'light');
     }
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <nav className="glassmorphism-navbar sticky top-0 z-50">
@@ -129,7 +125,7 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
 
           {/* Notifications Dropdown - Only show when authenticated */}
           {isAuthenticated && (
-            <NotificationsDropdown notifications={notifications} unreadCount={unreadCount} />
+            <NotificationsDropdown />
           )}
 
           {/* User Avatar Dropdown or Login Button */}
@@ -149,26 +145,36 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
 }
 
 /**
- * NotificationsDropdown - Bell icon with dropdown notification list
- * Features: Red badge with count, smooth slide-down animation, notification types
+ * Format relative time from epoch ms (e.g. "2m ago", "3h ago", "1d ago")
  */
-interface Notification {
-  id: string;
-  type: 'reply' | 'upvote' | 'mention' | 'follow' | 'campaign';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  avatar: string | null;
+function formatRelativeTime(epochMs: number): string {
+  const seconds = Math.floor((Date.now() - epochMs) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(epochMs).toLocaleDateString();
 }
 
-interface NotificationsDropdownProps {
-  notifications: Notification[];
-  unreadCount: number;
-}
+/**
+ * NotificationsDropdown - Bell icon with dropdown notification list
+ * Uses the useNotifications hook for real-time Convex data.
+ * Features: Red badge with count, mark as read, mark all as read, click-to-navigate
+ */
+function NotificationsDropdown() {
+  const router = useRouter();
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications(10);
 
-function NotificationsDropdown({ notifications, unreadCount }: NotificationsDropdownProps) {
-  const getNotificationIcon = (type: Notification['type']) => {
+  const getNotificationIcon = (type: NotificationItem['type']) => {
     switch (type) {
       case 'reply':
         return <MessageSquare className="h-4 w-4 text-blue-500" />;
@@ -180,9 +186,41 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
         return <Users className="h-4 w-4 text-green-500" />;
       case 'campaign':
         return <Trophy className="h-4 w-4 text-yellow-500" />;
+      case 'thread_pin':
+        return <Pin className="h-4 w-4 text-orange-500" />;
+      case 'thread_lock':
+        return <Lock className="h-4 w-4 text-orange-500" />;
+      case 'mod_action':
+        return <Shield className="h-4 w-4 text-orange-500" />;
       default:
         return <Bell className="h-4 w-4" />;
     }
+  };
+
+  /**
+   * Get the navigation URL for a notification based on its target type.
+   */
+  const getNotificationUrl = (notification: NotificationItem): string => {
+    switch (notification.targetType) {
+      case 'thread':
+        return `/t/${notification.targetId}`;
+      case 'post':
+        return `/t/${notification.targetId}`;
+      case 'comment':
+        return `/t/${notification.targetId}`;
+      case 'user':
+        return `/u/${notification.targetId}`;
+      default:
+        return '/account/notifications';
+    }
+  };
+
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    if (!notification.read) {
+      await markAsRead(notification._id);
+    }
+    const url = getNotificationUrl(notification);
+    router.push(url);
   };
 
   return (
@@ -197,7 +235,7 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground animate-pulse">
-              {unreadCount}
+              {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </Button>
@@ -209,15 +247,34 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
       >
         <DropdownMenuLabel className="flex items-center justify-between">
           <span className="font-semibold">Notifications</span>
-          {unreadCount > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {unreadCount} new
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <>
+                <Badge variant="secondary" className="text-xs">
+                  {unreadCount} new
+                </Badge>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    markAllAsRead();
+                  }}
+                  className="text-[10px] text-primary hover:underline"
+                >
+                  Mark all read
+                </button>
+              </>
+            )}
+          </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <div className="h-8 w-8 mx-auto mb-2 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+            <p className="text-sm">Loading...</p>
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No notifications yet</p>
@@ -226,7 +283,7 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
           <div className="space-y-1">
             {notifications.map((notification, index) => (
               <DropdownMenuItem
-                key={notification.id}
+                key={notification._id}
                 className={cn(
                   'flex items-start gap-3 p-3 cursor-pointer transition-all duration-200',
                   !notification.read && 'bg-primary/5',
@@ -235,12 +292,13 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
                 style={{
                   animation: `fadeInUp 0.3s ease-out ${index * 50}ms both`,
                 }}
+                onClick={() => handleNotificationClick(notification)}
               >
                 {/* Avatar or Icon */}
                 <div className="shrink-0">
-                  {notification.avatar ? (
+                  {notification.actor?.avatarUrl ? (
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={notification.avatar} alt="" />
+                      <AvatarImage src={notification.actor.avatarUrl} alt="" />
                       <AvatarFallback>
                         {getNotificationIcon(notification.type)}
                       </AvatarFallback>
@@ -264,7 +322,7 @@ function NotificationsDropdown({ notifications, unreadCount }: NotificationsDrop
                     {notification.message}
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    {notification.time}
+                    {formatRelativeTime(notification.createdAt)}
                   </p>
                 </div>
 

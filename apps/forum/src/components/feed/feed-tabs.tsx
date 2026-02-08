@@ -1,6 +1,6 @@
 'use client';
 
-import { Flame, Clock, TrendingUp, Heart } from 'lucide-react';
+import { Flame, Clock, TrendingUp, Heart, Zap, Users } from 'lucide-react';
 import { cn, Button } from '@createconomy/ui';
 import type { FeedTabType } from '@/types/forum';
 
@@ -13,6 +13,8 @@ const tabs: { id: FeedTabType; label: string; icon: React.ComponentType<{ classN
   { id: 'top', label: 'Top', icon: TrendingUp },
   { id: 'hot', label: 'Hot', icon: Flame },
   { id: 'new', label: 'New', icon: Clock },
+  { id: 'controversial', label: 'Controversial', icon: Zap },
+  { id: 'following', label: 'Following', icon: Users },
   { id: 'fav', label: 'Fav', icon: Heart },
 ];
 

@@ -175,7 +175,7 @@ function FeaturedCard({ discussion }: FeaturedCardProps) {
             <span className="text-sm text-white/90">{discussion.author.name}</span>
           </div>
           <div className="flex items-center gap-3 text-sm text-white/70">
-            <span>↑ {discussion.upvotes}</span>
+            <span>↑ {discussion.score ?? discussion.upvotes}</span>
             <span>💬 {discussion.comments}</span>
           </div>
         </div>

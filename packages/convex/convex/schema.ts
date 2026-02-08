@@ -166,6 +166,12 @@ export default defineSchema({
     isBanned: v.boolean(),
     bannedAt: v.optional(v.number()),
     bannedReason: v.optional(v.string()),
+    isMuted: v.optional(v.boolean()),
+    mutedUntil: v.optional(v.number()),
+    warnCount: v.optional(v.number()),
+    // Phase 8: Social counts
+    followerCount: v.optional(v.number()),
+    followingCount: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -488,13 +494,55 @@ export default defineSchema({
     authorId: v.id("users"),
     title: v.string(),
     slug: v.string(),
+    body: v.optional(v.string()), // Thread body content (markdown) — replaces first forumPost
     aiSummary: v.optional(v.string()), // AI-generated summary
     imageUrl: v.optional(v.string()), // Preview image
+
+    // Post type — defaults to "text" for backward compat
+    postType: v.optional(
+      v.union(
+        v.literal("text"),
+        v.literal("link"),
+        v.literal("image"),
+        v.literal("poll")
+      )
+    ),
+
+    // Link post fields (Phase 3)
+    linkUrl: v.optional(v.string()),
+    linkDomain: v.optional(v.string()), // e.g., "youtube.com"
+    linkTitle: v.optional(v.string()), // OG title
+    linkDescription: v.optional(v.string()), // OG description
+    linkImage: v.optional(v.string()), // OG image URL
+
+    // Image post fields (Phase 3)
+    images: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          caption: v.optional(v.string()),
+          width: v.optional(v.number()),
+          height: v.optional(v.number()),
+        })
+      )
+    ),
+
+    // Poll fields (Phase 3)
+    pollOptions: v.optional(v.array(v.string())),
+    pollEndsAt: v.optional(v.number()), // epoch ms
+    pollMultiSelect: v.optional(v.boolean()),
+
+    // Flair (Phase 10)
+    flairId: v.optional(v.id("postFlairs")),
+
     isPinned: v.boolean(),
     isLocked: v.boolean(),
     viewCount: v.number(),
-    postCount: v.number(),
+    postCount: v.number(), // Legacy: kept for backward compat
+    commentCount: v.optional(v.number()), // New: Reddit-style comment count
     upvoteCount: v.optional(v.number()), // Upvote count
+    downvoteCount: v.optional(v.number()), // Downvote count
+    score: v.optional(v.number()), // Net score (upvoteCount - downvoteCount)
     bookmarkCount: v.optional(v.number()), // Bookmark count
     lastPostAt: v.optional(v.number()),
     lastPostUserId: v.optional(v.id("users")),
@@ -511,6 +559,7 @@ export default defineSchema({
     .index("by_pinned", ["isPinned"])
     .index("by_deleted", ["isDeleted"])
     .index("by_upvotes", ["upvoteCount"])
+    .index("by_score", ["score"])
     .searchIndex("search_threads", {
       searchField: "title",
       filterFields: ["tenantId", "categoryId", "isDeleted"],
@@ -565,6 +614,37 @@ export default defineSchema({
     .index("by_deleted", ["isDeleted"]),
 
   /**
+   * Comments — Reddit-style threaded comments on threads
+   *
+   * Replaces the old forumPosts + forumComments 3-level hierarchy with
+   * a single Thread → Comments model that supports infinite nesting via parentId.
+   */
+  comments: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    threadId: v.id("forumThreads"),
+    authorId: v.id("users"),
+    parentId: v.optional(v.id("comments")), // For nesting
+    content: v.string(),
+    depth: v.number(), // 0 = top-level, 1+ = nested
+    upvoteCount: v.number(),
+    downvoteCount: v.number(),
+    score: v.number(), // upvoteCount - downvoteCount
+    replyCount: v.number(), // Direct child count (denormalized)
+    isCollapsed: v.boolean(), // Mod-collapsed
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    editedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_thread", ["threadId", "createdAt"])
+    .index("by_thread_score", ["threadId", "score"])
+    .index("by_parent", ["parentId", "createdAt"])
+    .index("by_parent_score", ["parentId", "score"])
+    .index("by_author", ["authorId", "createdAt"])
+    .index("by_deleted", ["isDeleted"]),
+
+  /**
    * Forum reactions
    * Upvotes, downvotes, and bookmarks on threads/posts/comments
    */
@@ -587,12 +667,16 @@ export default defineSchema({
    */
   forumTags: defineTable({
     tenantId: v.optional(v.id("tenants")),
-    name: v.string(),
+    name: v.string(),           // Lowercase, normalized
+    displayName: v.string(),    // Display version
     slug: v.string(),
-    color: v.optional(v.string()),
+    description: v.optional(v.string()),
+    color: v.optional(v.string()),  // Hex color for badge
     usageCount: v.number(),
     createdAt: v.number(),
+    updatedAt: v.number(),
   })
+    .index("by_name", ["name"])
     .index("by_slug", ["slug"])
     .index("by_tenant_slug", ["tenantId", "slug"])
     .index("by_usage", ["usageCount"])
@@ -819,6 +903,252 @@ export default defineSchema({
     .index("by_order", ["orderId"])
     .index("by_stripe_dispute", ["stripeDisputeId"])
     .index("by_status", ["status"]),
+
+  // -------------------------------------------------------------------------
+  // Notification Tables
+  // -------------------------------------------------------------------------
+
+  /**
+   * Notifications
+   * In-app notifications for user engagement events (replies, upvotes, mentions, etc.)
+   */
+  notifications: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    recipientId: v.id("users"),
+    actorId: v.id("users"),
+    type: v.union(
+      v.literal("reply"),
+      v.literal("upvote"),
+      v.literal("mention"),
+      v.literal("follow"),
+      v.literal("thread_lock"),
+      v.literal("thread_pin"),
+      v.literal("mod_action"),
+      v.literal("campaign")
+    ),
+    targetType: v.union(
+      v.literal("thread"),
+      v.literal("post"),
+      v.literal("comment"),
+      v.literal("user")
+    ),
+    targetId: v.string(),
+    title: v.string(),
+    message: v.string(),
+    read: v.boolean(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_recipient", ["recipientId", "createdAt"])
+    .index("by_recipient_unread", ["recipientId", "read"])
+    .index("by_tenant_recipient", ["tenantId", "recipientId"]),
+
+  /**
+   * Notification preferences
+   * Per-user toggles for email and push notifications by type
+   */
+  notificationPreferences: defineTable({
+    userId: v.id("users"),
+    replyEmail: v.boolean(),
+    replyPush: v.boolean(),
+    upvoteEmail: v.boolean(),
+    upvotePush: v.boolean(),
+    mentionEmail: v.boolean(),
+    mentionPush: v.boolean(),
+    followEmail: v.boolean(),
+    followPush: v.boolean(),
+    campaignEmail: v.boolean(),
+    campaignPush: v.boolean(),
+    weeklyDigest: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"]),
+
+  // -------------------------------------------------------------------------
+  // Poll Tables (Phase 3)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Poll votes
+   * Tracks which option(s) each user voted for on poll threads
+   */
+  pollVotes: defineTable({
+    threadId: v.id("forumThreads"),
+    userId: v.id("users"),
+    optionIndex: v.number(), // Which option they voted for
+    createdAt: v.number(),
+  })
+    .index("by_thread", ["threadId"])
+    .index("by_thread_user", ["threadId", "userId"]),
+
+  // -------------------------------------------------------------------------
+  // Moderation Tables (Phase 4)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Reports — user-submitted reports for threads, comments, or users.
+   * Moderators review pending reports and take action from the admin queue.
+   */
+  reports: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    reporterId: v.id("users"),
+    targetType: v.union(
+      v.literal("thread"),
+      v.literal("comment"),
+      v.literal("user")
+    ),
+    targetId: v.string(),
+    targetAuthorId: v.id("users"),
+    reason: v.union(
+      v.literal("spam"),
+      v.literal("harassment"),
+      v.literal("hate_speech"),
+      v.literal("misinformation"),
+      v.literal("nsfw"),
+      v.literal("off_topic"),
+      v.literal("self_harm"),
+      v.literal("violence"),
+      v.literal("other")
+    ),
+    details: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("reviewed"),
+      v.literal("actioned"),
+      v.literal("dismissed")
+    ),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    actionTaken: v.optional(
+      v.union(
+        v.literal("none"),
+        v.literal("removed"),
+        v.literal("warned"),
+        v.literal("banned")
+      )
+    ),
+    modNotes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status", "createdAt"])
+    .index("by_target", ["targetType", "targetId"])
+    .index("by_reporter", ["reporterId", "createdAt"])
+    .index("by_target_author", ["targetAuthorId", "createdAt"]),
+
+  /**
+   * Moderation action log — audit trail for all moderator actions.
+   * Every remove, approve, lock, ban, warn, etc. is logged here.
+   */
+  modActions: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    moderatorId: v.id("users"),
+    targetType: v.union(
+      v.literal("thread"),
+      v.literal("comment"),
+      v.literal("user")
+    ),
+    targetId: v.string(),
+    action: v.union(
+      v.literal("remove"),
+      v.literal("approve"),
+      v.literal("lock"),
+      v.literal("unlock"),
+      v.literal("pin"),
+      v.literal("unpin"),
+      v.literal("warn"),
+      v.literal("ban"),
+      v.literal("unban"),
+      v.literal("mute"),
+      v.literal("unmute")
+    ),
+    reason: v.optional(v.string()),
+    reportId: v.optional(v.id("reports")),
+    createdAt: v.number(),
+  })
+    .index("by_moderator", ["moderatorId", "createdAt"])
+    .index("by_target", ["targetType", "targetId", "createdAt"]),
+
+  /**
+   * User bans — tracks active/expired bans (temp or permanent).
+   */
+  userBans: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    userId: v.id("users"),
+    bannedBy: v.id("users"),
+    reason: v.string(),
+    isPermanent: v.boolean(),
+    expiresAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId", "isActive"])
+    .index("by_active", ["isActive", "expiresAt"]),
+
+  // -------------------------------------------------------------------------
+  // Social / Following Tables (Phase 8)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Follows — user-to-user follow relationships.
+   * Used for "Following" feed tab and follow notifications.
+   */
+  follows: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    followerId: v.id("users"), // The user who follows
+    followeeId: v.id("users"), // The user being followed
+    createdAt: v.number(),
+  })
+    .index("by_follower", ["followerId", "createdAt"])
+    .index("by_followee", ["followeeId", "createdAt"])
+    .index("by_pair", ["followerId", "followeeId"]),
+
+  // -------------------------------------------------------------------------
+  // Flair Tables (Phase 10)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Post flairs — moderator-managed labels per category.
+   * Examples: "Solved", "Bug", "Discussion", "Tutorial"
+   */
+  postFlairs: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    categoryId: v.id("forumCategories"),
+    name: v.string(),
+    displayName: v.string(),
+    backgroundColor: v.string(),    // e.g., "#22c55e"
+    textColor: v.string(),          // e.g., "#ffffff"
+    emoji: v.optional(v.string()),  // Optional emoji prefix
+    isModOnly: v.boolean(),         // Can only be applied by mods
+    sortOrder: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["categoryId", "sortOrder"]),
+
+  /**
+   * User flairs — visible badges/roles on user posts within categories.
+   * Examples: "Pro Seller", "Moderator", custom user-set text
+   */
+  userFlairs: defineTable({
+    tenantId: v.optional(v.id("tenants")),
+    categoryId: v.optional(v.id("forumCategories")),  // Null = global flair
+    userId: v.id("users"),
+    text: v.string(),              // Custom text (e.g., "Pro Seller", "Moderator")
+    emoji: v.optional(v.string()), // Optional emoji
+    backgroundColor: v.optional(v.string()),
+    textColor: v.optional(v.string()),
+    isCustom: v.boolean(),         // User-customized vs assigned
+    assignedBy: v.optional(v.id("users")),  // If assigned by mod
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_category", ["userId", "categoryId"]),
 
   // -------------------------------------------------------------------------
   // Rate Limiting Tables

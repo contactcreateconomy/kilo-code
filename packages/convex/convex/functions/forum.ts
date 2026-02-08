@@ -2,6 +2,12 @@ import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
+import {
+  insertNotification,
+  parseMentions,
+  isUpvoteMilestone,
+} from "./notifications";
+import { checkBanStatus, checkMuteStatus } from "./moderation";
 
 /**
  * Forum Management Functions
@@ -418,12 +424,48 @@ export const createThread = mutation({
     title: v.string(),
     content: v.string(),
     tenantId: v.optional(v.id("tenants")),
+    // Phase 3: Post type support
+    postType: v.optional(
+      v.union(
+        v.literal("text"),
+        v.literal("link"),
+        v.literal("image"),
+        v.literal("poll")
+      )
+    ),
+    // Link post fields
+    linkUrl: v.optional(v.string()),
+    linkDomain: v.optional(v.string()),
+    linkTitle: v.optional(v.string()),
+    linkDescription: v.optional(v.string()),
+    linkImage: v.optional(v.string()),
+    // Image post fields
+    images: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          caption: v.optional(v.string()),
+          width: v.optional(v.number()),
+          height: v.optional(v.number()),
+        })
+      )
+    ),
+    // Poll fields
+    pollOptions: v.optional(v.array(v.string())),
+    pollEndsAt: v.optional(v.number()),
+    pollMultiSelect: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Authentication required");
     }
+
+    // Check ban/mute status before allowing content creation
+    await checkBanStatus(ctx, userId);
+    await checkMuteStatus(ctx, userId);
+
+    const postType = args.postType ?? "text";
 
     // Validate category
     const category = await ctx.db.get(args.categoryId);
@@ -439,9 +481,44 @@ export const createThread = mutation({
       throw new Error("Title must be less than 200 characters");
     }
 
-    // Validate content
-    if (args.content.length < 10) {
-      throw new Error("Content must be at least 10 characters");
+    // Type-specific validation
+    if (postType === "text") {
+      if (args.content.length < 10) {
+        throw new Error("Content must be at least 10 characters");
+      }
+    } else if (postType === "link") {
+      if (!args.linkUrl) {
+        throw new Error("URL is required for link posts");
+      }
+      // Basic URL validation
+      try {
+        const parsed = new URL(args.linkUrl);
+        if (!["http:", "https:"].includes(parsed.protocol)) {
+          throw new Error("URL must use http or https protocol");
+        }
+      } catch {
+        throw new Error("Invalid URL");
+      }
+    } else if (postType === "image") {
+      if (!args.images || args.images.length === 0) {
+        throw new Error("At least one image is required for image posts");
+      }
+      if (args.images.length > 20) {
+        throw new Error("Maximum 20 images per post");
+      }
+    } else if (postType === "poll") {
+      if (!args.pollOptions || args.pollOptions.length < 2) {
+        throw new Error("At least 2 options are required for polls");
+      }
+      if (args.pollOptions.length > 10) {
+        throw new Error("Maximum 10 poll options");
+      }
+      // Validate each option is non-empty
+      for (const option of args.pollOptions) {
+        if (option.trim().length === 0) {
+          throw new Error("Poll options cannot be empty");
+        }
+      }
     }
 
     const now = Date.now();
@@ -453,6 +530,16 @@ export const createThread = mutation({
       .replace(/^-|-$/g, "")
       .substring(0, 100) + `-${now}`;
 
+    // Extract domain from link URL
+    let linkDomain = args.linkDomain;
+    if (postType === "link" && args.linkUrl && !linkDomain) {
+      try {
+        linkDomain = new URL(args.linkUrl).hostname.replace(/^www\./, "");
+      } catch {
+        // ignore
+      }
+    }
+
     // Create thread
     const threadId = await ctx.db.insert("forumThreads", {
       tenantId: args.tenantId ?? category.tenantId,
@@ -460,10 +547,41 @@ export const createThread = mutation({
       authorId: userId,
       title: args.title,
       slug,
+      body: postType === "text" ? args.content : (args.content || undefined),
+      postType,
+      // Link fields
+      ...(postType === "link"
+        ? {
+            linkUrl: args.linkUrl,
+            linkDomain,
+            linkTitle: args.linkTitle,
+            linkDescription: args.linkDescription,
+            linkImage: args.linkImage,
+          }
+        : {}),
+      // Image fields
+      ...(postType === "image"
+        ? {
+            images: args.images,
+          }
+        : {}),
+      // Poll fields
+      ...(postType === "poll"
+        ? {
+            pollOptions: args.pollOptions,
+            pollEndsAt: args.pollEndsAt,
+            pollMultiSelect: args.pollMultiSelect ?? false,
+          }
+        : {}),
       isPinned: false,
       isLocked: false,
       viewCount: 0,
       postCount: 1,
+      commentCount: 0,
+      upvoteCount: 0,
+      downvoteCount: 0,
+      score: 0,
+      bookmarkCount: 0,
       lastPostAt: now,
       lastPostUserId: userId,
       isDeleted: false,
@@ -471,12 +589,12 @@ export const createThread = mutation({
       updatedAt: now,
     });
 
-    // Create first post
+    // Create first post (for backward compatibility with old system)
     await ctx.db.insert("forumPosts", {
       tenantId: args.tenantId ?? category.tenantId,
       threadId,
       authorId: userId,
-      content: args.content,
+      content: args.content || args.title,
       status: "published",
       isFirstPost: true,
       likeCount: 0,
@@ -557,6 +675,46 @@ export const updateThread = mutation({
       ...updates,
       updatedAt: Date.now(),
     });
+
+    // --- Notification: Thread pinned or locked by mod ---
+    if (
+      (args.isPinned !== undefined || args.isLocked !== undefined) &&
+      thread.authorId !== userId
+    ) {
+      const modProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      const modName = modProfile?.displayName ?? "A moderator";
+
+      if (args.isPinned !== undefined) {
+        const action = args.isPinned ? "pinned" : "unpinned";
+        await insertNotification(ctx, {
+          tenantId: thread.tenantId ?? undefined,
+          recipientId: thread.authorId,
+          actorId: userId,
+          type: "thread_pin",
+          targetType: "thread",
+          targetId: args.threadId,
+          title: `${modName} ${action} your thread`,
+          message: thread.title.slice(0, 120),
+        });
+      }
+
+      if (args.isLocked !== undefined) {
+        const action = args.isLocked ? "locked" : "unlocked";
+        await insertNotification(ctx, {
+          tenantId: thread.tenantId ?? undefined,
+          recipientId: thread.authorId,
+          actorId: userId,
+          type: "thread_lock",
+          targetType: "thread",
+          targetId: args.threadId,
+          title: `${modName} ${action} your thread`,
+          message: thread.title.slice(0, 120),
+        });
+      }
+    }
 
     return true;
   },
@@ -640,6 +798,10 @@ export const createPost = mutation({
       throw new Error("Authentication required");
     }
 
+    // Check ban/mute status before allowing content creation
+    await checkBanStatus(ctx, userId);
+    await checkMuteStatus(ctx, userId);
+
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.isDeleted) {
       throw new Error("Thread not found");
@@ -686,6 +848,45 @@ export const createPost = mutation({
         lastPostAt: now,
         updatedAt: now,
       });
+    }
+
+    // --- Notification: Reply to thread author ---
+    const actorProfile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    const actorName = actorProfile?.displayName ?? "Someone";
+
+    await insertNotification(ctx, {
+      tenantId: thread.tenantId ?? undefined,
+      recipientId: thread.authorId,
+      actorId: userId,
+      type: "reply",
+      targetType: "thread",
+      targetId: args.threadId,
+      title: `${actorName} replied to your thread`,
+      message: args.content.slice(0, 120),
+    });
+
+    // --- Notification: @mentions in post content ---
+    const mentionedUsernames = parseMentions(args.content);
+    for (const username of mentionedUsernames) {
+      const mentionedProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_username", (q) => q.eq("username", username))
+        .first();
+      if (mentionedProfile && mentionedProfile.userId !== userId) {
+        await insertNotification(ctx, {
+          tenantId: thread.tenantId ?? undefined,
+          recipientId: mentionedProfile.userId,
+          actorId: userId,
+          type: "mention",
+          targetType: "post",
+          targetId: postId,
+          title: `${actorName} mentioned you`,
+          message: args.content.slice(0, 120),
+        });
+      }
     }
 
     return postId;
@@ -840,6 +1041,10 @@ export const createComment = mutation({
       throw new Error("Authentication required");
     }
 
+    // Check ban/mute status before allowing content creation
+    await checkBanStatus(ctx, userId);
+    await checkMuteStatus(ctx, userId);
+
     const post = await ctx.db.get(args.postId);
     if (!post || post.isDeleted) {
       throw new Error("Post not found");
@@ -883,6 +1088,65 @@ export const createComment = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    // --- Notification: Reply to post/comment author ---
+    const commentActorProfile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    const commentActorName = commentActorProfile?.displayName ?? "Someone";
+
+    if (args.parentId) {
+      // Replying to a comment — notify the parent comment's author
+      const parentComment = await ctx.db.get(args.parentId);
+      if (parentComment && parentComment.authorId !== userId) {
+        await insertNotification(ctx, {
+          tenantId: post.tenantId ?? undefined,
+          recipientId: parentComment.authorId,
+          actorId: userId,
+          type: "reply",
+          targetType: "comment",
+          targetId: commentId,
+          title: `${commentActorName} replied to your comment`,
+          message: args.content.slice(0, 120),
+        });
+      }
+    } else {
+      // Top-level comment on a post — notify the post's author
+      if (post.authorId !== userId) {
+        await insertNotification(ctx, {
+          tenantId: post.tenantId ?? undefined,
+          recipientId: post.authorId,
+          actorId: userId,
+          type: "reply",
+          targetType: "post",
+          targetId: args.postId,
+          title: `${commentActorName} commented on your post`,
+          message: args.content.slice(0, 120),
+        });
+      }
+    }
+
+    // --- Notification: @mentions in comment content ---
+    const commentMentions = parseMentions(args.content);
+    for (const username of commentMentions) {
+      const mentionedProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_username", (q) => q.eq("username", username))
+        .first();
+      if (mentionedProfile && mentionedProfile.userId !== userId) {
+        await insertNotification(ctx, {
+          tenantId: post.tenantId ?? undefined,
+          recipientId: mentionedProfile.userId,
+          actorId: userId,
+          type: "mention",
+          targetType: "comment",
+          targetId: commentId,
+          title: `${commentActorName} mentioned you`,
+          message: args.content.slice(0, 120),
+        });
+      }
+    }
 
     return commentId;
   },
@@ -969,6 +1233,27 @@ function formatCount(count: number): string {
 }
 
 /**
+ * Calculate controversy score for a thread.
+ *
+ * High engagement + polarized votes = high controversy.
+ * Balance is highest (1) when up ≈ down, lowest (0) when one dominates.
+ * Requires minimum 5 total votes to avoid noise.
+ */
+function calculateControversy(thread: {
+  upvoteCount?: number;
+  downvoteCount?: number;
+}): number {
+  const up = thread.upvoteCount ?? 0;
+  const down = thread.downvoteCount ?? 0;
+  const total = up + down;
+
+  if (total < 5) return 0; // Need minimum engagement
+
+  const balance = 1 - Math.abs(up - down) / total;
+  return total * balance;
+}
+
+/**
  * List discussions for the homepage feed
  *
  * Fetches threads across ALL categories with author + category info.
@@ -981,31 +1266,57 @@ function formatCount(count: number): string {
 export const listDiscussions = query({
   args: {
     sortBy: v.optional(
-      v.union(v.literal("top"), v.literal("hot"), v.literal("new"))
+      v.union(
+        v.literal("top"),
+        v.literal("hot"),
+        v.literal("new"),
+        v.literal("controversial")
+      )
     ),
     limit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
     const sortBy = args.sortBy ?? "new";
 
-    // Fetch recent threads (cap at limit*2 to allow in-memory sorting)
-    const threads = await ctx.db
-      .query("forumThreads")
-      .filter((q) => q.eq(q.field("isDeleted"), false))
-      .order("desc")
-      .take(limit * 2);
+    // Fetch threads — if cursor provided, filter to those created before cursor doc
+    let threads;
+    if (args.cursor) {
+      const cursorDoc = await ctx.db.get(args.cursor as never);
+      if (cursorDoc) {
+        const cursorCreatedAt = (cursorDoc as { createdAt: number }).createdAt;
+        threads = await ctx.db
+          .query("forumThreads")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("isDeleted"), false),
+              q.lt(q.field("createdAt"), cursorCreatedAt)
+            )
+          )
+          .order("desc")
+          .take(limit * 2);
+      } else {
+        threads = [];
+      }
+    } else {
+      threads = await ctx.db
+        .query("forumThreads")
+        .filter((q) => q.eq(q.field("isDeleted"), false))
+        .order("desc")
+        .take(limit * 2);
+    }
 
     // Sort based on sortBy
     let sorted = [...threads];
     if (sortBy === "top") {
-      sorted.sort((a, b) => (b.upvoteCount ?? 0) - (a.upvoteCount ?? 0));
+      sorted.sort((a, b) => (b.score ?? (b.upvoteCount ?? 0)) - (a.score ?? (a.upvoteCount ?? 0)));
     } else if (sortBy === "hot") {
       sorted.sort((a, b) => {
         const scoreA =
-          (a.upvoteCount ?? 0) + a.postCount * 2;
+          (a.score ?? (a.upvoteCount ?? 0)) + a.postCount * 2;
         const scoreB =
-          (b.upvoteCount ?? 0) + b.postCount * 2;
+          (b.score ?? (b.upvoteCount ?? 0)) + b.postCount * 2;
         const ageA = (Date.now() - a.createdAt) / 3600000;
         const ageB = (Date.now() - b.createdAt) / 3600000;
         return (
@@ -1013,12 +1324,16 @@ export const listDiscussions = query({
           scoreA * Math.pow(0.95, ageA / 24)
         );
       });
+    } else if (sortBy === "controversial") {
+      sorted.sort((a, b) => {
+        return calculateControversy(b) - calculateControversy(a);
+      });
     }
     // "new" is already sorted desc by creation time
 
     const result = sorted.slice(0, limit);
 
-    // Enrich with author + category
+    // Enrich with author + category + tags + flair
     const enriched = await Promise.all(
       result.map(async (thread) => {
         const author = await ctx.db.get(thread.authorId);
@@ -1030,14 +1345,61 @@ export const listDiscussions = query({
           : null;
         const category = await ctx.db.get(thread.categoryId);
 
+        // Phase 10: Fetch thread tags
+        const threadTagJunctions = await ctx.db
+          .query("forumThreadTags")
+          .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
+          .collect();
+        const tags = (
+          await Promise.all(threadTagJunctions.map((tt) => ctx.db.get(tt.tagId)))
+        )
+          .filter(Boolean)
+          .map((tag) => ({
+            _id: tag!._id,
+            name: tag!.name,
+            displayName: tag!.displayName,
+            color: tag!.color ?? null,
+          }));
+
+        // Phase 10: Fetch flair if set
+        let flair = null;
+        if (thread.flairId) {
+          const flairDoc = await ctx.db.get(thread.flairId);
+          if (flairDoc && flairDoc.isActive) {
+            flair = {
+              _id: flairDoc._id,
+              displayName: flairDoc.displayName,
+              backgroundColor: flairDoc.backgroundColor,
+              textColor: flairDoc.textColor,
+              emoji: flairDoc.emoji ?? null,
+            };
+          }
+        }
+
         return {
           _id: thread._id,
           title: thread.title,
           slug: thread.slug,
+          body: thread.body ?? null,
           aiSummary: thread.aiSummary ?? null,
           imageUrl: thread.imageUrl ?? null,
+          postType: thread.postType ?? "text",
+          // Link post fields
+          linkUrl: thread.linkUrl ?? null,
+          linkDomain: thread.linkDomain ?? null,
+          linkTitle: thread.linkTitle ?? null,
+          linkDescription: thread.linkDescription ?? null,
+          linkImage: thread.linkImage ?? null,
+          // Image post fields
+          images: thread.images ?? null,
+          // Poll fields
+          pollOptions: thread.pollOptions ?? null,
+          pollEndsAt: thread.pollEndsAt ?? null,
           isPinned: thread.isPinned,
           upvoteCount: thread.upvoteCount ?? 0,
+          downvoteCount: thread.downvoteCount ?? 0,
+          score: thread.score ?? (thread.upvoteCount ?? 0),
+          commentCount: thread.commentCount ?? thread.postCount ?? 0,
           postCount: thread.postCount,
           viewCount: thread.viewCount,
           createdAt: thread.createdAt,
@@ -1059,6 +1421,9 @@ export const listDiscussions = query({
                 color: category.color ?? null,
               }
             : null,
+          // Phase 10: Tags & Flair
+          tags,
+          flair,
         };
       })
     );
@@ -1066,6 +1431,7 @@ export const listDiscussions = query({
     return {
       discussions: enriched,
       hasMore: threads.length > limit,
+      nextCursor: enriched.length > 0 ? enriched[enriched.length - 1]?._id ?? null : null,
     };
   },
 });
@@ -1281,14 +1647,15 @@ export const getActiveCampaign = query({
 });
 
 /**
- * Toggle a reaction (upvote/bookmark) on a thread, post, or comment
+ * Toggle a reaction (upvote/downvote/bookmark) on a thread, post, or comment
  *
- * Maintains denormalized upvoteCount on threads.
+ * Maintains denormalized upvoteCount, downvoteCount, and score on threads.
+ * Switching between upvote ↔ downvote removes the old reaction and adds the new one.
  *
  * @param targetType - "thread" | "post" | "comment"
  * @param targetId - ID of the target document
- * @param reactionType - "upvote" | "bookmark"
- * @returns { action: "added" | "removed" }
+ * @param reactionType - "upvote" | "downvote" | "bookmark"
+ * @returns { action: "added" | "removed" | "switched" }
  */
 export const toggleReaction = mutation({
   args: {
@@ -1308,7 +1675,7 @@ export const toggleReaction = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Authentication required");
 
-    // Check existing reaction
+    // Check existing reaction (upvote/downvote are mutually exclusive per target)
     const existing = await ctx.db
       .query("forumReactions")
       .withIndex("by_user_target", (q) =>
@@ -1319,87 +1686,98 @@ export const toggleReaction = mutation({
       )
       .first();
 
+    // Deltas for denormalized counts
+    let deltaUp = 0;
+    let deltaDown = 0;
+    let deltaBookmark = 0;
+    let action: "added" | "removed" | "switched";
+
     if (existing && existing.reactionType === args.reactionType) {
-      // Toggle off — remove reaction
+      // Toggle off — remove same reaction
       await ctx.db.delete(existing._id);
+      if (args.reactionType === "upvote") deltaUp = -1;
+      else if (args.reactionType === "downvote") deltaDown = -1;
+      else if (args.reactionType === "bookmark") deltaBookmark = -1;
+      action = "removed";
+    } else if (existing) {
+      // Different reaction type — remove old, add new (switch)
+      const oldType = existing.reactionType;
+      await ctx.db.delete(existing._id);
+      if (oldType === "upvote") deltaUp = -1;
+      else if (oldType === "downvote") deltaDown = -1;
+      else if (oldType === "bookmark") deltaBookmark = -1;
 
-      // Update denormalized count on thread
-      if (
-        args.targetType === "thread" &&
-        args.reactionType === "upvote"
-      ) {
-        const thread = await ctx.db.get(
-          args.targetId as never
-        );
-        if (thread) {
-          await ctx.db.patch(
-            args.targetId as never,
-            {
-              upvoteCount: Math.max(
-                0,
-                ((thread as Doc<"forumThreads">).upvoteCount ?? 0) - 1
-              ),
-            }
-          );
-        }
-      }
-
-      return { action: "removed" as const };
+      await ctx.db.insert("forumReactions", {
+        userId,
+        targetType: args.targetType,
+        targetId: args.targetId,
+        reactionType: args.reactionType,
+        createdAt: Date.now(),
+      });
+      if (args.reactionType === "upvote") deltaUp += 1;
+      else if (args.reactionType === "downvote") deltaDown += 1;
+      else if (args.reactionType === "bookmark") deltaBookmark += 1;
+      action = "switched";
+    } else {
+      // No existing reaction — add new
+      await ctx.db.insert("forumReactions", {
+        userId,
+        targetType: args.targetType,
+        targetId: args.targetId,
+        reactionType: args.reactionType,
+        createdAt: Date.now(),
+      });
+      if (args.reactionType === "upvote") deltaUp = 1;
+      else if (args.reactionType === "downvote") deltaDown = 1;
+      else if (args.reactionType === "bookmark") deltaBookmark = 1;
+      action = "added";
     }
 
-    // If different reaction type exists, remove it first
-    if (existing) {
-      await ctx.db.delete(existing._id);
-      if (
-        args.targetType === "thread" &&
-        existing.reactionType === "upvote"
-      ) {
-        const thread = await ctx.db.get(
-          args.targetId as never
-        );
-        if (thread) {
-          await ctx.db.patch(
-            args.targetId as never,
-            {
-              upvoteCount: Math.max(
-                0,
-                ((thread as Doc<"forumThreads">).upvoteCount ?? 0) - 1
-              ),
-            }
-          );
-        }
-      }
-    }
-
-    // Add new reaction
-    await ctx.db.insert("forumReactions", {
-      userId,
-      targetType: args.targetType,
-      targetId: args.targetId,
-      reactionType: args.reactionType,
-      createdAt: Date.now(),
-    });
-
-    // Update denormalized count
-    if (
-      args.targetType === "thread" &&
-      args.reactionType === "upvote"
-    ) {
-      const thread = await ctx.db.get(
-        args.targetId as never
-      );
+    // Update denormalized counts on thread
+    if (args.targetType === "thread" && (deltaUp !== 0 || deltaDown !== 0 || deltaBookmark !== 0)) {
+      const thread = await ctx.db.get(args.targetId as never);
       if (thread) {
-        await ctx.db.patch(
-          args.targetId as never,
-          {
-            upvoteCount:
-              ((thread as Doc<"forumThreads">).upvoteCount ?? 0) + 1,
-          }
-        );
+        const typedThread = thread as Doc<"forumThreads">;
+        const newUp = Math.max(0, (typedThread.upvoteCount ?? 0) + deltaUp);
+        const newDown = Math.max(0, (typedThread.downvoteCount ?? 0) + deltaDown);
+        const patchData: Record<string, number> = {};
+        if (deltaUp !== 0) {
+          patchData.upvoteCount = newUp;
+          patchData.score = newUp - newDown;
+        }
+        if (deltaDown !== 0) {
+          patchData.downvoteCount = newDown;
+          patchData.score = newUp - newDown;
+        }
+        if (deltaBookmark !== 0) {
+          patchData.bookmarkCount = Math.max(0, (typedThread.bookmarkCount ?? 0) + deltaBookmark);
+        }
+        await ctx.db.patch(args.targetId as never, patchData);
+
+        // --- Notification: Upvote milestone ---
+        if (deltaUp > 0 && isUpvoteMilestone(newUp)) {
+          const upvoteActorProfile = await ctx.db
+            .query("userProfiles")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .first();
+          const upvoteActorName =
+            upvoteActorProfile?.displayName ?? "Someone";
+
+          await insertNotification(ctx, {
+            tenantId: typedThread.tenantId ?? undefined,
+            recipientId: typedThread.authorId,
+            actorId: userId,
+            type: "upvote",
+            targetType: "thread",
+            targetId: args.targetId,
+            title: `Your thread reached ${newUp} upvotes!`,
+            message: `${upvoteActorName} and others upvoted your thread`,
+          });
+        }
       }
     }
 
-    return { action: "added" as const };
+    return { action };
   },
 });
 
@@ -1486,6 +1864,7 @@ export const getUserProfile = query({
       .first();
 
     return {
+      userId: profile.userId,
       username: profile.username,
       displayName: profile.displayName ?? user?.name ?? "Anonymous",
       avatarUrl: profile.avatarUrl ?? null,
@@ -1495,6 +1874,8 @@ export const getUserProfile = query({
       threadCount: threads.length,
       postCount: posts.length,
       reputation: points?.totalPoints ?? 0,
+      followerCount: profile.followerCount ?? 0,
+      followingCount: profile.followingCount ?? 0,
     };
   },
 });
@@ -1544,6 +1925,7 @@ export const listThreadsBySlug = query({
   args: {
     slug: v.string(),
     limit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
     sort: v.optional(
       v.union(
         v.literal("recent"),
@@ -1562,14 +1944,37 @@ export const listThreadsBySlug = query({
 
     const limit = args.limit ?? 20;
 
-    const threads = await ctx.db
-      .query("forumThreads")
-      .withIndex("by_category", (q) =>
-        q.eq("categoryId", category._id)
-      )
-      .filter((q) => q.eq(q.field("isDeleted"), false))
-      .order("desc")
-      .take(limit + 1);
+    let threads;
+    if (args.cursor) {
+      const cursorDoc = await ctx.db.get(args.cursor as never);
+      if (cursorDoc) {
+        const cursorCreatedAt = (cursorDoc as { createdAt: number }).createdAt;
+        threads = await ctx.db
+          .query("forumThreads")
+          .withIndex("by_category", (q) =>
+            q.eq("categoryId", category._id)
+          )
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("isDeleted"), false),
+              q.lt(q.field("createdAt"), cursorCreatedAt)
+            )
+          )
+          .order("desc")
+          .take(limit + 1);
+      } else {
+        threads = [];
+      }
+    } else {
+      threads = await ctx.db
+        .query("forumThreads")
+        .withIndex("by_category", (q) =>
+          q.eq("categoryId", category._id)
+        )
+        .filter((q) => q.eq(q.field("isDeleted"), false))
+        .order("desc")
+        .take(limit + 1);
+    }
 
     const hasMore = threads.length > limit;
     const result = hasMore ? threads.slice(0, limit) : threads;
@@ -1581,7 +1986,7 @@ export const listThreadsBySlug = query({
       );
     }
 
-    // Enrich with author info
+    // Enrich with author info + tags + flair
     const enriched = await Promise.all(
       result.map(async (thread) => {
         const author = await ctx.db.get(thread.authorId);
@@ -1593,6 +1998,37 @@ export const listThreadsBySlug = query({
               )
               .first()
           : null;
+
+        // Phase 10: Fetch thread tags
+        const threadTagJunctions = await ctx.db
+          .query("forumThreadTags")
+          .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
+          .collect();
+        const tags = (
+          await Promise.all(threadTagJunctions.map((tt) => ctx.db.get(tt.tagId)))
+        )
+          .filter(Boolean)
+          .map((tag) => ({
+            _id: tag!._id,
+            name: tag!.name,
+            displayName: tag!.displayName,
+            color: tag!.color ?? null,
+          }));
+
+        // Phase 10: Fetch flair if set
+        let flair = null;
+        if (thread.flairId) {
+          const flairDoc = await ctx.db.get(thread.flairId);
+          if (flairDoc && flairDoc.isActive) {
+            flair = {
+              _id: flairDoc._id,
+              displayName: flairDoc.displayName,
+              backgroundColor: flairDoc.backgroundColor,
+              textColor: flairDoc.textColor,
+              emoji: flairDoc.emoji ?? null,
+            };
+          }
+        }
 
         return {
           ...thread,
@@ -1607,6 +2043,9 @@ export const listThreadsBySlug = query({
                 avatarUrl: profile?.avatarUrl ?? null,
               }
             : null,
+          // Phase 10: Tags & Flair
+          tags,
+          flair,
         };
       })
     );
@@ -1622,6 +2061,7 @@ export const listThreadsBySlug = query({
       },
       threads: enriched,
       hasMore,
+      nextCursor: enriched.length > 0 ? enriched[enriched.length - 1]?._id ?? null : null,
     };
   },
 });

@@ -533,3 +533,50 @@ export const deleteAccount = mutation({
     return true;
   },
 });
+
+// ============================================================================
+// Search
+// ============================================================================
+
+/**
+ * Search users by username or display name.
+ *
+ * Used for @mention autocomplete in the rich text editor.
+ * Returns minimal user info (id, name, username, avatar).
+ *
+ * @param query - Search string to match against username/displayName
+ * @param limit - Max results (default 5)
+ */
+export const searchUsers = query({
+  args: {
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 5;
+    const search = args.query.toLowerCase().trim();
+
+    if (search.length === 0) return [];
+
+    // Fetch a batch of profiles and filter in-memory
+    const profiles = await ctx.db
+      .query("userProfiles")
+      .filter((q) => q.neq(q.field("isBanned"), true))
+      .take(200);
+
+    const matches = profiles
+      .filter(
+        (p) =>
+          p.username?.toLowerCase().includes(search) ||
+          p.displayName?.toLowerCase().includes(search)
+      )
+      .slice(0, limit);
+
+    return matches.map((p) => ({
+      id: p.userId,
+      name: p.displayName ?? "Anonymous",
+      username: p.username ?? String(p.userId),
+      avatarUrl: p.avatarUrl ?? null,
+    }));
+  },
+});
