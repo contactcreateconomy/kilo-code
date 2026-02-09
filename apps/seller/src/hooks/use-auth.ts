@@ -52,11 +52,13 @@ export function useAuth() {
   );
 
   const signInWithGoogle = useCallback(async () => {
-    await convexSignIn("google");
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? window.location.origin;
+    await convexSignIn("google", { redirectTo: siteUrl });
   }, [convexSignIn]);
 
   const signInWithGitHub = useCallback(async () => {
-    await convexSignIn("github");
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? window.location.origin;
+    await convexSignIn("github", { redirectTo: siteUrl });
   }, [convexSignIn]);
 
   const signOut = useCallback(async () => {

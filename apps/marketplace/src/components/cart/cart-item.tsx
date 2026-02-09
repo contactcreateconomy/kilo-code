@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button, Input } from "@createconomy/ui";
 import { useCart } from "@/hooks/use-cart";
 import type { CartItem as CartItemType } from "@/types";
+import { Minus, Plus, Trash2 } from "lucide-react";
 
 interface CartItemProps {
   item: CartItemType;
@@ -22,7 +23,7 @@ export function CartItem({ item }: CartItemProps) {
   };
 
   return (
-    <div className="flex gap-4 border-b py-4">
+    <div className="flex gap-4 py-4">
       {/* Product Image */}
       <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
         <Image
@@ -54,81 +55,44 @@ export function CartItem({ item }: CartItemProps) {
         </div>
 
         {/* Quantity Controls */}
-        <div className="mt-auto flex items-center justify-between">
+        <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => handleQuantityChange(item.quantity - 1)}
               aria-label="Decrease quantity"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M5 12h14" />
-              </svg>
+              <Minus className="h-4 w-4" />
             </Button>
             <Input
               type="number"
               min="1"
               value={item.quantity}
               onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-              className="w-16 text-center"
+              className="h-8 w-14 text-center"
               aria-label="Quantity"
             />
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => handleQuantityChange(item.quantity + 1)}
               aria-label="Increase quantity"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-              </svg>
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
 
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => removeItem(item.id)}
-            className="text-destructive hover:text-destructive"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            aria-label="Remove item"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
-            <span className="ml-2">Remove</span>
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>

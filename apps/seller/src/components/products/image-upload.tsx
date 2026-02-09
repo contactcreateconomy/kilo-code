@@ -132,10 +132,10 @@ export function ImageUpload({ productId, images: imagesProp, onImagesChange, max
                       e.stopPropagation();
                       moveImage(index, index - 1);
                     }}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                    className="p-2 bg-white rounded-full hover:bg-muted transition-colors"
                     title="Move left"
                   >
-                    <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
@@ -148,10 +148,10 @@ export function ImageUpload({ productId, images: imagesProp, onImagesChange, max
                       e.stopPropagation();
                       moveImage(index, index + 1);
                     }}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                    className="p-2 bg-white rounded-full hover:bg-muted transition-colors"
                     title="Move right"
                   >
-                    <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -163,7 +163,7 @@ export function ImageUpload({ productId, images: imagesProp, onImagesChange, max
                     e.stopPropagation();
                     removeImage(index);
                   }}
-                  className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
+                  className="p-2 bg-destructive rounded-full hover:bg-destructive/90 transition-colors"
                   title="Remove image"
                 >
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,5 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ShieldX } from 'lucide-react';
+import { Logo } from '@createconomy/ui/components/logo';
+import { Button } from '@createconomy/ui/components/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@createconomy/ui/components/card';
 
 export const metadata: Metadata = {
   title: 'Unauthorized',
@@ -8,50 +18,38 @@ export const metadata: Metadata = {
 
 export default function UnauthorizedPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/50">
-      <div className="mx-auto w-full max-w-md space-y-6 p-6 text-center">
-        <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-destructive"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+    <div className="flex min-h-svh flex-col items-center justify-center bg-muted/50 p-6 md:p-10">
+      <div className="w-full max-w-md">
+        <div className="flex justify-center mb-8">
+          <Logo size={48} />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-destructive">
-            Access Denied
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            You do not have permission to access the admin dashboard. This area
-            is restricted to administrators and moderators only.
-          </p>
-        </div>
-        <div className="space-y-3">
-          <Link
-            href="/auth/signin"
-            className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            Sign in with a different account
-          </Link>
-          <a
-            href={process.env['NEXT_PUBLIC_MARKETPLACE_URL'] || '/'}
-            className="inline-flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            Return to Marketplace
-          </a>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          If you believe this is an error, please contact your system
-          administrator.
-        </p>
+
+        <Card>
+          <CardHeader className="items-center text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 mb-2">
+              <ShieldX className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle className="text-destructive">Access Denied</CardTitle>
+            <CardDescription>
+              You don&apos;t have permission to access the admin dashboard. This
+              area is restricted to administrators and moderators only.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Button asChild className="w-full">
+              <Link href="/auth/signin">Sign in with a different account</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <a href={process.env['NEXT_PUBLIC_MARKETPLACE_URL'] || '/'}>
+                Return to Marketplace
+              </a>
+            </Button>
+            <p className="text-center text-xs text-muted-foreground mt-2">
+              If you believe this is an error, please contact your system
+              administrator.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { api } from "@createconomy/convex";
 /**
  * User interface matching the Convex getCurrentUser response
  */
-interface User {
+export interface User {
   id: string;
   email?: string;
   name?: string;
@@ -86,18 +86,20 @@ export function useAuth() {
 
   /**
    * Sign in with Google OAuth
-   * Redirects to Google for authentication
+   * Redirects to Google for authentication, then back to the forum app
    */
   const signInWithGoogle = useCallback(async () => {
-    await convexSignIn("google");
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? window.location.origin;
+    await convexSignIn("google", { redirectTo: siteUrl });
   }, [convexSignIn]);
 
   /**
    * Sign in with GitHub OAuth
-   * Redirects to GitHub for authentication
+   * Redirects to GitHub for authentication, then back to the forum app
    */
   const signInWithGitHub = useCallback(async () => {
-    await convexSignIn("github");
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? window.location.origin;
+    await convexSignIn("github", { redirectTo: siteUrl });
   }, [convexSignIn]);
 
   /**

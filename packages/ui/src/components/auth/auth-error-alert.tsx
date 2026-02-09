@@ -15,7 +15,7 @@ export function AuthErrorAlert({ error }: AuthErrorAlertProps) {
   }
 
   return (
-    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-600 dark:text-red-400 text-sm">
+    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
       {error}
     </div>
   );

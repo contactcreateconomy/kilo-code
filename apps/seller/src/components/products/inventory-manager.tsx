@@ -46,15 +46,15 @@ export function InventoryManager({
         <h2 className="text-lg font-semibold">Inventory Management</h2>
         <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            <span className="w-2 h-2 rounded-full bg-success"></span>
             In Stock
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+            <span className="w-2 h-2 rounded-full bg-warning"></span>
             Low Stock
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+            <span className="w-2 h-2 rounded-full bg-destructive"></span>
             Out of Stock
           </span>
         </div>

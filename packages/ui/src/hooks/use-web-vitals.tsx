@@ -458,7 +458,7 @@ export function usePerformanceScore(metrics: WebVitalsState): number | null {
   const scores: Record<string, number> = {};
 
   if (lcp) {
-    scores.lcp = calculateScore(
+    scores["lcp"] = calculateScore(
       lcp.value,
       WEB_VITALS_THRESHOLDS.LCP.good,
       WEB_VITALS_THRESHOLDS.LCP.poor
@@ -466,7 +466,7 @@ export function usePerformanceScore(metrics: WebVitalsState): number | null {
   }
 
   if (fid) {
-    scores.fid = calculateScore(
+    scores["fid"] = calculateScore(
       fid.value,
       WEB_VITALS_THRESHOLDS.FID.good,
       WEB_VITALS_THRESHOLDS.FID.poor
@@ -474,7 +474,7 @@ export function usePerformanceScore(metrics: WebVitalsState): number | null {
   }
 
   if (cls) {
-    scores.cls = calculateScore(
+    scores["cls"] = calculateScore(
       cls.value,
       WEB_VITALS_THRESHOLDS.CLS.good,
       WEB_VITALS_THRESHOLDS.CLS.poor
@@ -482,7 +482,7 @@ export function usePerformanceScore(metrics: WebVitalsState): number | null {
   }
 
   if (fcp) {
-    scores.fcp = calculateScore(
+    scores["fcp"] = calculateScore(
       fcp.value,
       WEB_VITALS_THRESHOLDS.FCP.good,
       WEB_VITALS_THRESHOLDS.FCP.poor
@@ -490,7 +490,7 @@ export function usePerformanceScore(metrics: WebVitalsState): number | null {
   }
 
   if (ttfb) {
-    scores.ttfb = calculateScore(
+    scores["ttfb"] = calculateScore(
       ttfb.value,
       WEB_VITALS_THRESHOLDS.TTFB.good,
       WEB_VITALS_THRESHOLDS.TTFB.poor
@@ -548,7 +548,7 @@ export function WebVitalsDebug({
     "bottom-right": { bottom: 10, right: 10 },
   };
 
-  const ratingColors = {
+  const ratingColors: Record<string, string> = {
     good: "#0cce6b",
     "needs-improvement": "#ffa400",
     poor: "#ff4e42",

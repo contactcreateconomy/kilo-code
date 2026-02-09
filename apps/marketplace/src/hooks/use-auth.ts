@@ -32,11 +32,13 @@ export function useAuth() {
   };
 
   const signInWithGoogle = async () => {
-    await convexSignIn("google");
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? window.location.origin;
+    await convexSignIn("google", { redirectTo: siteUrl });
   };
 
   const signInWithGitHub = async () => {
-    await convexSignIn("github");
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? window.location.origin;
+    await convexSignIn("github", { redirectTo: siteUrl });
   };
 
   const signOut = async () => {

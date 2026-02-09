@@ -3,11 +3,16 @@
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, FileText, Link2, ImageIcon, BarChart } from 'lucide-react';
 import { cn, Button, Input, Badge } from '@createconomy/ui';
 import { CommunityDropdown } from './community-dropdown';
 import { EditorToolbar } from './editor-toolbar';
+import { RichTextEditor } from '@/components/editor';
+import { TagInput } from '@/components/tags';
+import { FlairSelector } from '@/components/flairs';
 import { useForum, useCategories } from '@/hooks/use-forum';
+import { useTagMutations } from '@/hooks/use-tags';
+import type { PostType } from '@/types/forum';
 
 interface DiscussionFormProps {
   className?: string;
@@ -24,18 +29,23 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { createThread } = useForum();
   const { categories } = useCategories();
+  const { addTagsToThread } = useTagMutations();
   
   const [community, setCommunity] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [showTagInput, setShowTagInput] = useState(false);
+  const [flairId, setFlairId] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Phase 3: Post type state
+  const [postType, setPostType] = useState<PostType>('text');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollDuration, setPollDuration] = useState('3'); // days
+  const [pollMultiSelect, setPollMultiSelect] = useState(false);
 
   const maxTitleLength = 300;
-  const maxTags = 5;
 
   // Insert text at cursor position in textarea
   const insertAtCursor = useCallback((before: string, after: string) => {
@@ -91,31 +101,6 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
     }, 0);
   }, [body]);
 
-  // Add tag
-  const addTag = () => {
-    const trimmedTag = tagInput.trim().toLowerCase();
-    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < maxTags) {
-      setTags([...tags, trimmedTag]);
-      setTagInput('');
-    }
-  };
-
-  // Remove tag
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
-
-  // Handle tag input keydown
-  const handleTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    } else if (e.key === 'Escape') {
-      setShowTagInput(false);
-      setTagInput('');
-    }
-  };
-
   // Save draft to localStorage
   const saveDraft = () => {
     const draft = {
@@ -161,11 +146,42 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
     setIsSubmitting(true);
 
     try {
-      const threadId = await createThread({
+      // Build type-specific arguments
+      const threadArgs: Record<string, unknown> = {
         title: title.trim(),
         content: body || title.trim(),
-        categoryId,
-      });
+        categoryId: categoryId,
+        postType,
+      };
+
+      if (postType === 'link') {
+        threadArgs['linkUrl'] = linkUrl;
+      } else if (postType === 'poll') {
+        const validOptions = pollOptions
+          .map((o) => o.trim())
+          .filter((o) => o.length > 0);
+        if (validOptions.length < 2) {
+          setError('Polls need at least 2 non-empty options.');
+          setIsSubmitting(false);
+          return;
+        }
+        threadArgs['pollOptions'] = validOptions;
+        threadArgs['pollEndsAt'] =
+          Date.now() + parseInt(pollDuration) * 24 * 60 * 60 * 1000;
+        threadArgs['pollMultiSelect'] = pollMultiSelect;
+      }
+
+      const threadId = await createThread(threadArgs as Parameters<typeof createThread>[0]);
+
+      // Add tags to the thread (after creation since tags are a separate table)
+      if (threadId && tags.length > 0) {
+        try {
+          await addTagsToThread(threadId as string, tags);
+        } catch {
+          // Non-critical: don't block thread creation if tags fail
+          console.warn('Failed to add tags to thread');
+        }
+      }
 
       // Clear draft
       localStorage.removeItem('discussion-draft');
@@ -210,6 +226,31 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
         {/* Community Selector */}
         <CommunityDropdown value={community} onChange={setCommunity} />
 
+        {/* Post Type Tabs */}
+        <div className="flex gap-1 rounded-lg border border-border p-1 bg-muted/30">
+          {([
+            { type: 'text' as PostType, label: 'Text', icon: FileText },
+            { type: 'link' as PostType, label: 'Link', icon: Link2 },
+            { type: 'image' as PostType, label: 'Image', icon: ImageIcon },
+            { type: 'poll' as PostType, label: 'Poll', icon: BarChart },
+          ]).map(({ type, label, icon: Icon }) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setPostType(type)}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                postType === type
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Title Input */}
         <div className="space-y-2">
           <div className="relative">
@@ -232,83 +273,175 @@ export function DiscussionForm({ className }: DiscussionFormProps) {
           </div>
         </div>
 
-        {/* Tags */}
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {tags.map((tag) => (
-              <Badge
-                key={tag}
-                variant="secondary"
-                className="gap-1 pl-2 pr-1 py-1"
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => removeTag(tag)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-            
-            {showTagInput ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  onBlur={() => {
-                    if (tagInput.trim()) addTag();
-                    setShowTagInput(false);
-                  }}
-                  placeholder="Add tag..."
-                  className="h-7 w-32 text-sm"
-                  autoFocus
-                />
-              </div>
-            ) : (
-              tags.length < maxTags && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowTagInput(true)}
-                  className="h-7 text-muted-foreground hover:text-foreground"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add tags
-                </Button>
-              )
-            )}
-          </div>
-          {tags.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {tags.length}/{maxTags} tags
-            </p>
-          )}
+        {/* Tags & Flair */}
+        <div className="space-y-3">
+          <TagInput value={tags} onChange={setTags} />
+          <FlairSelector
+            categoryId={getCategoryIdFromSlug(community) ?? undefined}
+            value={flairId}
+            onChange={setFlairId}
+          />
         </div>
 
-        {/* Editor */}
-        <div>
-          <EditorToolbar
-            onInsertText={insertAtCursor}
-            onInsertLink={insertLink}
-            onInsertImage={insertImage}
-          />
-          <textarea
-            ref={textareaRef}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
+        {/* Editor — type-specific */}
+        {postType === 'text' && (
+          <RichTextEditor
+            content={body}
+            onChange={(_html, text) => setBody(text)}
             placeholder="Body text (optional)"
-            className={cn(
-              'w-full min-h-[200px] resize-y rounded-b-lg border border-border bg-transparent p-4',
-              'text-foreground placeholder:text-muted-foreground',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
-            )}
+            minHeight="200px"
           />
-        </div>
+        )}
+
+        {postType === 'link' && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">URL*</label>
+              <Input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://example.com/article"
+                className="bg-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description (optional)</label>
+              <textarea
+                ref={textareaRef}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Add context about this link..."
+                className={cn(
+                  'w-full min-h-[100px] resize-y rounded-lg border border-border bg-transparent p-4 mt-2',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
+                )}
+              />
+            </div>
+          </div>
+        )}
+
+        {postType === 'image' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
+              <ImageIcon className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground mb-2">
+                Image upload coming soon
+              </p>
+              <p className="text-xs text-muted-foreground">
+                For now, use markdown syntax in a text post: ![alt](url)
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Caption (optional)</label>
+              <textarea
+                ref={textareaRef}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Add a caption..."
+                className={cn(
+                  'w-full min-h-[80px] resize-y rounded-lg border border-border bg-transparent p-4 mt-2',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
+                )}
+              />
+            </div>
+          </div>
+        )}
+
+        {postType === 'poll' && (
+          <div className="space-y-4">
+            {/* Poll options */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Options*</label>
+              {pollOptions.map((option, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    value={option}
+                    onChange={(e) => {
+                      const newOptions = [...pollOptions];
+                      newOptions[i] = e.target.value;
+                      setPollOptions(newOptions);
+                    }}
+                    placeholder={`Option ${i + 1}`}
+                    className="bg-transparent"
+                  />
+                  {pollOptions.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPollOptions(
+                          pollOptions.filter((_, idx) => idx !== i)
+                        )
+                      }
+                      className="p-1 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {pollOptions.length < 10 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPollOptions([...pollOptions, ''])}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add option
+                </Button>
+              )}
+            </div>
+
+            {/* Poll settings */}
+            <div className="flex items-center gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Duration</label>
+                <select
+                  value={pollDuration}
+                  onChange={(e) => setPollDuration(e.target.value)}
+                  className="block rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+                >
+                  <option value="1">1 day</option>
+                  <option value="3">3 days</option>
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer mt-5">
+                <input
+                  type="checkbox"
+                  checked={pollMultiSelect}
+                  onChange={(e) => setPollMultiSelect(e.target.checked)}
+                  className="rounded border-border"
+                />
+                <span className="text-sm">Allow multiple selections</span>
+              </label>
+            </div>
+
+            {/* Poll body */}
+            <div>
+              <label className="text-sm font-medium">
+                Description (optional)
+              </label>
+              <textarea
+                ref={textareaRef}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Add context about this poll..."
+                className={cn(
+                  'w-full min-h-[80px] resize-y rounded-lg border border-border bg-transparent p-4 mt-2',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
+                )}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">

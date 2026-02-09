@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Input } from "@createconomy/ui";
+import Link from "next/link";
+import { Button, Input, Spinner } from "@createconomy/ui";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ReplyFormProps {
   threadId: string;
@@ -10,7 +12,6 @@ interface ReplyFormProps {
   onSubmit?: (content: string) => Promise<void>;
   onCancel?: () => void;
   placeholder?: string;
-  isAuthenticated?: boolean;
 }
 
 export function ReplyForm({
@@ -20,8 +21,8 @@ export function ReplyForm({
   onSubmit,
   onCancel,
   placeholder = "Write your reply...",
-  isAuthenticated = false,
 }: ReplyFormProps) {
+  const { isAuthenticated, isLoading } = useAuth();
   const [content, setContent] = useState(
     replyToUsername ? `@${replyToUsername} ` : ""
   );
@@ -59,6 +60,14 @@ export function ReplyForm({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="bg-card rounded-lg border p-6 flex justify-center">
+        <Spinner size="md" className="text-muted-foreground" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="bg-card rounded-lg border p-6 text-center">
@@ -66,7 +75,7 @@ export function ReplyForm({
           You must be signed in to reply to this thread.
         </p>
         <Button asChild>
-          <a href="/auth/signin">Sign In</a>
+          <Link href={`/auth/signin?returnTo=${encodeURIComponent(`/t/${threadId}`)}`}>Sign In</Link>
         </Button>
       </div>
     );
@@ -153,7 +162,7 @@ export function ReplyForm({
 
       {/* Error Message */}
       {error && (
-        <p className="mt-2 text-sm text-red-600">{error}</p>
+        <p className="mt-2 text-sm text-destructive">{error}</p>
       )}
 
       {/* Actions */}

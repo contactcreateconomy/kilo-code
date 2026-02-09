@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Card, CardContent } from "@createconomy/ui";
+import { Card, CardContent, CardFooter } from "@createconomy/ui/components/card";
+import { Badge } from "@createconomy/ui/components/badge";
+import { Star } from "lucide-react";
 import type { Product } from "@/types";
 
 interface ProductCardProps {
@@ -20,6 +22,12 @@ export function ProductCard({ product }: ProductCardProps) {
               className="object-cover transition-transform group-hover:scale-105"
             />
           )}
+          {/* Category Badge */}
+          <div className="absolute left-3 top-3">
+            <Badge variant="secondary" className="shadow-sm">
+              {product.category.name}
+            </Badge>
+          </div>
         </div>
         <CardContent className="p-4">
           <h3 className="line-clamp-1 font-semibold group-hover:text-primary">
@@ -28,32 +36,18 @@ export function ProductCard({ product }: ProductCardProps) {
           <p className="mt-1 text-sm text-muted-foreground">
             by {product.seller.name}
           </p>
-          <div className="mt-2 flex items-center justify-between">
-            <span className="font-bold">${product.price.toFixed(2)}</span>
-            <div className="flex items-center gap-1 text-sm">
-              <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span>{product.rating}</span>
-            </div>
-          </div>
         </CardContent>
+        <CardFooter className="flex items-center justify-between px-4 pb-4 pt-0">
+          <span className="text-lg font-bold">${product.price.toFixed(2)}</span>
+          <div className="flex items-center gap-1 text-sm">
+            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+            <span>{product.rating}</span>
+            <span className="text-muted-foreground">
+              ({product.reviewCount})
+            </span>
+          </div>
+        </CardFooter>
       </Card>
     </Link>
-  );
-}
-
-function StarIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
   );
 }

@@ -8,7 +8,14 @@ export const metadata: Metadata = {
   description: "Sign in to your Createconomy Forum account",
 };
 
-export default function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
+  const { returnTo } = await searchParams;
+  const callbackUrl = returnTo ?? "/";
+
   return (
     <AuthPageWrapper
       title="Welcome back"
@@ -26,7 +33,7 @@ export default function SignInPage() {
         </p>
       }
     >
-      <SignInForm />
+      <SignInForm callbackUrl={callbackUrl} />
 
       {/* Forgot Password Link */}
       <div className="mt-4 text-center">
@@ -43,7 +50,10 @@ export default function SignInPage() {
         <span className="text-muted-foreground">
           Don&apos;t have an account?{" "}
         </span>
-        <Link href="/auth/signup" className="text-primary hover:underline">
+        <Link
+          href={`/auth/signup${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
+          className="text-primary hover:underline"
+        >
           Sign up
         </Link>
       </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Check, Loader2 } from 'lucide-react';
-import { cn, Button } from '@createconomy/ui';
+import { ChevronDown, Check } from 'lucide-react';
+import { cn, Button, Spinner } from '@createconomy/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +52,7 @@ export function CommunityDropdown({ value, onChange, className }: CommunityDropd
         >
           <div className="flex items-center gap-2">
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <Spinner size="sm" className="text-muted-foreground" />
             ) : selectedCommunity ? (
               <>
                 <span className="text-base">{selectedCommunity.emoji}</span>
@@ -80,7 +80,7 @@ export function CommunityDropdown({ value, onChange, className }: CommunityDropd
       >
         {isLoading ? (
           <div className="flex justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Spinner size="sm" className="text-muted-foreground" />
           </div>
         ) : communityItems.length === 0 ? (
           <div className="px-3 py-2 text-sm text-muted-foreground">

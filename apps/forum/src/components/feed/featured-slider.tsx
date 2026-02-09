@@ -175,7 +175,7 @@ function FeaturedCard({ discussion }: FeaturedCardProps) {
             <span className="text-sm text-white/90">{discussion.author.name}</span>
           </div>
           <div className="flex items-center gap-3 text-sm text-white/70">
-            <span>↑ {discussion.upvotes}</span>
+            <span>↑ {discussion.score ?? discussion.upvotes}</span>
             <span>💬 {discussion.comments}</span>
           </div>
         </div>
@@ -183,7 +183,7 @@ function FeaturedCard({ discussion }: FeaturedCardProps) {
 
       {/* Pinned Badge */}
       {discussion.isPinned && (
-        <div className="absolute top-4 right-4 px-2 py-1 bg-yellow-500/90 text-black text-xs font-medium rounded-full">
+        <div className="absolute top-4 right-4 px-2 py-1 bg-warning text-black text-xs font-medium rounded-full">
           📌 Pinned
         </div>
       )}

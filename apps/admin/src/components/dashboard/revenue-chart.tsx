@@ -1,14 +1,19 @@
 'use client';
 
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@createconomy/ui/components/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@createconomy/ui/components/chart';
+import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
 
 // Mock data - in production this would come from Convex
 const data = [
@@ -26,49 +31,70 @@ const data = [
   { name: 'Dec', revenue: 10000, orders: 650 },
 ];
 
+const chartConfig = {
+  revenue: {
+    label: 'Revenue',
+    color: 'hsl(var(--chart-1))',
+  },
+} satisfies ChartConfig;
+
 export function RevenueChart() {
   return (
-    <div className="h-80 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={data}
-          margin={{
-            top: 5,
-            right: 30,
-            left: 20,
-            bottom: 5,
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-          <XAxis
-            dataKey="name"
-            className="text-xs"
-            tick={{ fill: 'hsl(var(--muted-foreground))' }}
-          />
-          <YAxis
-            className="text-xs"
-            tick={{ fill: 'hsl(var(--muted-foreground))' }}
-            tickFormatter={(value) => `$${value}`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '8px',
-            }}
-            labelStyle={{ color: 'hsl(var(--foreground))' }}
-            formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
-          />
-          <Line
-            type="monotone"
-            dataKey="revenue"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 6 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Revenue Overview</CardTitle>
+        <CardDescription>Monthly revenue for the current year</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig} className="h-80 w-full">
+          <AreaChart
+            data={data}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-revenue)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-revenue)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="name"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  indicator="dot"
+                  formatter={(value) => (
+                    <span className="font-mono font-medium">
+                      ${Number(value).toLocaleString()}
+                    </span>
+                  )}
+                />
+              }
+            />
+            <Area
+              type="natural"
+              dataKey="revenue"
+              stroke="var(--color-revenue)"
+              fill="url(#fillRevenue)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
   );
 }

@@ -463,7 +463,8 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   function timerExpired(): void {
     const time = Date.now();
     if (shouldInvoke(time)) {
-      return trailingEdge(time);
+      trailingEdge(time);
+      return;
     }
     timerId = startTimer(timerExpired, remainingWait(time));
   }

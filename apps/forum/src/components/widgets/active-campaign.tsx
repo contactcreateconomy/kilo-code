@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlowButton } from '@/components/ui/glow-button';
 import { useActiveCampaign } from '@/hooks/use-campaign';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from '@createconomy/ui';
 
 /**
  * ActiveCampaignWidget - Featured campaign with countdown and progress
@@ -38,7 +38,7 @@ export function ActiveCampaignWidget() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Spinner className="text-muted-foreground" />
       </div>
     );
   }

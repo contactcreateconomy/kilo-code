@@ -1,0 +1,129 @@
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
+
+interface LogoProps {
+  className?: string;
+  size?: number;
+  variant?: "default" | "light" | "dark";
+}
+
+/**
+ * Returns gradient stop colors based on variant.
+ * - `default`: dark gradient (#333 → #111) for normal backgrounds
+ * - `light`: white gradient for dark backgrounds
+ * - `dark`: dark gradient (same as default) for light backgrounds
+ */
+function getGradientStops(variant: "default" | "light" | "dark") {
+  switch (variant) {
+    case "light":
+      return { start: "#ffffff", end: "#e0e0e0" };
+    case "dark":
+      return { start: "#333333", end: "#111111" };
+    default:
+      return { start: "#333333", end: "#111111" };
+  }
+}
+
+/**
+ * Createconomy logo mark — composed of three geometric segments:
+ * - A left semi-circle
+ * - A top-right quarter circle
+ * - A bottom-right square
+ *
+ * Separated by a small gap, filled with a dark gradient.
+ */
+function Logo({ className, size = 32, variant = "default" }: LogoProps) {
+  const stops = getGradientStops(variant);
+  // Use a unique gradient ID per variant to avoid conflicts when multiple logos render
+  const gradientId = `logo-gradient-${variant}`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 100 100"
+      width={size}
+      height={size}
+      fill="none"
+      className={cn("shrink-0", className)}
+      aria-label="Createconomy logo"
+      role="img"
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={stops.start} />
+          <stop offset="100%" stopColor={stops.end} />
+        </linearGradient>
+      </defs>
+
+      {/* Left Semi-circle Segment */}
+      <path
+        d="M47 5C23.8 5 5 23.8 5 47C5 70.2 23.8 89 47 89V5Z"
+        fill={`url(#${gradientId})`}
+      />
+
+      {/* Top Right Quarter Segment */}
+      <path
+        d="M53 5V44H92C92 22.5 74.5 5 53 5Z"
+        fill={`url(#${gradientId})`}
+      />
+
+      {/* Bottom Right Square Segment */}
+      <path
+        d="M53 50V89H92V50H53Z"
+        fill={`url(#${gradientId})`}
+      />
+    </svg>
+  );
+}
+
+/**
+ * Logo with "Createconomy" text and optional app name.
+ *
+ * @example
+ * <LogoWithText /> // "Createconomy"
+ * <LogoWithText appName="Admin" /> // "Createconomy Admin"
+ * <LogoWithText appName="Seller Portal" /> // "Createconomy Seller Portal"
+ */
+function LogoWithText({
+  className,
+  size = 32,
+  variant = "default",
+  appName,
+}: LogoProps & { appName?: string }) {
+  const textColor =
+    variant === "light"
+      ? "#ffffff"
+      : variant === "dark"
+        ? "#111111"
+        : undefined;
+
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      <Logo size={size} variant={variant} />
+      <div className="flex items-baseline gap-1.5">
+        <span
+          className="text-lg font-bold leading-none tracking-tight"
+          style={textColor ? { color: textColor } : undefined}
+        >
+          Createconomy
+        </span>
+        {appName && (
+          <span
+            className="text-sm font-medium leading-none text-muted-foreground"
+            style={
+              variant !== "default"
+                ? { color: textColor, opacity: 0.7 }
+                : undefined
+            }
+          >
+            {appName}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export { Logo, LogoWithText };
+export type { LogoProps };

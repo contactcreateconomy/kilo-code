@@ -95,9 +95,9 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
   };
 
   const colors: Record<ToastType, string> = {
-    success: 'bg-green-500/10 border-green-500/20 text-green-500',
-    error: 'bg-red-500/10 border-red-500/20 text-red-500',
-    warning: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500',
+    success: 'bg-success/10 border-success/20 text-success',
+    error: 'bg-destructive/10 border-destructive/20 text-destructive',
+    warning: 'bg-warning/10 border-warning/20 text-warning',
     info: 'bg-primary/10 border-primary/20 text-primary',
   };
 

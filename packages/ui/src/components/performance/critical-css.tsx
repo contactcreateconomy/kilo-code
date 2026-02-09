@@ -187,16 +187,19 @@ export function extractCriticalSelectors(
   let match;
 
   while ((match = ruleRegex.exec(css)) !== null) {
-    const selector = match[1].trim();
-    const declarations = match[2].trim();
+    const selector = match[1]?.trim();
+    const declarations = match[2]?.trim();
+
+    if (!selector || !declarations) continue;
 
     // Check if any of the critical selectors match
     const selectorParts = selector.split(",").map((s) => s.trim());
     const hasCriticalSelector = selectorParts.some((part) => {
       // Check for exact match or class/id match
+      const firstPart = part.split(/[\s>+~]/)[0] ?? "";
       return (
         selectorSet.has(part) ||
-        selectorSet.has(part.split(/[\s>+~]/)[0]) ||
+        selectorSet.has(firstPart) ||
         Array.from(selectorSet).some(
           (s) => part.includes(s) || part.startsWith(s)
         )

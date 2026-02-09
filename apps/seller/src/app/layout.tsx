@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/providers/convex-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { GoogleOneTapWrapper } from "@/components/auth/google-one-tap-wrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,7 +33,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider defaultTheme="system" storageKey="seller-theme">
-          <ConvexClientProvider>{children}</ConvexClientProvider>
+          <ConvexClientProvider>
+            <div className="dot-grid-background relative min-h-screen bg-background">
+              <GoogleOneTapWrapper />
+              <div className="relative z-10">{children}</div>
+            </div>
+          </ConvexClientProvider>
         </ThemeProvider>
       </body>
     </html>

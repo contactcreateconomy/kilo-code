@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Gift, Loader2 } from 'lucide-react';
-import { Button, Card, CardContent } from '@createconomy/ui';
+import { Gift } from 'lucide-react';
+import { Button, Card, CardContent, Spinner } from '@createconomy/ui';
 import { useActiveCampaign } from '@/hooks/use-campaign';
 
 /**
@@ -18,7 +18,7 @@ export function CampaignWidget() {
     return (
       <Card>
         <CardContent className="flex justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner className="text-muted-foreground" />
         </CardContent>
       </Card>
     );

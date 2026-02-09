@@ -74,7 +74,7 @@ export default async function ProductImagesPage({ params }: ProductImagesPagePro
                           Set Primary
                         </button>
                       )}
-                      <button className="p-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">
+                      <button className="p-1 bg-destructive text-white rounded text-xs hover:bg-destructive/90">
                         Delete
                       </button>
                     </div>

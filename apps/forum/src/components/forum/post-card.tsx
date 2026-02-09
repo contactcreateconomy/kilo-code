@@ -71,10 +71,10 @@ export function PostCard({
                 <span
                   className={`ml-2 md:ml-0 md:block text-xs px-2 py-0.5 rounded-full ${
                     author.role === "admin"
-                      ? "bg-red-500/10 text-red-600"
+                      ? "bg-destructive/10 text-destructive"
                       : author.role === "moderator"
-                        ? "bg-blue-500/10 text-blue-600"
-                        : "bg-gray-500/10 text-gray-600"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {author.role}
@@ -132,7 +132,7 @@ export function PostCard({
                 onClick={onLike}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors ${
                   isLiked
-                    ? "bg-red-500/10 text-red-600"
+                    ? "bg-destructive/10 text-destructive"
                     : "hover:bg-accent text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -187,7 +187,7 @@ export function PostCard({
               {canDelete && (
                 <button
                   onClick={onDelete}
-                  className="px-3 py-1.5 rounded-md text-sm text-red-600 hover:bg-red-500/10 transition-colors"
+                  className="px-3 py-1.5 rounded-md text-sm text-destructive hover:bg-destructive/10 transition-colors"
                 >
                   Delete
                 </button>

@@ -1,7 +1,9 @@
-"use client";
+'use client';
 
-import { SellerSidebar } from "./seller-sidebar";
-import { SellerHeader } from "./seller-header";
+import { SidebarProvider, SidebarInset } from '@createconomy/ui/components/sidebar';
+import { AppSidebar } from './app-sidebar';
+import { SellerHeader } from './seller-header';
+import { SellerGuard } from '@/components/auth/seller-guard';
 
 interface SellerLayoutProps {
   children: React.ReactNode;
@@ -9,18 +11,16 @@ interface SellerLayoutProps {
 
 export function SellerLayout({ children }: SellerLayoutProps) {
   return (
-    <div className="flex h-screen bg-[var(--background)]">
-      {/* Sidebar */}
-      <SellerSidebar />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <SellerHeader />
-
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </div>
-    </div>
+    <SellerGuard>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <SellerHeader />
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </SellerGuard>
   );
 }

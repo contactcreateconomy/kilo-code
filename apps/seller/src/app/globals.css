@@ -12,7 +12,7 @@
     background: linear-gradient(135deg, var(--primary) 0%, oklch(0.5 0.25 310) 100%);
   }
 
-  /* Seller card with hover shadow */
+  /* Seller card with hover shadow — used across non-dashboard pages */
   .seller-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -25,7 +25,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
-  /* Status badges (use shared badge-success/warning/error from globals) */
+  /* Status badges — used by orders, products, payouts pages */
   .status-badge {
     display: inline-flex;
     align-items: center;
@@ -49,9 +49,4 @@
     background: oklch(0.577 0.245 27.325 / 0.1);
     color: var(--destructive);
   }
-}
-
-/* Chart font size override */
-.recharts-wrapper {
-  font-size: 0.75rem;
 }

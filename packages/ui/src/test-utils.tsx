@@ -1,5 +1,5 @@
-import React, { ReactElement, ReactNode } from "react";
-import { render, RenderOptions } from "@testing-library/react";
+import React, { type ReactElement, type ReactNode } from "react";
+import { render, type RenderOptions } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 /**
@@ -19,6 +19,7 @@ function AllProviders({ children }: WrapperProps) {
 /**
  * Custom render function with all providers
  */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function customRender(
   ui: ReactElement,
   options?: Omit<RenderOptions, "wrapper">
@@ -26,7 +27,7 @@ function customRender(
   return {
     user: userEvent.setup(),
     ...render(ui, { wrapper: AllProviders, ...options }),
-  };
+  } as ReturnType<typeof render> & { user: ReturnType<typeof userEvent.setup> };
 }
 
 // Re-export everything from testing-library

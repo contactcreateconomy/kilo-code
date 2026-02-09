@@ -47,11 +47,11 @@ export const ALLOWED_ORIGINS = [
  */
 export const COOKIE_CONFIG = {
   /** Cookie domain - leading dot enables subdomain sharing */
-  domain: process.env.NODE_ENV === "production" ? ".createconomy.com" : undefined,
+  domain: process.env["NODE_ENV"] === "production" ? ".createconomy.com" : undefined,
   /** Cookie path - root path for all routes */
   path: "/",
   /** Secure flag - HTTPS only in production */
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env["NODE_ENV"] === "production",
   /** SameSite - Lax allows cross-subdomain while preventing CSRF */
   sameSite: "lax" as const,
   /** HttpOnly - prevents JavaScript access (set server-side) */
@@ -120,7 +120,7 @@ export function getCorsHeaders(origin: string | null): Record<string, string> {
   // Check if origin is in the production allowed list
   if (origin && CORS_CONFIG.allowedOrigins.includes(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
-  } else if (process.env.NODE_ENV === "development") {
+  } else if (process.env["NODE_ENV"] === "development") {
     // Security fix (S7): Only allow specific localhost origins in development.
     // Never pair Access-Control-Allow-Credentials: true with wildcard (*).
     if (origin && DEV_ALLOWED_ORIGINS.includes(origin)) {

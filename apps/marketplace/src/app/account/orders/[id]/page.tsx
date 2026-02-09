@@ -2,7 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Card, CardContent, Button } from "@createconomy/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  Badge,
+  Separator,
+} from "@createconomy/ui";
+import { ArrowLeft, Download } from "lucide-react";
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
@@ -24,14 +33,16 @@ async function getOrder(id: string) {
           id: "1",
           name: "Premium Website Template",
           price: 49.99,
-          image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=200",
+          image:
+            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=200",
           seller: "Creative Studio",
         },
         {
           id: "2",
           name: "Icon Pack Pro",
           price: 29.99,
-          image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200",
+          image:
+            "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200",
           seller: "Design Hub",
         },
       ],
@@ -39,6 +50,23 @@ async function getOrder(id: string) {
   ];
 
   return orders.find((o) => o.id === id) || null;
+}
+
+function getStatusBadgeVariant(
+  status: string
+): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "completed":
+      return "default";
+    case "processing":
+      return "secondary";
+    case "pending":
+      return "outline";
+    case "cancelled":
+      return "destructive";
+    default:
+      return "outline";
+  }
 }
 
 export async function generateMetadata({
@@ -51,7 +79,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
+export default async function OrderDetailPage({
+  params,
+}: OrderDetailPageProps) {
   const { id } = await params;
   const order = await getOrder(id);
 
@@ -61,7 +91,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             Order #{order.id}
@@ -75,34 +105,43 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             })}
           </p>
         </div>
-        <StatusBadge status={order.status} />
+        <Badge
+          variant={getStatusBadgeVariant(order.status)}
+          className="w-fit text-sm"
+        >
+          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+        </Badge>
       </div>
 
       {/* Order Items */}
       <Card>
-        <CardContent className="p-6">
-          <h2 className="mb-4 font-semibold">Order Items</h2>
+        <CardHeader>
+          <CardTitle>Order Items</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-4">
-            {order.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 border-b pb-4 last:border-0 last:pb-0"
-              >
-                <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-muted">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
+            {order.items.map((item, index) => (
+              <div key={item.id}>
+                <div className="flex items-center gap-4">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-muted">
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      by {item.seller}
+                    </p>
+                  </div>
+                  <p className="font-semibold">${item.price.toFixed(2)}</p>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    by {item.seller}
-                  </p>
-                </div>
-                <p className="font-semibold">${item.price.toFixed(2)}</p>
+                {index < order.items.length - 1 && (
+                  <Separator className="mt-4" />
+                )}
               </div>
             ))}
           </div>
@@ -111,58 +150,48 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
       {/* Order Summary */}
       <Card>
-        <CardContent className="p-6">
-          <h2 className="mb-4 font-semibold">Order Summary</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>${order.subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tax</span>
-              <span>${order.tax.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between border-t pt-2 font-semibold">
-              <span>Total</span>
-              <span>${order.total.toFixed(2)}</span>
-            </div>
+        <CardHeader>
+          <CardTitle>Order Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span>${order.subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Tax</span>
+            <span>${order.tax.toFixed(2)}</span>
+          </div>
+          <Separator />
+          <div className="flex justify-between pt-1 font-semibold">
+            <span>Total</span>
+            <span>${order.total.toFixed(2)}</span>
           </div>
         </CardContent>
       </Card>
 
       {/* Payment Info */}
       <Card>
-        <CardContent className="p-6">
-          <h2 className="mb-4 font-semibold">Payment Information</h2>
+        <CardHeader>
+          <CardTitle>Payment Information</CardTitle>
+        </CardHeader>
+        <CardContent>
           <p className="text-muted-foreground">{order.paymentMethod}</p>
         </CardContent>
       </Card>
 
       <div className="flex gap-4">
         <Button asChild variant="outline">
-          <Link href="/account/orders">Back to Orders</Link>
+          <Link href="/account/orders">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Orders
+          </Link>
         </Button>
-        <Button variant="outline">Download Invoice</Button>
+        <Button variant="outline">
+          <Download className="mr-2 h-4 w-4" />
+          Download Invoice
+        </Button>
       </div>
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const statusStyles: Record<string, string> = {
-    completed: "bg-green-100 text-green-800",
-    processing: "bg-blue-100 text-blue-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    cancelled: "bg-red-100 text-red-800",
-  };
-
-  return (
-    <span
-      className={`rounded-full px-3 py-1 text-sm font-medium capitalize ${
-        statusStyles[status] || "bg-gray-100 text-gray-800"
-      }`}
-    >
-      {status}
-    </span>
   );
 }

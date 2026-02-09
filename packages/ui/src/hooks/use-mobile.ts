@@ -32,3 +32,8 @@ export function useMobile(): boolean {
 
   return !!isMobile;
 }
+
+/**
+ * Alias for useMobile — used by shadcn Sidebar component
+ */
+export const useIsMobile = useMobile;

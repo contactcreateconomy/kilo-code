@@ -10,6 +10,10 @@ import type { Id, Doc } from "../_generated/dataModel";
  * in the Createconomy marketplace.
  */
 
+interface CategoryTreeNode extends Doc<"productCategories"> {
+  children?: CategoryTreeNode[];
+}
+
 // ============================================================================
 // Queries
 // ============================================================================
@@ -50,10 +54,6 @@ export const listCategories = query({
     // Build tree structure
     const rootCategories = categories.filter((c) => !c.parentId);
     const childCategories = categories.filter((c) => c.parentId);
-
-    interface CategoryTreeNode extends Doc<"productCategories"> {
-      children?: CategoryTreeNode[];
-    }
 
     function buildTree(parent: (typeof categories)[0]): CategoryTreeNode {
       const children: CategoryTreeNode[] = childCategories

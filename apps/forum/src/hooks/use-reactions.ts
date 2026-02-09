@@ -8,9 +8,10 @@ type TargetType = "thread" | "post" | "comment";
 type ReactionType = "upvote" | "downvote" | "bookmark";
 
 /**
- * useReactions — Manages upvote/bookmark reactions via Convex.
+ * useReactions — Manages upvote/downvote/bookmark reactions via Convex.
  *
  * Fetches existing reactions for a set of targets and provides a toggle function.
+ * Returns convenience helpers: hasReaction, hasUpvote, hasDownvote.
  *
  * @param targetType - "thread" | "post" | "comment"
  * @param targetIds - Array of target IDs to check for existing reactions
@@ -41,10 +42,34 @@ export function useReactions(targetType: TargetType, targetIds: string[]) {
     [reactions]
   );
 
+  /**
+   * Check if the current user has upvoted a specific target.
+   */
+  const hasUpvote = useCallback(
+    (targetId: string): boolean => {
+      if (!reactions) return false;
+      return reactions[targetId] === "upvote";
+    },
+    [reactions]
+  );
+
+  /**
+   * Check if the current user has downvoted a specific target.
+   */
+  const hasDownvote = useCallback(
+    (targetId: string): boolean => {
+      if (!reactions) return false;
+      return reactions[targetId] === "downvote";
+    },
+    [reactions]
+  );
+
   return {
     reactions: reactions ?? {},
     toggle,
     hasReaction,
+    hasUpvote,
+    hasDownvote,
     isLoading: reactions === undefined,
   };
 }

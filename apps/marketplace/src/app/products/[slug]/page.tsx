@@ -4,8 +4,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCartButton } from "@/components/products/add-to-cart-button";
 import { ProductCard } from "@/components/products/product-card";
-import { Button, Card, CardContent } from "@createconomy/ui";
+import { Button } from "@createconomy/ui";
+import { Card, CardContent } from "@createconomy/ui/components/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@createconomy/ui/components/tabs";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@createconomy/ui/components/breadcrumb";
+import { Badge } from "@createconomy/ui/components/badge";
+import { Avatar, AvatarFallback } from "@createconomy/ui/components/avatar";
 import type { Product } from "@/types";
+import { Star, Heart, ShoppingBag, FileText, MessageSquare, Info } from "lucide-react";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -31,6 +44,21 @@ async function getProduct(slug: string): Promise<Product | null> {
       rating: 4.9,
       reviewCount: 128,
       salesCount: 1250,
+      tags: ["responsive", "dark-mode", "nextjs", "tailwind"],
+      features: [
+        "Fully responsive design",
+        "Dark mode support",
+        "SEO optimized",
+        "Multiple page layouts",
+        "Comprehensive documentation",
+      ],
+      specifications: {
+        "File Format": "Next.js Project",
+        "Compatible Browsers": "Chrome, Firefox, Safari, Edge",
+        Framework: "Next.js 14, React 19",
+        Styling: "Tailwind CSS 4",
+        License: "Standard License",
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -125,10 +153,38 @@ export default async function ProductPage({ params }: ProductPageProps) {
     product.id
   );
 
+  const sellerInitials = product.seller.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <>
       <ProductJsonLd product={product} />
       <div className="container py-8">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/products">Products</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{product.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Product Images */}
           <div className="space-y-4">
@@ -165,24 +221,26 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Product Info */}
           <div className="space-y-6">
             <div>
-              <Link
-                href={`/categories/${product.category.slug}`}
-                className="text-sm text-muted-foreground hover:text-primary"
-              >
-                {product.category.name}
-              </Link>
+              {/* Category Badge */}
+              <Badge variant="secondary" className="mb-3">
+                <Link href={`/categories/${product.category.slug}`}>
+                  {product.category.name}
+                </Link>
+              </Badge>
+
               <h1 className="mt-2 text-3xl font-bold tracking-tight">
                 {product.name}
               </h1>
               <div className="mt-4 flex items-center gap-4">
                 <div className="flex items-center gap-1">
-                  <StarIcon className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
                   <span className="font-medium">{product.rating}</span>
                   <span className="text-muted-foreground">
                     ({product.reviewCount} reviews)
                   </span>
                 </div>
                 <span className="text-muted-foreground">
+                  <ShoppingBag className="mr-1 inline h-4 w-4" />
                   {product.salesCount.toLocaleString()} sales
                 </span>
               </div>
@@ -190,7 +248,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             <div className="text-4xl font-bold">${product.price.toFixed(2)}</div>
 
-            <p className="text-muted-foreground">{product.description}</p>
+            {/* Tags */}
+            {product.tags && product.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {product.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
 
             <div className="flex items-center gap-4">
               <AddToCartButton
@@ -202,14 +269,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 className="flex-1"
               />
               <Button variant="outline" size="icon">
-                <HeartIcon className="h-5 w-5" />
+                <Heart className="h-5 w-5" />
               </Button>
             </div>
 
             {/* Seller Info */}
             <Card>
               <CardContent className="flex items-center gap-4 p-4">
-                <div className="h-12 w-12 rounded-full bg-muted" />
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-medium">
+                    {sellerInitials}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <p className="font-medium">{product.seller.name}</p>
                   <Link
@@ -222,6 +293,111 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Tabs Section */}
+        <div className="mt-12">
+          <Tabs defaultValue="description" className="w-full">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="description" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Description
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Reviews ({product.reviewCount})
+              </TabsTrigger>
+              <TabsTrigger value="details" className="gap-2">
+                <Info className="h-4 w-4" />
+                Details
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="description" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  <p className="leading-relaxed text-muted-foreground">
+                    {product.description}
+                  </p>
+
+                  {/* Features list */}
+                  {product.features && product.features.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="mb-3 text-lg font-semibold">Features</h3>
+                      <ul className="space-y-2">
+                        {product.features.map((feature, index) => (
+                          <li
+                            key={index}
+                            className="flex items-start gap-2 text-muted-foreground"
+                          >
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reviews" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold">{product.rating}</div>
+                      <div className="flex items-center gap-1 mt-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < Math.floor(product.rating)
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {product.reviewCount} reviews
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Reviews will be displayed here when available.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="details" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  {product.specifications &&
+                  Object.keys(product.specifications).length > 0 ? (
+                    <dl className="space-y-4">
+                      {Object.entries(product.specifications).map(
+                        ([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex items-start justify-between border-b pb-3 last:border-0"
+                          >
+                            <dt className="font-medium">{key}</dt>
+                            <dd className="text-muted-foreground">{value}</dd>
+                          </div>
+                        )
+                      )}
+                    </dl>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No additional details available.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Related Products */}
@@ -265,39 +441,5 @@ function ProductJsonLd({ product }: { product: Product }) {
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
     />
-  );
-}
-
-function StarIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-  );
-}
-
-function HeartIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-    </svg>
   );
 }

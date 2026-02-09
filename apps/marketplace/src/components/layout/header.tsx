@@ -1,95 +1,167 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { LogoWithText } from "@createconomy/ui/components/logo";
+import { Input } from "@createconomy/ui";
+import { Button } from "@createconomy/ui";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@createconomy/ui/components/sheet";
+import { Search, Menu } from "lucide-react";
 import { Navigation } from "./navigation";
 import { UserMenu } from "@/components/auth/user-menu";
-import { Button, Input } from "@createconomy/ui";
+
+const FORUM_URL =
+  process.env["NEXT_PUBLIC_FORUM_URL"] || "https://discuss.createconomy.com";
+const SELLER_URL =
+  process.env["NEXT_PUBLIC_SELLER_URL"] || "https://seller.createconomy.com";
 
 export function Header() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container flex h-16 items-center gap-4">
+        {/* Mobile hamburger */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 md:hidden"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+
+          <SheetContent side="left" className="w-72">
+            <SheetHeader>
+              <SheetTitle asChild>
+                <Link
+                  href="/"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center"
+                >
+                  <LogoWithText size={24} />
+                </Link>
+              </SheetTitle>
+            </SheetHeader>
+
+            {/* Mobile search */}
+            <form action="/products" method="GET" className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                name="search"
+                placeholder="Search products..."
+                className="w-full pl-10"
+              />
+            </form>
+
+            {/* Mobile nav links */}
+            <nav className="mt-6 flex flex-col gap-1">
+              <Link
+                href="/products"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Products
+              </Link>
+              <Link
+                href="/categories"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Categories
+              </Link>
+              <a
+                href={FORUM_URL}
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Discuss
+              </a>
+              <a
+                href={SELLER_URL}
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Sell
+              </a>
+            </nav>
+
+            {/* Mobile sign-in */}
+            <div className="mt-6">
+              <Button asChild className="w-full">
+                <Link
+                  href="/auth/signin"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Sign In
+                </Link>
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold text-primary">Createconomy</span>
+        <Link href="/" className="flex shrink-0 items-center">
+          <LogoWithText size={28} />
         </Link>
 
-        {/* Navigation */}
-        <Navigation />
+        {/* Desktop navigation links */}
+        <nav className="hidden items-center gap-5 md:flex">
+          <Navigation />
+          <span className="text-border">|</span>
+          <a
+            href={FORUM_URL}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Discuss
+          </a>
+          <a
+            href={SELLER_URL}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Sell
+          </a>
+        </nav>
 
-        {/* Search */}
-        <div className="hidden flex-1 px-8 md:block">
-          <form action="/products" method="GET" className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        {/* Desktop centered search */}
+        <div className="hidden flex-1 justify-center md:flex">
+          <form
+            action="/products"
+            method="GET"
+            className="relative w-full max-w-lg"
+          >
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               name="search"
               placeholder="Search products..."
-              className="w-full max-w-md pl-10"
+              className="w-full pl-10"
             />
           </form>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-4">
-          <Link href="/cart" className="relative">
-            <Button variant="ghost" size="icon">
-              <CartIcon className="h-5 w-5" />
-              <span className="sr-only">Cart</span>
-            </Button>
-            <CartBadge />
-          </Link>
+        {/* Mobile search icon (compact) */}
+        <div className="flex flex-1 justify-end md:hidden">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/products?focus=search" aria-label="Search products">
+              <Search className="h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
+
+        {/* Right actions — UserMenu */}
+        <div className="flex shrink-0 items-center">
           <UserMenu />
         </div>
       </div>
     </header>
-  );
-}
-
-function CartBadge() {
-  // In production, this would use the cart hook to get the count
-  const count = 0;
-
-  if (count === 0) return null;
-
-  return (
-    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-      {count > 9 ? "9+" : count}
-    </span>
-  );
-}
-
-function SearchIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
-function CartIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <circle cx="8" cy="21" r="1" />
-      <circle cx="19" cy="21" r="1" />
-      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
-    </svg>
   );
 }

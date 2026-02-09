@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Button } from '@createconomy/ui';
 import { Pagination } from '@/components/tables/pagination';
 
 export const metadata: Metadata = {
@@ -101,7 +102,7 @@ function StarRating({ rating }: { rating: number }) {
       {[1, 2, 3, 4, 5].map((star) => (
         <span
           key={star}
-          className={star <= rating ? 'text-yellow-500' : 'text-gray-300'}
+          className={star <= rating ? 'text-warning' : 'text-muted-foreground/40'}
         >
           ★
         </span>
@@ -141,7 +142,7 @@ export default function PendingReviewsPage() {
             <option value="flagged">Flagged Only</option>
             <option value="clean">No Flags</option>
           </select>
-          <button className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+          <button className="rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90">
             Approve All Clean
           </button>
         </div>
@@ -149,7 +150,7 @@ export default function PendingReviewsPage() {
 
       <div className="rounded-lg border bg-card p-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="text-blue-500">ℹ️</span>
+          <span className="text-primary">ℹ️</span>
           <span>
             Reviews from verified purchases are generally safe to approve.
             Flagged reviews require careful examination.
@@ -162,7 +163,7 @@ export default function PendingReviewsPage() {
           <div
             key={review.id}
             className={`rounded-lg border bg-card shadow-sm overflow-hidden ${
-              review.flags.length > 0 ? 'border-yellow-300' : ''
+              review.flags.length > 0 ? 'border-warning' : ''
             }`}
           >
             <div className="p-6">
@@ -227,23 +228,23 @@ export default function PendingReviewsPage() {
             </div>
             <div className="border-t px-6 py-4 bg-muted/30 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <button className="text-sm text-muted-foreground hover:text-foreground">
+                <Button variant="link" size="sm" className="text-muted-foreground">
                   View Product
-                </button>
-                <button className="text-sm text-muted-foreground hover:text-foreground">
+                </Button>
+                <Button variant="link" size="sm" className="text-muted-foreground">
                   View Reviewer History
-                </button>
+                </Button>
               </div>
               <div className="flex items-center gap-2">
-                <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+                <Button variant="outline" size="sm">
                   Request Edit
-                </button>
-                <button className="rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50">
+                </Button>
+                <Button variant="destructive" size="sm">
                   Reject
-                </button>
-                <button className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                </Button>
+                <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90">
                   Approve
-                </button>
+                </Button>
               </div>
             </div>
           </div>

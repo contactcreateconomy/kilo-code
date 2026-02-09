@@ -44,12 +44,90 @@ export {
 } from "./components/dropdown-menu";
 export { Badge, badgeVariants, type BadgeProps } from "./components/badge";
 export { Separator } from "./components/separator";
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogClose,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "./components/dialog";
+export { Switch } from "./components/switch";
+export { Checkbox } from "./components/checkbox";
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from "./components/table";
+export {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "./components/tabs";
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+} from "./components/select";
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "./components/tooltip";
+export {
+  Sheet,
+  SheetPortal,
+  SheetOverlay,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from "./components/sheet";
+export { Progress } from "./components/progress";
+export { Alert, AlertTitle, AlertDescription } from "./components/alert";
+export { ScrollArea, ScrollBar } from "./components/scroll-area";
+export { Textarea } from "./components/textarea";
+export {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "./components/popover";
+export {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "./components/pagination";
 
 // Components — Design System
 export { GlowButton } from "./components/glow-button";
 export { GlowCard } from "./components/glow-card";
 export { DotGridBackground } from "./components/dot-grid-background";
 export { ToastProvider, useToast } from "./components/toast";
+export { Spinner } from "./components/spinner";
+export { NotificationIcon, type NotificationType } from "./components/notification-icon";
 
 // Providers
 export { ThemeProvider, useTheme } from "./providers/theme-provider";

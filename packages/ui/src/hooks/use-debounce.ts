@@ -569,7 +569,7 @@ export function useAsyncDebounce<T extends (...args: unknown[]) => Promise<unkno
       cancel();
       setError(null);
 
-      return new Promise((resolve) => {
+      return new Promise<Awaited<ReturnType<T>> | undefined>((resolve) => {
         timerRef.current = setTimeout(async () => {
           setIsLoading(true);
           try {

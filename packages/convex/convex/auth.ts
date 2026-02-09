@@ -4,7 +4,7 @@ import GitHub from "@auth/core/providers/github";
 import { query, mutation, internalMutation, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { SESSION_CONFIG } from "./auth.config";
+import { SESSION_CONFIG, ALLOWED_ORIGINS } from "./auth.config";
 
 /**
  * Convex Auth Configuration
@@ -29,6 +29,35 @@ export const { auth, signIn, signOut, store } = convexAuth({
       clientSecret: process.env["AUTH_GITHUB_SECRET"],
     }),
   ],
+  callbacks: {
+    /**
+     * Custom redirect callback for cross-subdomain OAuth support.
+     *
+     * By default Convex Auth only allows redirects to SITE_URL. Since we have
+     * multiple apps on different subdomains (marketplace, forum, admin, seller),
+     * each app passes its own origin as `redirectTo` and we validate it here
+     * against the allowed origins list.
+     */
+    async redirect({ redirectTo }) {
+      // Allow relative paths (default behaviour)
+      if (redirectTo.startsWith("/")) {
+        return redirectTo;
+      }
+
+      // Allow any URL whose origin is in the allowed list
+      try {
+        const url = new URL(redirectTo);
+        const origin = url.origin;
+        if (ALLOWED_ORIGINS.includes(origin)) {
+          return redirectTo;
+        }
+      } catch {
+        // Invalid URL — fall through to error
+      }
+
+      throw new Error(`Invalid redirectTo URI: ${redirectTo}`);
+    },
+  },
 });
 
 // ============================================================================

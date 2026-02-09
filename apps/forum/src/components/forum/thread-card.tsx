@@ -53,17 +53,17 @@ export function ThreadCard({
       {/* Status Indicators */}
       <div className="absolute top-4 right-4 flex items-center gap-2">
         {isPinned && (
-          <span className="text-xs bg-yellow-500/10 text-yellow-600 px-2 py-0.5 rounded-full">
+          <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded-full">
             📌 Pinned
           </span>
         )}
         {isLocked && (
-          <span className="text-xs bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full">
+          <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">
             🔒 Locked
           </span>
         )}
         {isHot && (
-          <span className="text-xs bg-orange-500/10 text-orange-600 px-2 py-0.5 rounded-full">
+          <span className="text-xs bg-upvote/10 text-upvote px-2 py-0.5 rounded-full">
             🔥 Hot
           </span>
         )}
