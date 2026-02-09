@@ -1,6 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@createconomy/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Avatar,
+  AvatarFallback,
+  Button,
+} from "@createconomy/ui";
+import { ClipboardList, CreditCard, Star, Heart, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Account Dashboard",
@@ -18,35 +27,53 @@ export default function AccountPage() {
   const stats = {
     totalOrders: 12,
     totalSpent: 459.99,
+    reviewsWritten: 8,
     wishlistItems: 5,
   };
 
+  const initials = user.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Account Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user.name}!
-        </p>
-      </div>
+      {/* Profile Overview */}
+      <Card>
+        <CardContent className="flex flex-col items-center gap-4 p-6 sm:flex-row sm:items-start">
+          <Avatar className="h-20 w-20 text-2xl">
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl font-bold tracking-tight">{user.name}</h1>
+            <p className="text-muted-foreground">{user.email}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Member since {user.memberSince}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Orders
             </CardTitle>
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalOrders}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Spent
             </CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -55,10 +82,22 @@ export default function AccountPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Reviews Written
+            </CardTitle>
+            <Star className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.reviewsWritten}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Wishlist Items
             </CardTitle>
+            <Heart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.wishlistItems}</div>
@@ -67,72 +106,32 @@ export default function AccountPage() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link href="/account/orders">
-          <Card className="transition-shadow hover:shadow-md">
-            <CardContent className="flex items-center gap-4 p-6">
-              <PackageIcon className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <h3 className="font-semibold">Order History</h3>
-                <p className="text-sm text-muted-foreground">
-                  View and track your orders
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/account/settings">
-          <Card className="transition-shadow hover:shadow-md">
-            <CardContent className="flex items-center gap-4 p-6">
-              <SettingsIcon className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <h3 className="font-semibold">Account Settings</h3>
-                <p className="text-sm text-muted-foreground">
-                  Manage your profile and preferences
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+      <div>
+        <h2 className="mb-4 text-lg font-semibold">Quick Links</h2>
+        <div className="flex flex-wrap gap-3">
+          <Button asChild variant="outline">
+            <Link href="/account/orders">
+              <ClipboardList className="mr-2 h-4 w-4" />
+              View Orders
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/account/settings">
+              <Star className="mr-2 h-4 w-4" />
+              Edit Profile
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/account/settings">
+              <CreditCard className="mr-2 h-4 w-4" />
+              Account Settings
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
-  );
-}
-
-function PackageIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m7.5 4.27 9 5.15" />
-      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      <path d="m3.3 7 8.7 5 8.7-5" />
-      <path d="M12 22V12" />
-    </svg>
-  );
-}
-
-function SettingsIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
   );
 }

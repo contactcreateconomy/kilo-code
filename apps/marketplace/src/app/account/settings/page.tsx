@@ -1,5 +1,16 @@
 import type { Metadata } from "next";
-import { Button, Card, CardContent, Input, Label } from "@createconomy/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  Input,
+  Label,
+  Separator,
+} from "@createconomy/ui";
+import { Switch } from "@createconomy/ui/components/switch";
 
 export const metadata: Metadata = {
   title: "Account Settings",
@@ -24,8 +35,13 @@ export default function SettingsPage() {
 
       {/* Profile Settings */}
       <Card>
-        <CardContent className="p-6">
-          <h2 className="mb-4 font-semibold">Profile Information</h2>
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>
+            Update your personal details and public profile.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <form className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
@@ -51,8 +67,13 @@ export default function SettingsPage() {
 
       {/* Password Settings */}
       <Card>
-        <CardContent className="p-6">
-          <h2 className="mb-4 font-semibold">Change Password</h2>
+        <CardHeader>
+          <CardTitle>Change Password</CardTitle>
+          <CardDescription>
+            Update your password to keep your account secure.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <form className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="current-password">Current Password</Label>
@@ -85,42 +106,60 @@ export default function SettingsPage() {
 
       {/* Notification Settings */}
       <Card>
-        <CardContent className="p-6">
-          <h2 className="mb-4 font-semibold">Notification Preferences</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Email Notifications</p>
-                <p className="text-sm text-muted-foreground">
-                  Receive email updates about your orders
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                defaultChecked
-                className="h-4 w-4 rounded border-border"
-              />
+        <CardHeader>
+          <CardTitle>Notification Preferences</CardTitle>
+          <CardDescription>
+            Choose which notifications you want to receive.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-0">
+          <div className="flex items-center justify-between py-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="email-notifications" className="text-sm font-medium">
+                Email Notifications
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Receive email updates about your orders
+              </p>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Marketing Emails</p>
-                <p className="text-sm text-muted-foreground">
-                  Receive emails about new products and promotions
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-border"
-              />
+            <Switch id="email-notifications" defaultChecked />
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between py-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="marketing-emails" className="text-sm font-medium">
+                Marketing Emails
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Receive emails about new products and promotions
+              </p>
             </div>
+            <Switch id="marketing-emails" />
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between py-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="review-reminders" className="text-sm font-medium">
+                Review Reminders
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Get reminded to review products you&apos;ve purchased
+              </p>
+            </div>
+            <Switch id="review-reminders" defaultChecked />
           </div>
         </CardContent>
       </Card>
 
       {/* Danger Zone */}
       <Card className="border-destructive">
-        <CardContent className="p-6">
-          <h2 className="mb-4 font-semibold text-destructive">Danger Zone</h2>
+        <CardHeader>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <CardDescription>
+            Irreversible and destructive actions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <p className="mb-4 text-sm text-muted-foreground">
             Once you delete your account, there is no going back. Please be
             certain.

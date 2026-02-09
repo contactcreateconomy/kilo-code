@@ -84,7 +84,7 @@ class LazyErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error("LazyComponent Error:", error, errorInfo);
     this.props.onError?.(error);
   }
@@ -94,7 +94,7 @@ class LazyErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState
     this.props.onRetry?.();
   };
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError && this.state.error) {
       const { fallback } = this.props;
 
@@ -289,7 +289,8 @@ export function LazyComponent<T extends ComponentType<unknown>>({
         onRetry={handleRetry}
       >
         <Suspense fallback={fallback || <LoadingSkeleton className="h-32 w-full" />}>
-          <LazyLoadedComponent {...(componentProps as object)} />
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <LazyLoadedComponent {...(componentProps as any)} />
         </Suspense>
       </LazyErrorBoundary>
     </div>
@@ -450,7 +451,8 @@ export function createLazyPage<T extends ComponentType<unknown>>(
     return (
       <LazyErrorBoundary fallback={options.errorFallback}>
         <Suspense fallback={options.fallback || <LoadingSkeleton className="min-h-screen" />}>
-          <LazyComp {...(props as object)} />
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <LazyComp {...(props as any)} />
         </Suspense>
       </LazyErrorBoundary>
     );

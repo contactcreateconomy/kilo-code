@@ -63,7 +63,7 @@ export const priceDollarsSchema = z
   .number()
   .min(0, "Price cannot be negative")
   .max(1000000, "Price is too high")
-  .transform((val) => Math.round(val * 100)); // Convert to cents
+  .transform((val: number) => Math.round(val * 100)); // Convert to cents
 
 /**
  * Slug schema

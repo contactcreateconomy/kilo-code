@@ -1,94 +1,133 @@
 import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@createconomy/ui/components/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@createconomy/ui/components/table";
+import { Badge } from "@createconomy/ui/components/badge";
+import { Button } from "@createconomy/ui/components/button";
 
-interface Order {
-  id: string;
-  customer: string;
-  product: string;
-  amount: number;
-  status: "pending" | "processing" | "shipped" | "delivered";
-  date: string;
-}
+// Mock data — in production this would come from Convex
+const recentOrders = [
+  {
+    id: "ORD-001",
+    customer: "Sarah Johnson",
+    product: "Premium UI Kit",
+    amount: 49.99,
+    status: "delivered",
+    date: "2024-01-25",
+  },
+  {
+    id: "ORD-002",
+    customer: "Mike Chen",
+    product: "Icon Pack Pro",
+    amount: 29.99,
+    status: "shipped",
+    date: "2024-01-25",
+  },
+  {
+    id: "ORD-003",
+    customer: "Lisa Park",
+    product: "Landing Page Templates",
+    amount: 79.99,
+    status: "processing",
+    date: "2024-01-24",
+  },
+  {
+    id: "ORD-004",
+    customer: "Alex Rivera",
+    product: "Photo Presets Collection",
+    amount: 39.99,
+    status: "pending",
+    date: "2024-01-24",
+  },
+  {
+    id: "ORD-005",
+    customer: "Emma Wilson",
+    product: "React Component Library",
+    amount: 99.99,
+    status: "delivered",
+    date: "2024-01-23",
+  },
+];
 
-interface RecentOrdersProps {
-  orders?: Order[];
-}
+const statusStyles: Record<string, string> = {
+  delivered: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  shipped: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  processing: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  pending: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
+};
 
-export function RecentOrders({ orders = [] }: RecentOrdersProps) {
-  const statusColors = {
-    pending: "status-pending",
-    processing: "status-pending",
-    shipped: "status-active",
-    delivered: "status-active",
-  };
-
+export function RecentOrders() {
   return (
-    <div className="seller-card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Recent Orders</h3>
-        <Link
-          href="/orders"
-          className="text-sm text-[var(--primary)] hover:underline"
-        >
-          View all
-        </Link>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[var(--border)]">
-              <th className="text-left py-3 px-2 text-sm font-medium text-[var(--muted-foreground)]">
-                Order
-              </th>
-              <th className="text-left py-3 px-2 text-sm font-medium text-[var(--muted-foreground)]">
-                Customer
-              </th>
-              <th className="text-left py-3 px-2 text-sm font-medium text-[var(--muted-foreground)]">
-                Product
-              </th>
-              <th className="text-right py-3 px-2 text-sm font-medium text-[var(--muted-foreground)]">
-                Amount
-              </th>
-              <th className="text-right py-3 px-2 text-sm font-medium text-[var(--muted-foreground)]">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr
-                key={order.id}
-                className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/50"
-              >
-                <td className="py-3 px-2">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="space-y-1.5">
+          <CardTitle className="text-lg">Recent Orders</CardTitle>
+          <CardDescription>Latest customer transactions</CardDescription>
+        </div>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/orders">View All →</Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {recentOrders.map((order) => (
+              <TableRow key={order.id}>
+                <TableCell>
                   <Link
                     href={`/orders/${order.id}`}
-                    className="font-medium hover:text-[var(--primary)]"
+                    className="font-medium text-primary hover:underline"
                   >
-                    #{order.id}
+                    {order.id}
                   </Link>
-                </td>
-                <td className="py-3 px-2 text-sm">{order.customer}</td>
-                <td className="py-3 px-2 text-sm text-[var(--muted-foreground)]">
+                </TableCell>
+                <TableCell>{order.customer}</TableCell>
+                <TableCell className="max-w-[200px] truncate">
                   {order.product}
-                </td>
-                <td className="py-3 px-2 text-right font-medium">
+                </TableCell>
+                <TableCell className="font-medium">
                   ${order.amount.toFixed(2)}
-                </td>
-                <td className="py-3 px-2 text-right">
-                  <span className={`status-badge ${statusColors[order.status]}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                  </span>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant="outline"
+                    className={statusStyles[order.status]}
+                  >
+                    {order.status.charAt(0).toUpperCase() +
+                      order.status.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {order.date}
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
-      {orders.length === 0 && (
-        <p className="text-center py-8 text-[var(--muted-foreground)]">
-          No recent orders
-        </p>
-      )}
-    </div>
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

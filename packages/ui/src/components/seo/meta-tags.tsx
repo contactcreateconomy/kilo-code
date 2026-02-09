@@ -166,13 +166,14 @@ export function generateMetadata(config: MetaTagsConfig): Metadata {
 
   // Open Graph
   if (openGraph) {
+    const ogType = openGraph.type === "product" ? "website" : (openGraph.type || "website");
     metadata.openGraph = {
       title: openGraph.title || title,
       description: openGraph.description || description,
       url: openGraph.url || canonical,
       siteName: openGraph.siteName || DEFAULT_SITE_NAME,
       locale: openGraph.locale || DEFAULT_LOCALE,
-      type: openGraph.type || "website",
+      type: ogType,
       ...(openGraph.images && {
         images: openGraph.images.map((img) => ({
           url: img.url,
@@ -217,7 +218,7 @@ export function generateMetadata(config: MetaTagsConfig): Metadata {
     metadata.verification = {
       ...(verification.google && { google: verification.google }),
       ...(verification.yandex && { yandex: verification.yandex }),
-      ...(verification.other && {
+      ...((verification.bing || verification.yahoo) && {
         other: {
           ...(verification.bing && { "msvalidate.01": verification.bing }),
           ...(verification.yahoo && { "y_key": verification.yahoo }),
@@ -565,7 +566,7 @@ export const marketplaceDefaultMetadata: Metadata = {
     telephone: false,
   },
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "https://createconomy.com"
+    process.env["NEXT_PUBLIC_APP_URL"] || "https://createconomy.com"
   ),
   openGraph: {
     type: "website",

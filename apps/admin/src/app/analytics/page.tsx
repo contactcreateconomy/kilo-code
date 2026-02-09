@@ -2,6 +2,22 @@
 
 import { RevenueChart } from '@/components/dashboard/revenue-chart';
 import { StatsCard } from '@/components/dashboard/stats-card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@createconomy/ui/components/card';
+import { Progress } from '@createconomy/ui/components/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@createconomy/ui/components/select';
+import { Button } from '@createconomy/ui/components/button';
+import { Download } from 'lucide-react';
 
 // Mock data - in production this would come from Convex
 const analyticsData = {
@@ -56,15 +72,21 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="1y">Last year</option>
-          </select>
-          <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+          <Select defaultValue="30d">
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="1y">Last year</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
             Export Report
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -75,18 +97,21 @@ export default function AnalyticsPage() {
           value={`$${analyticsData.overview.totalRevenue.toLocaleString()}`}
           change={analyticsData.overview.revenueChange}
           trend="up"
+          icon="dollar"
         />
         <StatsCard
           title="Total Orders"
           value={analyticsData.overview.totalOrders.toLocaleString()}
           change={analyticsData.overview.ordersChange}
           trend="up"
+          icon="shopping-cart"
         />
         <StatsCard
           title="Total Users"
           value={analyticsData.overview.totalUsers.toLocaleString()}
           change={analyticsData.overview.usersChange}
           trend="up"
+          icon="users"
         />
         <StatsCard
           title="Conversion Rate"
@@ -97,145 +122,148 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Revenue Chart */}
-      <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Revenue Overview</h2>
-        <RevenueChart />
-      </div>
+      <RevenueChart />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Top Products */}
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold">Top Products</h2>
-          </div>
-          <div className="divide-y">
-            {analyticsData.topProducts.map((product, index) => (
-              <div
-                key={product.name}
-                className="p-4 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted-foreground font-medium">
-                    #{index + 1}
-                  </span>
-                  <span className="font-medium">{product.name}</span>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Top Products</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {analyticsData.topProducts.map((product, index) => (
+                <div
+                  key={product.name}
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      #{index + 1}
+                    </span>
+                    <span className="text-sm font-medium">{product.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">
+                      ${product.revenue.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {product.sales} sales
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    ${product.revenue.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {product.sales} sales
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Top Sellers */}
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold">Top Sellers</h2>
-          </div>
-          <div className="divide-y">
-            {analyticsData.topSellers.map((seller, index) => (
-              <div
-                key={seller.name}
-                className="p-4 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted-foreground font-medium">
-                    #{index + 1}
-                  </span>
-                  <span className="font-medium">{seller.name}</span>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Top Sellers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {analyticsData.topSellers.map((seller, index) => (
+                <div
+                  key={seller.name}
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      #{index + 1}
+                    </span>
+                    <span className="text-sm font-medium">{seller.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">
+                      ${seller.revenue.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {seller.sales} sales
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    ${seller.revenue.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {seller.sales} sales
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Top Categories */}
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold">Top Categories</h2>
-          </div>
-          <div className="divide-y">
-            {analyticsData.topCategories.map((category, index) => (
-              <div
-                key={category.name}
-                className="p-4 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-muted-foreground font-medium">
-                    #{index + 1}
-                  </span>
-                  <span className="font-medium">{category.name}</span>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Top Categories</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {analyticsData.topCategories.map((category, index) => (
+                <div
+                  key={category.name}
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      #{index + 1}
+                    </span>
+                    <span className="text-sm font-medium">{category.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">
+                      ${category.revenue.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {category.products} products
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    ${category.revenue.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {category.products} products
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Traffic Sources */}
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold">Traffic Sources</h2>
-          </div>
-          <div className="p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Traffic Sources</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             {analyticsData.trafficSources.map((source) => (
               <div key={source.source}>
-                <div className="flex items-center justify-between mb-1">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="text-sm font-medium">{source.source}</span>
                   <span className="text-sm text-muted-foreground">
                     {source.visits.toLocaleString()} ({source.percentage}%)
                   </span>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full"
-                    style={{ width: `${source.percentage}%` }}
-                  />
-                </div>
+                <Progress value={source.percentage} className="h-2" />
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Additional Metrics */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <h3 className="font-semibold mb-4">Average Order Value</h3>
-          <p className="text-3xl font-bold">$36.18</p>
-          <p className="text-sm text-success mt-1">+5.2% from last period</p>
-        </div>
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <h3 className="font-semibold mb-4">Customer Lifetime Value</h3>
-          <p className="text-3xl font-bold">$142.50</p>
-          <p className="text-sm text-success mt-1">+8.7% from last period</p>
-        </div>
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <h3 className="font-semibold mb-4">Refund Rate</h3>
-          <p className="text-3xl font-bold">2.1%</p>
-          <p className="text-sm text-success mt-1">-0.3% from last period</p>
-        </div>
+        <StatsCard
+          title="Average Order Value"
+          value="$36.18"
+          change={5.2}
+          trend="up"
+          icon="dollar"
+        />
+        <StatsCard
+          title="Customer Lifetime Value"
+          value="$142.50"
+          change={8.7}
+          trend="up"
+          icon="users"
+        />
+        <StatsCard
+          title="Refund Rate"
+          value="2.1%"
+          change={-0.3}
+          trend="down"
+        />
       </div>
     </div>
   );

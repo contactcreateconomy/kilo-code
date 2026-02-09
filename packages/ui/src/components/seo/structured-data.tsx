@@ -159,7 +159,7 @@ function getAvailabilityUrl(
     PreOrder: "https://schema.org/PreOrder",
     Discontinued: "https://schema.org/Discontinued",
   };
-  return urls[availability] || urls.InStock;
+  return urls[availability] ?? urls["InStock"] ?? "";
 }
 
 // ============================================================================

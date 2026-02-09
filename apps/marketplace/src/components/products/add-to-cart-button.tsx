@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@createconomy/ui";
 import { useCart } from "@/hooks/use-cart";
 import { cn } from "@createconomy/ui";
+import { ShoppingCart, Check, Loader2 } from "lucide-react";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -61,7 +62,7 @@ export function AddToCartButton({
         className={cn("pointer-events-none", className)}
         disabled
       >
-        <CheckIcon className="mr-2 h-4 w-4" />
+        <Check className="mr-2 h-4 w-4" />
         In Cart
       </Button>
     );
@@ -77,73 +78,20 @@ export function AddToCartButton({
     >
       {isLoading ? (
         <>
-          <LoadingIcon className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Adding...
         </>
       ) : isAdded ? (
         <>
-          <CheckIcon className="mr-2 h-4 w-4" />
+          <Check className="mr-2 h-4 w-4" />
           Added!
         </>
       ) : (
         <>
-          <CartIcon className="mr-2 h-4 w-4" />
+          <ShoppingCart className="mr-2 h-4 w-4" />
           Add to Cart
         </>
       )}
     </Button>
-  );
-}
-
-function CartIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <circle cx="8" cy="21" r="1" />
-      <circle cx="19" cy="21" r="1" />
-      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
-function LoadingIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-    </svg>
   );
 }

@@ -1,71 +1,110 @@
 import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@createconomy/ui/components/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@createconomy/ui/components/table";
+import { Badge } from "@createconomy/ui/components/badge";
+import { Progress } from "@createconomy/ui/components/progress";
+import { Button } from "@createconomy/ui/components/button";
+import { AlertTriangle } from "lucide-react";
 
-interface LowStockProduct {
-  id: string;
-  name: string;
-  stock: number;
-  threshold: number;
-}
+// Mock data — in production this would come from Convex
+const lowStockProducts = [
+  { id: "prod-001", name: "Premium UI Kit", stock: 3, threshold: 10 },
+  { id: "prod-002", name: "Icon Pack Pro", stock: 1, threshold: 5 },
+  { id: "prod-003", name: "Landing Templates", stock: 7, threshold: 15 },
+  { id: "prod-004", name: "Photo Presets", stock: 2, threshold: 10 },
+];
 
-interface LowStockAlertProps {
-  products?: LowStockProduct[];
-}
-
-export function LowStockAlert({ products = [] }: LowStockAlertProps) {
-  if (products.length === 0) {
-    return null;
-  }
-
+export function LowStockAlert() {
   return (
-    <div className="seller-card border-[var(--warning)] bg-[var(--warning)]/5">
-      <div className="flex items-center gap-3 mb-4">
-        <svg
-          className="w-6 h-6 text-[var(--warning)]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        <h3 className="text-lg font-semibold">Low Stock Alert</h3>
-      </div>
-      <div className="space-y-3">
-        {products.map((product) => (
-          <div
-            key={product.id}
-            className="flex items-center justify-between p-3 bg-[var(--background)] rounded-lg"
-          >
-            <div>
-              <Link
-                href={`/products/${product.id}`}
-                className="font-medium hover:text-[var(--primary)]"
-              >
-                {product.name}
-              </Link>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                {product.stock} remaining (threshold: {product.threshold})
-              </p>
-            </div>
-            <Link
-              href={`/products/${product.id}`}
-              className="px-3 py-1 text-sm border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
-            >
-              Restock
+    <Card className="h-full">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-amber-500" />
+          <CardTitle className="text-lg">Low Stock Alerts</CardTitle>
+        </div>
+        <CardDescription>Products that need restocking</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {lowStockProducts.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            All products are well stocked
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead className="w-[100px]">Level</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lowStockProducts.map((product) => {
+                const stockPercent = Math.round(
+                  (product.stock / product.threshold) * 100
+                );
+                const isCritical = product.stock <= product.threshold * 0.3;
+
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <Link
+                        href={`/products/${product.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {product.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{product.stock}</span>
+                        {isCritical ? (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                            Critical
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] px-1.5 py-0"
+                          >
+                            Low
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Progress
+                        value={stockPercent}
+                        className="h-2"
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+        <div className="mt-4 text-center">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/products?filter=low-stock">
+              View all low stock →
             </Link>
-          </div>
-        ))}
-      </div>
-      <Link
-        href="/products?filter=low-stock"
-        className="block text-center text-sm text-[var(--primary)] hover:underline mt-4"
-      >
-        View all low stock products
-      </Link>
-    </div>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,13 +1,28 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@createconomy/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@createconomy/ui/components/dropdown-menu";
+import { Avatar, AvatarFallback } from "@createconomy/ui/components/avatar";
+import {
+  ShoppingCart,
+  User,
+  ClipboardList,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function UserMenu() {
   const { user, signOut, isLoading } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -25,175 +40,82 @@ export function UserMenu() {
     );
   }
 
+  const initials =
+    user.name?.charAt(0).toUpperCase() ||
+    user.email?.charAt(0).toUpperCase() ||
+    "U";
+
   return (
-    <div className="relative">
-      {/* Cart - only visible when logged in */}
-      <Link href="/cart" className="relative mr-2 inline-flex">
-        <button
-          type="button"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted"
-        >
-          <CartIcon className="h-5 w-5" />
+    <div className="flex items-center gap-1">
+      {/* Cart button */}
+      <Button variant="ghost" size="icon" asChild>
+        <Link href="/cart">
+          <ShoppingCart className="h-5 w-5" />
           <span className="sr-only">Cart</span>
-        </button>
-      </Link>
+        </Link>
+      </Button>
 
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-full p-1 hover:bg-muted"
-        aria-expanded={isOpen}
-        aria-haspopup="true"
-      >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
-        </div>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
+      {/* User dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="relative h-9 w-9 rounded-full p-0"
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
 
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
-
-          {/* Dropdown Menu */}
-          <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border bg-card shadow-lg">
-            <div className="border-b p-3">
-              <p className="font-medium">{user.name || "User"}</p>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">
+                {user.name || "User"}
+              </p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user.email}
+              </p>
             </div>
+          </DropdownMenuLabel>
 
-            <div className="p-1">
-              <Link
-                href="/account"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
+          <DropdownMenuSeparator />
+
+          <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link href="/account" className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
                 My Account
               </Link>
-
-              <Link
-                href="/account/orders"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                  <path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z" />
-                </svg>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/account/orders" className="cursor-pointer">
+                <ClipboardList className="mr-2 h-4 w-4" />
                 My Orders
               </Link>
-
-              <Link
-                href="/account/settings"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/account/settings" className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
                 Settings
               </Link>
-            </div>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
 
-            <div className="border-t p-1">
-              <button
-                onClick={() => {
-                  signOut();
-                  setIsOpen(false);
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-muted"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" x2="9" y1="12" y2="12" />
-                </svg>
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            className="cursor-pointer text-destructive focus:text-destructive"
+            onSelect={() => signOut()}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
-  );
-}
-
-function CartIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <circle cx="8" cy="21" r="1" />
-      <circle cx="19" cy="21" r="1" />
-      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
-    </svg>
   );
 }

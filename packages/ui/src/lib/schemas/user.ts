@@ -104,10 +104,10 @@ export const userRegistrationSchema = z
     username: usernameSchema,
     displayName: displayNameSchema.optional(),
     acceptTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the terms and conditions" }),
+      message: "You must accept the terms and conditions",
     }),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data: { password: string; confirmPassword: string }) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
@@ -158,11 +158,11 @@ export const passwordChangeSchema = z
     newPassword: passwordSchema,
     confirmNewPassword: z.string(),
   })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
+  .refine((data: { newPassword: string; confirmNewPassword: string }) => data.newPassword === data.confirmNewPassword, {
     message: "Passwords do not match",
     path: ["confirmNewPassword"],
   })
-  .refine((data) => data.currentPassword !== data.newPassword, {
+  .refine((data: { currentPassword: string; newPassword: string }) => data.currentPassword !== data.newPassword, {
     message: "New password must be different from current password",
     path: ["newPassword"],
   });
@@ -185,7 +185,7 @@ export const passwordResetSchema = z
     newPassword: passwordSchema,
     confirmNewPassword: z.string(),
   })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
+  .refine((data: { newPassword: string; confirmNewPassword: string }) => data.newPassword === data.confirmNewPassword, {
     message: "Passwords do not match",
     path: ["confirmNewPassword"],
   });
