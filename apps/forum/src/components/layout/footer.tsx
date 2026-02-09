@@ -2,10 +2,10 @@ import Link from "next/link";
 
 const footerLinks = {
   community: [
+    { name: "About", href: "/about" },
     { name: "Guidelines", href: "/guidelines" },
-    { name: "FAQ", href: "/faq" },
-    { name: "Help", href: "/help" },
-    { name: "Contact", href: "/contact" },
+    { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Tags", href: "/tags" },
   ],
   categories: [
     { name: "General Discussion", href: "/c/general" },
@@ -16,13 +16,10 @@ const footerLinks = {
   platform: [
     { name: "Marketplace", href: process.env['NEXT_PUBLIC_MAIN_SITE_URL'] || "https://createconomy.com" },
     { name: "Seller Portal", href: process.env['NEXT_PUBLIC_SELLER_URL'] || "https://seller.createconomy.com" },
-    { name: "Blog", href: "/blog" },
-    { name: "Status", href: "/status" },
   ],
   legal: [
     { name: "Terms of Service", href: "/terms" },
     { name: "Privacy Policy", href: "/privacy" },
-    { name: "Cookie Policy", href: "/cookies" },
     { name: "Community Guidelines", href: "/guidelines" },
   ],
 };

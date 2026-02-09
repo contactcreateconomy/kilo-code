@@ -35,16 +35,6 @@ export default async function SignInPage({
     >
       <SignInForm callbackUrl={callbackUrl} />
 
-      {/* Forgot Password Link */}
-      <div className="mt-4 text-center">
-        <Link
-          href="/auth/forgot-password"
-          className="text-sm text-primary hover:underline"
-        >
-          Forgot your password?
-        </Link>
-      </div>
-
       {/* Sign Up Link */}
       <div className="mt-4 text-center text-sm">
         <span className="text-muted-foreground">

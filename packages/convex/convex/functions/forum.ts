@@ -2141,3 +2141,138 @@ export const getUserThreads = query({
     );
   },
 });
+
+/**
+ * Get replies (non-first posts) by a specific user
+ *
+ * Fetches posts authored by the user that are NOT the first post of a thread,
+ * enriched with thread title for context.
+ *
+ * @param username - Username to look up
+ * @param limit - Max replies (default 20)
+ * @returns List of replies with thread context
+ */
+export const getUserReplies = query({
+  args: {
+    username: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 20;
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (!profile) return [];
+
+    // Get posts by this user that are NOT the first post (i.e. replies)
+    const posts = await ctx.db
+      .query("forumPosts")
+      .withIndex("by_author", (q) => q.eq("authorId", profile.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isDeleted"), false),
+          q.eq(q.field("isFirstPost"), false)
+        )
+      )
+      .order("desc")
+      .take(limit);
+
+    // Enrich with thread title
+    return Promise.all(
+      posts.map(async (post) => {
+        const thread = await ctx.db.get(post.threadId);
+        return {
+          id: post._id,
+          content: post.content.slice(0, 300),
+          createdAt: post.createdAt,
+          threadId: post.threadId,
+          threadTitle: thread?.title ?? "Deleted thread",
+        };
+      })
+    );
+  },
+});
+
+/**
+ * Get bookmarked threads for the current user
+ *
+ * Fetches all "bookmark" reactions by the authenticated user on threads,
+ * then enriches with thread + author + category data.
+ *
+ * @param limit - Max bookmarks (default 20)
+ * @returns List of bookmarked threads
+ */
+export const getBookmarkedThreads = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const limit = args.limit ?? 20;
+
+    // Find all bookmark reactions by the current user on threads
+    const bookmarks = await ctx.db
+      .query("forumReactions")
+      .withIndex("by_user_target", (q) =>
+        q.eq("userId", userId).eq("targetType", "thread")
+      )
+      .filter((q) => q.eq(q.field("reactionType"), "bookmark"))
+      .order("desc")
+      .take(limit);
+
+    // Enrich with thread data
+    const threads = await Promise.all(
+      bookmarks.map(async (bookmark) => {
+        const thread = await ctx.db.get(bookmark.targetId as never) as Doc<"forumThreads"> | null;
+        if (!thread || thread.isDeleted) return null;
+
+        const author = await ctx.db.get(thread.authorId);
+        const authorProfile = author
+          ? await ctx.db
+              .query("userProfiles")
+              .withIndex("by_user", (q) => q.eq("userId", author._id))
+              .first()
+          : null;
+
+        const category = await ctx.db.get(thread.categoryId);
+
+        return {
+          bookmarkedAt: bookmark.createdAt,
+          thread: {
+            id: thread._id,
+            title: thread.title,
+            slug: thread.slug,
+            createdAt: thread.createdAt,
+            postCount: thread.postCount,
+            viewCount: thread.viewCount,
+            upvoteCount: thread.upvoteCount ?? 0,
+            isPinned: thread.isPinned,
+            isLocked: thread.isLocked,
+            author: author
+              ? {
+                  id: author._id,
+                  name: authorProfile?.displayName ?? author.name ?? "Anonymous",
+                  username: authorProfile?.username ?? author._id,
+                  avatarUrl: authorProfile?.avatarUrl ?? null,
+                }
+              : null,
+            category: category
+              ? {
+                  name: category.name,
+                  slug: category.slug,
+                  icon: category.icon ?? null,
+                }
+              : null,
+          },
+        };
+      })
+    );
+
+    return threads.filter(Boolean);
+  },
+});

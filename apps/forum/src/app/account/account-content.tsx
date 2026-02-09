@@ -6,6 +6,8 @@ import { AuthGuard } from "@/components/auth/auth-guard";
 const navItems = [
   { href: "/account", label: "Profile", icon: "👤" },
   { href: "/account/notifications", label: "Notifications", icon: "🔔" },
+  { href: "/account/saved", label: "Saved", icon: "🔖" },
+  { href: "/account/security", label: "Security", icon: "🔒" },
   { href: "/account/flair", label: "Flair", icon: "🏷️" },
 ];
 
