@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Label } from "@createconomy/ui";
+import { Button, Checkbox, Label } from "@createconomy/ui";
 import {
   useNotificationPreferences,
   type NotificationPreferences,
@@ -170,23 +170,19 @@ export default function NotificationsPage() {
                 </p>
               </div>
               <div className="flex justify-center">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={localPrefs[setting.emailKey]}
-                  onChange={(e) =>
-                    toggleSetting(setting.emailKey, e.target.checked)
+                  onCheckedChange={(checked) =>
+                    toggleSetting(setting.emailKey, !!checked)
                   }
-                  className="h-4 w-4 rounded border-gray-300"
                 />
               </div>
               <div className="flex justify-center">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={localPrefs[setting.pushKey]}
-                  onChange={(e) =>
-                    toggleSetting(setting.pushKey, e.target.checked)
+                  onCheckedChange={(checked) =>
+                    toggleSetting(setting.pushKey, !!checked)
                   }
-                  className="h-4 w-4 rounded border-gray-300"
                 />
               </div>
             </div>
@@ -201,13 +197,11 @@ export default function NotificationsPage() {
               </p>
             </div>
             <div className="flex justify-center">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={localPrefs.weeklyDigest}
-                onChange={(e) =>
-                  toggleSetting("weeklyDigest", e.target.checked)
+                onCheckedChange={(checked) =>
+                  toggleSetting("weeklyDigest", !!checked)
                 }
-                className="h-4 w-4 rounded border-gray-300"
               />
             </div>
             <div className="flex justify-center">
@@ -241,7 +235,7 @@ export default function NotificationsPage() {
           <p
             className={`text-sm ${
               saveMessage.includes("success")
-                ? "text-green-600"
+                ? "text-success"
                 : "text-destructive"
             }`}
           >

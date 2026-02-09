@@ -29,6 +29,12 @@
     --border: oklch(0.91 0.015 285);
     --input: oklch(0.91 0.015 285);
     --ring: oklch(0.585 0.233 264);
+
+    /* Vote Colors */
+    --upvote: oklch(0.705 0.213 47);
+    --upvote-foreground: oklch(1 0 0);
+    --downvote: oklch(0.585 0.233 264);
+    --downvote-foreground: oklch(1 0 0);
     
     /* Chart Colors */
     --chart-1: oklch(0.585 0.233 264);
@@ -68,6 +74,12 @@
     --border: oklch(0.3 0.015 285);
     --input: oklch(0.3 0.015 285);
     --ring: oklch(0.585 0.233 264);
+
+    /* Vote Colors — Dark Mode */
+    --upvote: oklch(0.705 0.213 47);
+    --upvote-foreground: oklch(1 0 0);
+    --downvote: oklch(0.488 0.243 264.376);
+    --downvote-foreground: oklch(0.985 0 0);
     
     /* Dark Mode Chart Colors */
     --chart-1: oklch(0.488 0.243 264.376);
@@ -116,6 +128,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-upvote: var(--upvote);
+  --color-upvote-foreground: var(--upvote-foreground);
+  --color-downvote: var(--downvote);
+  --color-downvote-foreground: var(--downvote-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -289,7 +305,7 @@
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 9999px;
-    background-color: #22c55e;
+    background-color: var(--success);
   }
   
   /* Discussion card hover glow effect */

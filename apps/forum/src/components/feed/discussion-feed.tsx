@@ -6,8 +6,8 @@ import { DiscussionCard } from './discussion-card';
 import { FeaturedSlider } from './featured-slider';
 import { useDiscussionFeed } from '@/hooks/use-discussion-feed';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
-import { cn } from '@/lib/utils';
-import { Loader2, Users } from 'lucide-react';
+import { cn, Spinner } from '@createconomy/ui';
+import { Users } from 'lucide-react';
 import type { FeedTabType } from '@/types/forum';
 
 interface DiscussionFeedProps {
@@ -67,7 +67,7 @@ export function DiscussionFeed({
         {isLoading && discussions.length === 0 ? (
           <div className="flex justify-center py-12">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
+                    <Spinner size="md" />
               <span className="text-sm">Loading discussions...</span>
             </div>
           </div>
@@ -103,7 +103,7 @@ export function DiscussionFeed({
               <div ref={loadMoreRef} className="flex justify-center py-4">
                 {isLoadingMore ? (
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Spinner size="md" />
                     <span className="text-sm">Loading more...</span>
                   </div>
                 ) : (

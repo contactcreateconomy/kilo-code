@@ -5,20 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Bell,
-  MessageSquare,
-  Heart,
-  AtSign,
-  Users,
-  Trophy,
-  Pin,
-  Lock,
-  Shield,
   CheckCheck,
   Filter,
 } from "lucide-react";
 import { cn } from "@createconomy/ui";
 import { Button } from "@createconomy/ui";
-import { Badge } from "@createconomy/ui";
+import { Badge, NotificationIcon } from "@createconomy/ui";
 import { Avatar, AvatarImage, AvatarFallback } from "@createconomy/ui";
 import {
   useNotifications,
@@ -91,28 +83,9 @@ export default function NotificationInboxPage() {
 
   const groups = groupByDate(notifications);
 
-  const getNotificationIcon = (type: NotificationItem["type"]) => {
-    switch (type) {
-      case "reply":
-        return <MessageSquare className="h-4 w-4 text-blue-500" />;
-      case "upvote":
-        return <Heart className="h-4 w-4 text-red-500" />;
-      case "mention":
-        return <AtSign className="h-4 w-4 text-purple-500" />;
-      case "follow":
-        return <Users className="h-4 w-4 text-green-500" />;
-      case "campaign":
-        return <Trophy className="h-4 w-4 text-yellow-500" />;
-      case "thread_pin":
-        return <Pin className="h-4 w-4 text-orange-500" />;
-      case "thread_lock":
-        return <Lock className="h-4 w-4 text-orange-500" />;
-      case "mod_action":
-        return <Shield className="h-4 w-4 text-orange-500" />;
-      default:
-        return <Bell className="h-4 w-4" />;
-    }
-  };
+  const getNotificationIconElement = (type: NotificationItem["type"]) => (
+    <NotificationIcon type={type} size="sm" />
+  );
 
   const getNotificationUrl = (notification: NotificationItem): string => {
     switch (notification.targetType) {
@@ -230,12 +203,12 @@ export default function NotificationInboxPage() {
                             alt=""
                           />
                           <AvatarFallback>
-                            {getNotificationIcon(notification.type)}
+                            {getNotificationIconElement(notification.type)}
                           </AvatarFallback>
                         </Avatar>
                       ) : (
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                          {getNotificationIcon(notification.type)}
+                          {getNotificationIconElement(notification.type)}
                         </div>
                       )}
                     </div>

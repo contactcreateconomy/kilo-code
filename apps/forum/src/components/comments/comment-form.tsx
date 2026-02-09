@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@createconomy/ui';
+import { Button, Spinner } from '@createconomy/ui';
 import { useCommentActions } from '@/hooks/use-comments';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
 
 interface CommentFormProps {
   threadId: string;
@@ -69,7 +68,7 @@ export function CommentForm({
   if (authLoading) {
     return (
       <div className="flex justify-center py-4">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Spinner size="md" className="text-muted-foreground" />
       </div>
     );
   }
@@ -126,7 +125,7 @@ export function CommentForm({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                <Spinner size="xs" className="mr-1" />
                 Posting...
               </>
             ) : (

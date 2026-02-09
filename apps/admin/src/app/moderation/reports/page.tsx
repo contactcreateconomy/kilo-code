@@ -9,22 +9,22 @@ type ReportStatus = 'pending' | 'reviewed' | 'actioned' | 'dismissed';
 type TargetType = 'thread' | 'comment' | 'user';
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  reviewed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  actioned: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  dismissed: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+  pending: 'bg-warning/10 text-warning',
+  reviewed: 'bg-primary/10 text-primary',
+  actioned: 'bg-success/10 text-success',
+  dismissed: 'bg-muted text-muted-foreground',
 };
 
 const reasonColors: Record<string, string> = {
-  spam: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-  harassment: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  hate_speech: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  misinformation: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  nsfw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
-  off_topic: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  self_harm: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  violence: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  other: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+  spam: 'bg-upvote/10 text-upvote',
+  harassment: 'bg-destructive/10 text-destructive',
+  hate_speech: 'bg-destructive/10 text-destructive',
+  misinformation: 'bg-primary/10 text-primary',
+  nsfw: 'bg-destructive/10 text-destructive',
+  off_topic: 'bg-primary/10 text-primary',
+  self_harm: 'bg-destructive/10 text-destructive',
+  violence: 'bg-destructive/10 text-destructive',
+  other: 'bg-muted text-muted-foreground',
 };
 
 const typeIcons: Record<string, string> = {
@@ -144,7 +144,7 @@ export default function ReportsPage() {
           <span className="text-muted-foreground">/</span>
           <h1 className="text-3xl font-bold tracking-tight">Reports Queue</h1>
           {reports && (
-            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            <span className="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
               {reports.length} {statusFilter || 'total'}
             </span>
           )}
@@ -254,7 +254,7 @@ export default function ReportsPage() {
                           </div>
                           <div>
                             <span className="text-muted-foreground">Author: </span>
-                            <span className="font-medium text-red-600">
+                            <span className="font-medium text-destructive">
                               @{report.targetAuthor?.username ?? 'unknown'}
                             </span>
                           </div>
@@ -294,7 +294,7 @@ export default function ReportsPage() {
                     {report.targetType !== 'user' && (
                       <button
                         onClick={() => handleRemove(report)}
-                        className="rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="rounded-md border border-destructive px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
                         disabled={isProcessing}
                       >
                         Remove Content
@@ -302,14 +302,14 @@ export default function ReportsPage() {
                     )}
                     <button
                       onClick={() => handleWarn(report)}
-                      className="rounded-md border border-yellow-500 px-4 py-2 text-sm font-medium text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                      className="rounded-md border border-warning px-4 py-2 text-sm font-medium text-warning hover:bg-warning/10"
                       disabled={isProcessing || !report.targetAuthor}
                     >
                       Warn User
                     </button>
                     <button
                       onClick={() => handleBan(report)}
-                      className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                      className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
                       disabled={isProcessing || !report.targetAuthor}
                     >
                       Ban User (7d)

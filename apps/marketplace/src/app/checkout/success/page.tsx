@@ -81,8 +81,8 @@ export default function CheckoutSuccessPage() {
     return (
       <div className="container py-16">
         <div className="mx-auto max-w-lg text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
-            <WarningIcon className="h-8 w-8 text-yellow-600" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
+            <WarningIcon className="h-8 w-8 text-warning" />
           </div>
           <h1 className="mt-6 text-3xl font-bold tracking-tight">
             Verification Issue
@@ -111,8 +111,8 @@ export default function CheckoutSuccessPage() {
     <div className="container py-16">
       <div className="mx-auto max-w-lg text-center">
         {/* Success Icon */}
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <CheckIcon className="h-8 w-8 text-green-600" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+          <CheckIcon className="h-8 w-8 text-success" />
         </div>
 
         {/* Title */}
@@ -176,8 +176,8 @@ export default function CheckoutSuccessPage() {
               <span className="text-sm text-muted-foreground">Payment Status:</span>
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 orderDetails.paymentStatus === "paid"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-yellow-100 text-yellow-800"
+                  ? "bg-success/10 text-success"
+                  : "bg-warning/10 text-warning"
               }`}>
                 {orderDetails.paymentStatus === "paid" ? "Paid" : "Processing"}
               </span>

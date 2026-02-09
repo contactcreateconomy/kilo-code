@@ -32,28 +32,28 @@ export default function ModerationPage() {
           className="rounded-lg border bg-card p-4 shadow-sm hover:border-primary transition-colors"
         >
           <p className="text-sm text-muted-foreground">Pending Reports</p>
-          <p className="text-2xl font-bold text-yellow-600">
+          <p className="text-2xl font-bold text-warning">
             {loading ? '—' : stats?.pendingReports ?? 0}
           </p>
           <p className="text-xs text-muted-foreground">Needs attention</p>
         </Link>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Reviewed Today</p>
-          <p className="text-2xl font-bold text-blue-600">
+          <p className="text-2xl font-bold text-primary">
             {loading ? '—' : stats?.reviewedToday ?? 0}
           </p>
           <p className="text-xs text-muted-foreground">Actions taken</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Actions This Week</p>
-          <p className="text-2xl font-bold text-green-600">
+          <p className="text-2xl font-bold text-success">
             {loading ? '—' : stats?.actionsThisWeek ?? 0}
           </p>
           <p className="text-xs text-muted-foreground">Mod activity</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Active Bans</p>
-          <p className="text-2xl font-bold text-red-600">
+          <p className="text-2xl font-bold text-destructive">
             {loading ? '—' : stats?.activeBans ?? 0}
           </p>
           <p className="text-xs text-muted-foreground">Currently enforced</p>
@@ -86,10 +86,10 @@ export default function ModerationPage() {
                         <span className="text-xs uppercase text-muted-foreground">
                           {report.targetType}
                         </span>
-                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        <span className="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
                           {report.status}
                         </span>
-                        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                        <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
                           {report.reason.replace('_', ' ')}
                         </span>
                       </div>

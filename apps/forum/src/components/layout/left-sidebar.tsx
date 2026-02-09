@@ -6,9 +6,9 @@ import { usePathname } from 'next/navigation';
 import { 
   Plus, Activity,
   Newspaper, Star, Scale, List, HelpCircle, Sparkles, GraduationCap,
-  Crown, Lock, Rocket, Loader2
+  Crown, Lock, Rocket
 } from 'lucide-react';
-import { cn, Button, Badge, Separator, Card, CardContent } from '@createconomy/ui';
+import { cn, Button, Badge, Separator, Card, CardContent, Spinner } from '@createconomy/ui';
 import { useCategories } from '@/hooks/use-forum';
 import { useActiveCampaign } from '@/hooks/use-campaign';
 
@@ -112,7 +112,7 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
       {/* PREMIUM Section */}
       <div className="mt-4">
         <h3 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <Crown className="h-3 w-3 text-yellow-500" />
+          <Crown className="h-3 w-3 text-warning" />
           Premium
         </h3>
         <div className="space-y-1">
@@ -145,7 +145,7 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
                 {/* Icon */}
                 <IconComponent className={cn(
                   'h-4 w-4 transition-transform duration-200',
-                  item.locked ? 'text-muted-foreground' : 'text-yellow-500',
+                  item.locked ? 'text-muted-foreground' : 'text-warning',
                   (isSelected || isHovered) && !item.locked && 'scale-110'
                 )} />
 
@@ -168,7 +168,7 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
       {campaignLoading ? (
         <Card className="mt-4">
           <CardContent className="flex justify-center py-6">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Spinner size="sm" className="text-muted-foreground" />
           </CardContent>
         </Card>
       ) : campaign ? (

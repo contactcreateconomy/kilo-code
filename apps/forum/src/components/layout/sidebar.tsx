@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@createconomy/ui";
 import { useCategories } from "@/hooks/use-forum";
 import { useCommunityStats } from "@/hooks/use-community-stats";
 import { PopularTagsWidget } from "@/components/tags";
@@ -37,7 +37,7 @@ export function Sidebar({ currentCategory }: SidebarProps) {
           <nav className="space-y-1">
             {categoriesLoading ? (
               <div className="flex justify-center py-4">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <Spinner size="sm" className="text-muted-foreground" />
               </div>
             ) : categories.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-2">
@@ -67,7 +67,7 @@ export function Sidebar({ currentCategory }: SidebarProps) {
           <h2 className="font-semibold text-sm mb-4">Community Stats</h2>
           {statsLoading ? (
             <div className="flex justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <Spinner size="sm" className="text-muted-foreground" />
             </div>
           ) : (
             <div className="space-y-3">

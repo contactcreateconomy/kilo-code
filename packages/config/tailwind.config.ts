@@ -74,6 +74,15 @@ const config: Config = {
           DEFAULT: "var(--info)",
           foreground: "var(--info-foreground)",
         },
+        // Vote colors
+        upvote: {
+          DEFAULT: "var(--upvote)",
+          foreground: "var(--upvote-foreground)",
+        },
+        downvote: {
+          DEFAULT: "var(--downvote)",
+          foreground: "var(--downvote-foreground)",
+        },
         // Sidebar colors
         sidebar: {
           DEFAULT: "var(--sidebar)",

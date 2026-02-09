@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Trophy, Zap, Crown, Medal, Award, Loader2 } from 'lucide-react';
-import { cn, Card, CardContent, CardHeader, CardTitle, Avatar, AvatarImage, AvatarFallback } from '@createconomy/ui';
+import { Trophy, Zap, Crown, Medal, Award } from 'lucide-react';
+import { cn, Card, CardContent, CardHeader, CardTitle, Avatar, AvatarImage, AvatarFallback, Spinner } from '@createconomy/ui';
 import { useLeaderboard } from '@/hooks/use-leaderboard';
 
 interface LeaderboardWidgetProps {
@@ -22,11 +22,11 @@ export function LeaderboardWidget({ maxEntries = 10 }: LeaderboardWidgetProps) {
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Crown className="h-4 w-4 text-yellow-500" />;
+        return <Crown className="h-4 w-4 text-warning" />;
       case 2:
-        return <Medal className="h-4 w-4 text-gray-400" />;
+        return <Medal className="h-4 w-4 text-muted-foreground" />;
       case 3:
-        return <Award className="h-4 w-4 text-amber-600" />;
+        return <Award className="h-4 w-4 text-warning" />;
       default:
         return <span className="text-xs font-bold text-muted-foreground">#{rank}</span>;
     }
@@ -43,7 +43,7 @@ export function LeaderboardWidget({ maxEntries = 10 }: LeaderboardWidgetProps) {
       <CardContent className="pt-0">
         {isLoading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Spinner className="text-muted-foreground" />
           </div>
         ) : entries.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">

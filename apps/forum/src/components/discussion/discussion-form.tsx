@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, X, FileText, Link2, ImageIcon, BarChart, Loader2 } from 'lucide-react';
+import { Plus, X, FileText, Link2, ImageIcon, BarChart } from 'lucide-react';
 import { cn, Button, Input, Badge } from '@createconomy/ui';
 import { CommunityDropdown } from './community-dropdown';
 import { EditorToolbar } from './editor-toolbar';

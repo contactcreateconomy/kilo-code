@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { cn, Button } from '@createconomy/ui';
-import { ArrowUpDown, Loader2 } from 'lucide-react';
+import { cn, Button, Spinner } from '@createconomy/ui';
+import { ArrowUpDown } from 'lucide-react';
 import { CommentNode, type CommentData } from './comment-node';
 import { CommentForm } from './comment-form';
 import type { CommentSortBy } from '@/hooks/use-comments';
@@ -115,7 +115,7 @@ export function CommentTree({
       {/* Comment list */}
       {isLoading && comments.length === 0 ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner className="text-muted-foreground" />
         </div>
       ) : comments.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground">

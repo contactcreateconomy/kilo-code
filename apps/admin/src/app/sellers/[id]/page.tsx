@@ -127,12 +127,12 @@ export default async function SellerDetailPage({
         </div>
         <div className="flex items-center gap-2">
           {seller.status === 'active' && (
-            <button className="rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50">
+            <button className="rounded-md border border-destructive px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
               Suspend Seller
             </button>
           )}
           {seller.status === 'suspended' && (
-            <button className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+            <button className="rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90">
               Reactivate Seller
             </button>
           )}
@@ -153,7 +153,7 @@ export default async function SellerDetailPage({
               <h2 className="mt-4 text-xl font-semibold">{seller.name}</h2>
               <p className="text-muted-foreground">{seller.email}</p>
               <div className="mt-2 flex items-center gap-1">
-                <span className="text-yellow-500">★</span>
+                <span className="text-warning">★</span>
                 <span className="font-medium">{seller.rating}</span>
                 <span className="text-muted-foreground">
                   ({seller.reviewCount} reviews)
@@ -370,9 +370,9 @@ export default async function SellerDetailPage({
                   Promote on homepage
                 </span>
               </button>
-              <button className="rounded-md border border-red-200 px-4 py-3 text-sm font-medium hover:bg-red-50 text-left text-red-600">
+              <button className="rounded-md border border-destructive/30 px-4 py-3 text-sm font-medium hover:bg-destructive/10 text-left text-destructive">
                 <span className="block font-medium">Delete Seller Account</span>
-                <span className="text-red-400">
+                <span className="text-destructive/70">
                   This action cannot be undone
                 </span>
               </button>

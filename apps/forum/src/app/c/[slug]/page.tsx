@@ -6,10 +6,9 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { ThreadList } from '@/components/forum/thread-list';
 import { Sidebar } from '@/components/layout/sidebar';
 import { SearchBar } from '@/components/forum/search-bar';
-import { Button, Skeleton } from '@createconomy/ui';
+import { Button, Skeleton, Spinner } from '@createconomy/ui';
 import { useCategoryThreads } from '@/hooks/use-category-threads';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
-import { Loader2 } from 'lucide-react';
 
 function ThreadListSkeleton() {
   return (
@@ -58,7 +57,7 @@ export default function CategoryPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="xl" className="text-muted-foreground" />
         </div>
       </div>
     );
@@ -157,7 +156,7 @@ export default function CategoryPage() {
             <div ref={loadMoreRef} className="flex justify-center py-6 mt-4">
               {isLoadingMore ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                   <Spinner size="md" />
                   <span className="text-sm">Loading more threads...</span>
                 </div>
               ) : (

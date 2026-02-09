@@ -43,7 +43,7 @@ export default function BansPage() {
           <span className="text-muted-foreground">/</span>
           <h1 className="text-3xl font-bold tracking-tight">Active Bans</h1>
           {bans && (
-            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
               {bans.length} active
             </span>
           )}
@@ -103,8 +103,8 @@ export default function BansPage() {
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                           ban.isPermanent
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-warning/10 text-warning'
                         }`}
                       >
                         {ban.isPermanent ? 'Permanent' : 'Temporary'}

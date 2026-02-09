@@ -176,7 +176,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </h1>
               <div className="mt-4 flex items-center gap-4">
                 <div className="flex items-center gap-1">
-                  <StarIcon className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <StarIcon className="h-5 w-5 fill-warning text-warning" />
                   <span className="font-medium">{product.rating}</span>
                   <span className="text-muted-foreground">
                     ({product.reviewCount} reviews)

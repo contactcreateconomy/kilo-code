@@ -203,8 +203,8 @@ export function CommentNode({
                 <button
                   onClick={handleUpvote}
                   className={cn(
-                    'p-1 rounded hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors',
-                    isUpvoted && 'text-orange-500'
+                    'p-1 rounded hover:bg-upvote/10 transition-colors',
+                    isUpvoted && 'text-upvote'
                   )}
                   aria-label="Upvote"
                 >
@@ -218,8 +218,8 @@ export function CommentNode({
                 <span
                   className={cn(
                     'text-xs font-bold tabular-nums min-w-[20px] text-center',
-                    isUpvoted && 'text-orange-500',
-                    isDownvoted && 'text-blue-500',
+                    isUpvoted && 'text-upvote',
+                    isDownvoted && 'text-downvote',
                     !isUpvoted && !isDownvoted && 'text-muted-foreground'
                   )}
                 >
@@ -228,8 +228,8 @@ export function CommentNode({
                 <button
                   onClick={handleDownvote}
                   className={cn(
-                    'p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors',
-                    isDownvoted && 'text-blue-500'
+                    'p-1 rounded hover:bg-downvote/10 transition-colors',
+                    isDownvoted && 'text-downvote'
                   )}
                   aria-label="Downvote"
                 >

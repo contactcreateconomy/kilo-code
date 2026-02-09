@@ -1,7 +1,7 @@
 'use client';
 
-import { Users, FileText, MessageSquare, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@createconomy/ui';
+import { Users, FileText, MessageSquare } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, Spinner } from '@createconomy/ui';
 import { useCommunityStats } from '@/hooks/use-community-stats';
 
 const statItems = [
@@ -24,7 +24,7 @@ export function CommunityStatsWidget() {
       <CardContent className="pt-0">
         {isLoading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Spinner className="text-muted-foreground" />
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Checkbox } from '@createconomy/ui';
 
 interface Column<T> {
   key: keyof T | string;
@@ -82,11 +83,9 @@ export function DataTable<T>({
           <tr>
             {selectable && (
               <th className="w-12">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={selectedItems.size === data.length && data.length > 0}
-                  onChange={handleSelectAll}
-                  className="rounded border-gray-300"
+                  onCheckedChange={handleSelectAll}
                 />
               </th>
             )}
@@ -115,11 +114,9 @@ export function DataTable<T>({
             >
               {selectable && (
                 <td onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedItems.has(item[keyField])}
-                    onChange={() => handleSelectItem(item)}
-                    className="rounded border-gray-300"
+                    onCheckedChange={() => handleSelectItem(item)}
                   />
                 </td>
               )}

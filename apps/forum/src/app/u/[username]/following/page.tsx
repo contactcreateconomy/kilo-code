@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Button } from '@createconomy/ui';
+import { Button, Spinner } from '@createconomy/ui';
 import { useQuery } from 'convex/react';
 import { api } from '@createconomy/convex';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useFollow } from '@/hooks/use-follow';
-import { Loader2, ArrowLeft, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowLeft, UserCheck, UserPlus } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 /**
@@ -50,7 +50,7 @@ function FollowingCard({ followee }: { followee: { userId: string; username: str
           disabled={isToggling}
         >
           {isToggling ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Spinner size="sm" />
           ) : isFollowing ? (
             <UserCheck className="h-4 w-4" />
           ) : (
@@ -78,7 +78,7 @@ export default function FollowingPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="xl" className="text-muted-foreground" />
         </div>
       </div>
     );
@@ -112,7 +112,7 @@ export default function FollowingPage() {
 
       {following === undefined ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner size="lg" className="text-muted-foreground" />
         </div>
       ) : following.following.length === 0 ? (
         <p className="text-center text-muted-foreground py-8">

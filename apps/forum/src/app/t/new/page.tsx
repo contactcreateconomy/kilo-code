@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from '@createconomy/ui';
 import { Navbar } from '@/components/navbar/navbar';
 import { LeftSidebar } from '@/components/layout/left-sidebar';
 import { DiscussionForm } from '@/components/discussion';
@@ -21,7 +21,7 @@ export default function NewDiscussionPage() {
   if (isLoading || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Spinner size="xl" className="text-muted-foreground" />
       </div>
     );
   }

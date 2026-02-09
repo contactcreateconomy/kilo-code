@@ -6,8 +6,15 @@ import { api } from '@createconomy/convex';
 import {
   Button,
   cn,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Textarea,
 } from '@createconomy/ui';
-import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 /**
  * Report reasons with user-friendly labels and descriptions.
@@ -38,7 +45,7 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 /**
  * ReportDialog — modal for users to report threads, comments, or other users.
  *
- * Uses a custom overlay instead of shadcn Dialog to avoid portal issues.
+ * Uses shadcn Dialog for accessible overlay/focus-trap/portal.
  */
 export function ReportDialog({ targetType, targetId, isOpen, onClose }: ReportDialogProps) {
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -90,38 +97,15 @@ export function ReportDialog({ targetType, targetId, isOpen, onClose }: ReportDi
     onClose();
   };
 
-  if (!isOpen) return null;
-
   const targetLabel = targetType === 'thread' ? 'post' : targetType;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleClose}
-      />
-
-      {/* Dialog */}
-      <div className="relative z-10 w-full max-w-md mx-4 rounded-lg border bg-card shadow-xl animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            <h2 className="text-lg font-semibold">Report {targetLabel}</h2>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded-md hover:bg-muted transition-colors"
-          >
-            <X className="h-5 w-5 text-muted-foreground" />
-          </button>
-        </div>
-
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-md">
         {/* Success state */}
         {submitState === 'success' ? (
           <div className="p-8 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+            <CheckCircle2 className="h-12 w-12 text-success mx-auto mb-3" />
             <h3 className="text-lg font-semibold">Report Submitted</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Thank you for helping keep our community safe. A moderator will review your report.
@@ -129,12 +113,18 @@ export function ReportDialog({ targetType, targetId, isOpen, onClose }: ReportDi
           </div>
         ) : (
           <>
-            {/* Body */}
-            <div className="p-4 max-h-[60vh] overflow-y-auto">
-              <p className="text-sm text-muted-foreground mb-4">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Report {targetLabel}
+              </DialogTitle>
+              <DialogDescription>
                 Why are you reporting this {targetLabel}? Select the most appropriate reason.
-              </p>
+              </DialogDescription>
+            </DialogHeader>
 
+            {/* Body */}
+            <div className="max-h-[60vh] overflow-y-auto space-y-4">
               {/* Reason selection */}
               <div className="space-y-2">
                 {REPORT_REASONS.map((r) => (
@@ -155,22 +145,22 @@ export function ReportDialog({ targetType, targetId, isOpen, onClose }: ReportDi
                 ))}
               </div>
 
-              {/* Additional details (always visible for context, required for "other") */}
-              <div className="mt-4">
+              {/* Additional details */}
+              <div>
                 <label
                   htmlFor="report-details"
                   className="text-sm font-medium"
                 >
                   Additional details {reason === 'other' ? '(required)' : '(optional)'}
                 </label>
-                <textarea
+                <Textarea
                   id="report-details"
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
                   placeholder="Provide any additional context that might help moderators..."
                   maxLength={500}
                   rows={3}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  className="mt-1 resize-none"
                 />
                 <p className="mt-1 text-xs text-muted-foreground text-right">
                   {details.length}/500
@@ -179,14 +169,13 @@ export function ReportDialog({ targetType, targetId, isOpen, onClose }: ReportDi
 
               {/* Error message */}
               {submitState === 'error' && errorMessage && (
-                <div className="mt-3 rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
                   {errorMessage}
                 </div>
               )}
             </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-2 p-4 border-t">
+            <DialogFooter>
               <Button variant="ghost" onClick={handleClose}>
                 Cancel
               </Button>
@@ -200,11 +189,11 @@ export function ReportDialog({ targetType, targetId, isOpen, onClose }: ReportDi
               >
                 {submitState === 'submitting' ? 'Submitting...' : 'Submit Report'}
               </Button>
-            </div>
+            </DialogFooter>
           </>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

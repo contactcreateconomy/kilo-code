@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, TrendingUp, ArrowUpRight, Loader2 } from 'lucide-react';
-import { cn, Card, CardContent, Badge } from '@createconomy/ui';
+import { Flame, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { cn, Card, CardContent, Badge, Spinner } from '@createconomy/ui';
 import { useTrending } from '@/hooks/use-trending';
 
 interface WhatsVibingWidgetProps {
@@ -37,7 +37,7 @@ export function WhatsVibingWidget({ className }: WhatsVibingWidgetProps) {
         {/* Trending Topics List */}
         {isLoading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Spinner className="text-muted-foreground" />
           </div>
         ) : topics.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
@@ -54,9 +54,9 @@ export function WhatsVibingWidget({ className }: WhatsVibingWidgetProps) {
                 {/* Rank Number */}
                 <span className={cn(
                   'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shrink-0',
-                  index === 0 && 'bg-orange-500/20 text-orange-500',
-                  index === 1 && 'bg-amber-500/20 text-amber-500',
-                  index === 2 && 'bg-yellow-500/20 text-yellow-500',
+                  index === 0 && 'bg-upvote/20 text-upvote',
+                  index === 1 && 'bg-warning/20 text-warning',
+                  index === 2 && 'bg-warning/20 text-warning',
                   index > 2 && 'bg-muted text-muted-foreground'
                 )}>
                   {index + 1}
@@ -80,9 +80,9 @@ export function WhatsVibingWidget({ className }: WhatsVibingWidgetProps) {
                 {/* Trend Indicator */}
                 <div className="shrink-0">
                   {topic.trend === 'hot' ? (
-                    <Flame className="h-4 w-4 text-orange-500" />
+                    <Flame className="h-4 w-4 text-upvote" />
                   ) : (
-                    <TrendingUp className="h-4 w-4 text-green-500" />
+                    <TrendingUp className="h-4 w-4 text-success" />
                   )}
                 </div>
               </Link>

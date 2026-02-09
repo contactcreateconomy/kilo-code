@@ -224,17 +224,17 @@ export default function AnalyticsPage() {
         <div className="rounded-lg border bg-card p-6 shadow-sm">
           <h3 className="font-semibold mb-4">Average Order Value</h3>
           <p className="text-3xl font-bold">$36.18</p>
-          <p className="text-sm text-green-600 mt-1">+5.2% from last period</p>
+          <p className="text-sm text-success mt-1">+5.2% from last period</p>
         </div>
         <div className="rounded-lg border bg-card p-6 shadow-sm">
           <h3 className="font-semibold mb-4">Customer Lifetime Value</h3>
           <p className="text-3xl font-bold">$142.50</p>
-          <p className="text-sm text-green-600 mt-1">+8.7% from last period</p>
+          <p className="text-sm text-success mt-1">+8.7% from last period</p>
         </div>
         <div className="rounded-lg border bg-card p-6 shadow-sm">
           <h3 className="font-semibold mb-4">Refund Rate</h3>
           <p className="text-3xl font-bold">2.1%</p>
-          <p className="text-sm text-green-600 mt-1">-0.3% from last period</p>
+          <p className="text-sm text-success mt-1">-0.3% from last period</p>
         </div>
       </div>
     </div>

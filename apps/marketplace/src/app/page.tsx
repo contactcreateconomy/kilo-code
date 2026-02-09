@@ -116,7 +116,7 @@ export default function HomePage() {
                         ${product.price.toFixed(2)}
                       </span>
                       <div className="flex items-center gap-1 text-sm">
-                        <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <StarIcon className="h-4 w-4 fill-warning text-warning" />
                         <span>{product.rating}</span>
                       </div>
                     </div>

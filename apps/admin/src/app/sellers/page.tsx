@@ -93,7 +93,7 @@ export default function SellersPage() {
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Total Sellers</p>
           <p className="text-2xl font-bold">234</p>
-          <p className="text-xs text-green-600">+8 this month</p>
+          <p className="text-xs text-success">+8 this month</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Active Sellers</p>
@@ -103,12 +103,12 @@ export default function SellersPage() {
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Pending Applications</p>
           <p className="text-2xl font-bold">12</p>
-          <p className="text-xs text-yellow-600">Needs review</p>
+          <p className="text-xs text-warning">Needs review</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Total Revenue</p>
           <p className="text-2xl font-bold">$1.2M</p>
-          <p className="text-xs text-green-600">+15% from last month</p>
+          <p className="text-xs text-success">+15% from last month</p>
         </div>
       </div>
 

@@ -24,7 +24,7 @@ export function PollPreview({ options, endsAt, totalVotes }: PollPreviewProps) {
         <BarChart className="h-3.5 w-3.5" />
         <span>Poll · {options.length} options</span>
         {hasEnded && (
-          <span className="text-orange-500 font-medium">· Ended</span>
+          <span className="text-warning font-medium">· Ended</span>
         )}
       </div>
       <div className="space-y-1">
@@ -183,7 +183,7 @@ export function PollWidget({ threadId }: PollWidgetProps) {
       <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
         <span>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
         {hasEnded ? (
-          <span className="text-orange-500 font-medium">Poll ended</span>
+          <span className="text-warning font-medium">Poll ended</span>
         ) : endsAt ? (
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />

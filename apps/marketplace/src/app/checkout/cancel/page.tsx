@@ -11,8 +11,8 @@ export default function CheckoutCancelPage() {
   return (
     <div className="container py-16">
       <div className="mx-auto max-w-lg text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
-          <XIcon className="h-8 w-8 text-yellow-600" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
+          <XIcon className="h-8 w-8 text-warning" />
         </div>
         <h1 className="mt-6 text-3xl font-bold tracking-tight">
           Checkout Cancelled

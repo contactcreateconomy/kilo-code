@@ -107,7 +107,7 @@ export default function OrdersPage() {
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Total Orders</p>
           <p className="text-2xl font-bold">2,350</p>
-          <p className="text-xs text-green-600">+12% from last month</p>
+          <p className="text-xs text-success">+12% from last month</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Pending</p>
@@ -122,7 +122,7 @@ export default function OrdersPage() {
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">Refund Requests</p>
           <p className="text-2xl font-bold">8</p>
-          <p className="text-xs text-red-600">Needs attention</p>
+          <p className="text-xs text-destructive">Needs attention</p>
         </div>
       </div>
 

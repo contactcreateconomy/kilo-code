@@ -28,7 +28,7 @@ export function AdminHeader() {
         {/* Notifications */}
         <button className="relative rounded-md p-2 hover:bg-muted">
           <span className="text-lg">🔔</span>
-          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-white flex items-center justify-center">
             3
           </span>
         </button>

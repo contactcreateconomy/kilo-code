@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input } from '@createconomy/ui';
-import { Loader2, Trash2, Save } from 'lucide-react';
+import { Button, Input, Spinner } from '@createconomy/ui';
+import { Trash2, Save } from 'lucide-react';
 import { useMyFlair } from '@/hooks/use-flairs';
 
 /**
@@ -83,7 +83,7 @@ export default function UserFlairPage() {
 
       {!initialized ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner size="md" className="text-muted-foreground" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -137,7 +137,7 @@ export default function UserFlairPage() {
           <div className="flex items-center gap-3 pt-2">
             <Button onClick={handleSave} disabled={saving || !text.trim()}>
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Spinner size="sm" className="mr-2" />
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
@@ -146,7 +146,7 @@ export default function UserFlairPage() {
             {myFlair && (
               <Button variant="outline" onClick={handleRemove} disabled={removing}>
                 {removing ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Spinner size="sm" className="mr-2" />
                 ) : (
                   <Trash2 className="h-4 w-4 mr-2" />
                 )}
@@ -159,7 +159,7 @@ export default function UserFlairPage() {
           {message && (
             <p
               className={`text-sm ${
-                message.type === 'success' ? 'text-green-600' : 'text-destructive'
+                message.type === 'success' ? 'text-success' : 'text-destructive'
               }`}
             >
               {message.text}

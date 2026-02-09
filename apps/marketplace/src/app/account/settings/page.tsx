@@ -98,7 +98,7 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 defaultChecked
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-border"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -110,7 +110,7 @@ export default function SettingsPage() {
               </div>
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-border"
               />
             </div>
           </div>

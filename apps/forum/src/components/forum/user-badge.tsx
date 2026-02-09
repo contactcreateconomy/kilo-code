@@ -18,10 +18,10 @@ const sizeClasses = {
 };
 
 const roleColors: Record<string, string> = {
-  admin: "bg-red-500/10 text-red-600 border-red-500/20",
-  moderator: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  member: "bg-gray-500/10 text-gray-600 border-gray-500/20",
-  vip: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+  admin: "bg-destructive/10 text-destructive border-destructive/20",
+  moderator: "bg-primary/10 text-primary border-primary/20",
+  member: "bg-muted text-muted-foreground border-border",
+  vip: "bg-warning/10 text-warning border-warning/20",
 };
 
 function getInitials(username: string): string {

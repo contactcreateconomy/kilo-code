@@ -123,16 +123,16 @@ export default function OrdersPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const statusStyles: Record<string, string> = {
-    completed: "bg-green-100 text-green-800",
-    processing: "bg-blue-100 text-blue-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    cancelled: "bg-red-100 text-red-800",
+    completed: "bg-success/10 text-success",
+    processing: "bg-primary/10 text-primary",
+    pending: "bg-warning/10 text-warning",
+    cancelled: "bg-destructive/10 text-destructive",
   };
 
   return (
     <span
       className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-        statusStyles[status] || "bg-gray-100 text-gray-800"
+        statusStyles[status] || "bg-muted text-muted-foreground"
       }`}
     >
       {status}

@@ -75,20 +75,20 @@ export default function PayoutsPage() {
         <div className="space-y-6">
           {/* Success Message */}
           {showSuccessMessage && (
-            <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+            <div className="rounded-lg bg-success/10 border border-success/20 p-4">
               <div className="flex">
-                <CheckIcon className="h-5 w-5 text-green-400" />
+                <CheckIcon className="h-5 w-5 text-success" />
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-green-800">
+                  <p className="text-sm font-medium text-success">
                     Stripe account connected successfully!
                   </p>
-                  <p className="mt-1 text-sm text-green-700">
+                  <p className="mt-1 text-sm text-success/80">
                     You can now receive payouts for your sales.
                   </p>
                 </div>
                 <button
                   onClick={() => setShowSuccessMessage(false)}
-                  className="ml-auto text-green-500 hover:text-green-600"
+                  className="ml-auto text-success hover:text-success/80"
                 >
                   <XIcon className="h-5 w-5" />
                 </button>

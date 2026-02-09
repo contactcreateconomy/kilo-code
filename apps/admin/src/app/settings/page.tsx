@@ -1,11 +1,25 @@
-import type { Metadata } from 'next';
+"use client";
 
-export const metadata: Metadata = {
-  title: 'General Settings',
-  description: 'Configure general platform settings',
-};
+import { useState } from "react";
+import {
+  Button,
+  Input,
+  Label,
+  Switch,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@createconomy/ui";
 
 export default function SettingsPage() {
+  const [sellerRegistration, setSellerRegistration] = useState(true);
+  const [reviewModeration, setReviewModeration] = useState(true);
+  const [forumEnabled, setForumEnabled] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
   return (
     <div className="space-y-6">
       <div>
@@ -21,34 +35,30 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <Label htmlFor="platform-name" className="mb-1">
                 Platform Name
-              </label>
-              <input
-                type="text"
-                defaultValue="Createconomy"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
+              </Label>
+              <Input id="platform-name" defaultValue="Createconomy" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <Label htmlFor="support-email" className="mb-1">
                 Support Email
-              </label>
-              <input
+              </Label>
+              <Input
+                id="support-email"
                 type="email"
                 defaultValue="support@createconomy.com"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <Label htmlFor="platform-description" className="mb-1">
               Platform Description
-            </label>
-            <textarea
+            </Label>
+            <Textarea
+              id="platform-description"
               rows={3}
               defaultValue="A marketplace for digital creators to sell their products and connect with customers."
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -60,49 +70,55 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <Label htmlFor="commission-rate" className="mb-1">
                 Default Commission Rate (%)
-              </label>
-              <input
+              </Label>
+              <Input
+                id="commission-rate"
                 type="number"
                 defaultValue="15"
-                min="0"
-                max="100"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                min={0}
+                max={100}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <Label htmlFor="min-payout" className="mb-1">
                 Minimum Payout Amount ($)
-              </label>
-              <input
+              </Label>
+              <Input
+                id="min-payout"
                 type="number"
                 defaultValue="50"
-                min="0"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                min={0}
               />
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Default Currency
-              </label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="GBP">GBP - British Pound</option>
-              </select>
+              <Label className="mb-1">Default Currency</Label>
+              <Select defaultValue="USD">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD - US Dollar</SelectItem>
+                  <SelectItem value="EUR">EUR - Euro</SelectItem>
+                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Payout Schedule
-              </label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Bi-weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
+              <Label className="mb-1">Payout Schedule</Label>
+              <Select defaultValue="weekly">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select schedule" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -119,10 +135,10 @@ export default function SettingsPage() {
                 Allow new sellers to register on the platform
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
+            <Switch
+              checked={sellerRegistration}
+              onCheckedChange={setSellerRegistration}
+            />
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -131,10 +147,10 @@ export default function SettingsPage() {
                 Require approval for new product reviews
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
+            <Switch
+              checked={reviewModeration}
+              onCheckedChange={setReviewModeration}
+            />
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -143,10 +159,10 @@ export default function SettingsPage() {
                 Enable community forum features
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
+            <Switch
+              checked={forumEnabled}
+              onCheckedChange={setForumEnabled}
+            />
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -155,10 +171,10 @@ export default function SettingsPage() {
                 Put the platform in maintenance mode
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
+            <Switch
+              checked={maintenanceMode}
+              onCheckedChange={setMaintenanceMode}
+            />
           </div>
         </div>
       </div>
@@ -168,23 +184,22 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold mb-4">SEO Settings</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <Label htmlFor="meta-title" className="mb-1">
               Default Meta Title
-            </label>
-            <input
-              type="text"
+            </Label>
+            <Input
+              id="meta-title"
               defaultValue="Createconomy - Digital Marketplace for Creators"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <Label htmlFor="meta-description" className="mb-1">
               Default Meta Description
-            </label>
-            <textarea
+            </Label>
+            <Textarea
+              id="meta-description"
               rows={2}
               defaultValue="Discover and purchase high-quality digital products from talented creators. Templates, graphics, code, and more."
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -192,12 +207,8 @@ export default function SettingsPage() {
 
       {/* Save Button */}
       <div className="flex justify-end gap-4">
-        <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
-          Reset to Defaults
-        </button>
-        <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          Save Changes
-        </button>
+        <Button variant="outline">Reset to Defaults</Button>
+        <Button>Save Changes</Button>
       </div>
     </div>
   );

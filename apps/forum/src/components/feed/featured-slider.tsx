@@ -183,7 +183,7 @@ function FeaturedCard({ discussion }: FeaturedCardProps) {
 
       {/* Pinned Badge */}
       {discussion.isPinned && (
-        <div className="absolute top-4 right-4 px-2 py-1 bg-yellow-500/90 text-black text-xs font-medium rounded-full">
+        <div className="absolute top-4 right-4 px-2 py-1 bg-warning text-black text-xs font-medium rounded-full">
           📌 Pinned
         </div>
       )}

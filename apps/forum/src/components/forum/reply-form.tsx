@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button, Input } from "@createconomy/ui";
+import { Button, Input, Spinner } from "@createconomy/ui";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
 
 interface ReplyFormProps {
   threadId: string;
@@ -64,7 +63,7 @@ export function ReplyForm({
   if (isLoading) {
     return (
       <div className="bg-card rounded-lg border p-6 flex justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Spinner size="md" className="text-muted-foreground" />
       </div>
     );
   }
@@ -163,7 +162,7 @@ export function ReplyForm({
 
       {/* Error Message */}
       {error && (
-        <p className="mt-2 text-sm text-red-600">{error}</p>
+        <p className="mt-2 text-sm text-destructive">{error}</p>
       )}
 
       {/* Actions */}

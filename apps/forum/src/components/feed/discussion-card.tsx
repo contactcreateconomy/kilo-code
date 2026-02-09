@@ -31,14 +31,14 @@ interface DiscussionCardProps {
   index?: number;
 }
 
-// Category color mapping
+// Category color mapping — uses design tokens for consistency
 const categoryColors: Record<string, string> = {
-  'Programming': 'bg-blue-500 text-white hover:bg-blue-600',
-  'Design': 'bg-pink-500 text-white hover:bg-pink-600',
-  'Startups': 'bg-orange-500 text-white hover:bg-orange-600',
-  'AI & ML': 'bg-violet-500 text-white hover:bg-violet-600',
-  'Gaming': 'bg-green-500 text-white hover:bg-green-600',
-  'Learning': 'bg-cyan-500 text-white hover:bg-cyan-600',
+  'Programming': 'bg-primary text-primary-foreground hover:bg-primary/90',
+  'Design': 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+  'Startups': 'bg-upvote text-upvote-foreground hover:bg-upvote/90',
+  'AI & ML': 'bg-primary text-primary-foreground hover:bg-primary/90',
+  'Gaming': 'bg-success text-success-foreground hover:bg-success/90',
+  'Learning': 'bg-primary text-primary-foreground hover:bg-primary/90',
 };
 
 /**
@@ -132,8 +132,8 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
             <button
               onClick={handleUpvote}
               className={cn(
-                'p-1 rounded-md transition-colors hover:bg-orange-100 dark:hover:bg-orange-900/30',
-                isUpvoted && 'text-orange-500'
+                'p-1 rounded-md transition-colors hover:bg-upvote/10',
+                isUpvoted && 'text-upvote'
               )}
               aria-label="Upvote"
             >
@@ -148,8 +148,8 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
             <span
               className={cn(
                 'text-sm font-bold tabular-nums select-none',
-                isUpvoted && 'text-orange-500',
-                isDownvoted && 'text-blue-500',
+                isUpvoted && 'text-upvote',
+                isDownvoted && 'text-downvote',
                 !isUpvoted && !isDownvoted && 'text-muted-foreground'
               )}
             >
@@ -159,8 +159,8 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
             <button
               onClick={handleDownvote}
               className={cn(
-                'p-1 rounded-md transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30',
-                isDownvoted && 'text-blue-500'
+                'p-1 rounded-md transition-colors hover:bg-downvote/10',
+                isDownvoted && 'text-downvote'
               )}
               aria-label="Downvote"
             >
@@ -238,9 +238,9 @@ export function DiscussionCard({ discussion, index = 0 }: DiscussionCardProps) {
                 <span
                   className={cn(
                     'inline-flex items-center gap-1 shrink-0 mt-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
-                    discussion.postType === 'link' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                    discussion.postType === 'image' && 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                    discussion.postType === 'poll' && 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                    discussion.postType === 'link' && 'bg-primary/10 text-primary',
+                    discussion.postType === 'image' && 'bg-success/10 text-success',
+                    discussion.postType === 'poll' && 'bg-primary/10 text-primary'
                   )}
                 >
                   {discussion.postType === 'link' && <Link2 className="h-3 w-3" />}

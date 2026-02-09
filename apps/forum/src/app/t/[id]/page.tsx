@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowBigUp, ArrowBigDown, Bookmark, Share2, Flag, Loader2, ExternalLink } from 'lucide-react';
+import { ArrowBigUp, ArrowBigDown, Bookmark, Share2, Flag, ExternalLink } from 'lucide-react';
 import { cn, Button, Skeleton } from '@createconomy/ui';
 import { CommentTree } from '@/components/comments/comment-tree';
 import { UserBadge } from '@/components/forum/user-badge';
@@ -160,8 +160,8 @@ export default function ThreadPage() {
                 <button
                   onClick={handleUpvote}
                   className={cn(
-                    'p-1 rounded-md transition-colors hover:bg-orange-100 dark:hover:bg-orange-900/30',
-                    isUpvoted && 'text-orange-500'
+                    'p-1 rounded-md transition-colors hover:bg-upvote/10',
+                    isUpvoted && 'text-upvote'
                   )}
                   aria-label="Upvote"
                 >
@@ -175,8 +175,8 @@ export default function ThreadPage() {
                 <span
                   className={cn(
                     'text-sm font-bold tabular-nums',
-                    isUpvoted && 'text-orange-500',
-                    isDownvoted && 'text-blue-500',
+                    isUpvoted && 'text-upvote',
+                    isDownvoted && 'text-downvote',
                     !isUpvoted && !isDownvoted && 'text-muted-foreground'
                   )}
                 >
@@ -185,8 +185,8 @@ export default function ThreadPage() {
                 <button
                   onClick={handleDownvote}
                   className={cn(
-                    'p-1 rounded-md transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30',
-                    isDownvoted && 'text-blue-500'
+                    'p-1 rounded-md transition-colors hover:bg-downvote/10',
+                    isDownvoted && 'text-downvote'
                   )}
                   aria-label="Downvote"
                 >

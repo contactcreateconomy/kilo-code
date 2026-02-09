@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, Menu, X, User, Settings, FileText, LogOut, Moon, Sun, MessageSquare, Heart, AtSign, Users, Trophy, Pin, Lock, Shield } from 'lucide-react';
+import { Search, Bell, Menu, X, User, Settings, FileText, LogOut, Moon, Sun } from 'lucide-react';
 import { cn } from '@createconomy/ui';
 import { Button } from '@createconomy/ui';
 import { Input } from '@createconomy/ui';
-import { Avatar, AvatarImage, AvatarFallback, Badge } from '@createconomy/ui';
+import { Avatar, AvatarImage, AvatarFallback, Badge, NotificationIcon, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@createconomy/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,24 +59,32 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
   };
 
   return (
+    <TooltipProvider>
     <nav className="glassmorphism-navbar sticky top-0 z-50">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         {/* Left section: Mobile menu + Logo */}
         <div className="flex items-center gap-3">
           {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onMobileMenuToggle}
-            className="lg:hidden"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onMobileMenuToggle}
+                className="lg:hidden"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isMobileMenuOpen ? 'Close menu' : 'Open menu'}</p>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
@@ -109,19 +117,26 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
         {/* Right section: Dark mode + Notifications + Avatar/Login */}
         <div className="flex items-center gap-2">
           {/* Dark Mode Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleDarkMode}
-            aria-label="Toggle dark mode"
-            className="transition-transform duration-200 hover:scale-110"
-          >
-            {isDarkMode ? (
-              <Sun className="h-5 w-5 text-yellow-500" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleDarkMode}
+                aria-label="Toggle dark mode"
+                className="transition-transform duration-200 hover:scale-110"
+              >
+                {isDarkMode ? (
+                  <Sun className="h-5 w-5 text-warning" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isDarkMode ? 'Light mode' : 'Dark mode'}</p>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Notifications Dropdown - Only show when authenticated */}
           {isAuthenticated && (
@@ -141,6 +156,7 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
         </div>
       </div>
     </nav>
+    </TooltipProvider>
   );
 }
 
@@ -174,28 +190,9 @@ function NotificationsDropdown() {
     markAllAsRead,
   } = useNotifications(10);
 
-  const getNotificationIcon = (type: NotificationItem['type']) => {
-    switch (type) {
-      case 'reply':
-        return <MessageSquare className="h-4 w-4 text-blue-500" />;
-      case 'upvote':
-        return <Heart className="h-4 w-4 text-red-500" />;
-      case 'mention':
-        return <AtSign className="h-4 w-4 text-purple-500" />;
-      case 'follow':
-        return <Users className="h-4 w-4 text-green-500" />;
-      case 'campaign':
-        return <Trophy className="h-4 w-4 text-yellow-500" />;
-      case 'thread_pin':
-        return <Pin className="h-4 w-4 text-orange-500" />;
-      case 'thread_lock':
-        return <Lock className="h-4 w-4 text-orange-500" />;
-      case 'mod_action':
-        return <Shield className="h-4 w-4 text-orange-500" />;
-      default:
-        return <Bell className="h-4 w-4" />;
-    }
-  };
+  const getNotificationIconElement = (type: NotificationItem['type']) => (
+    <NotificationIcon type={type} size="sm" />
+  );
 
   /**
    * Get the navigation URL for a notification based on its target type.
@@ -300,12 +297,12 @@ function NotificationsDropdown() {
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={notification.actor.avatarUrl} alt="" />
                       <AvatarFallback>
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIconElement(notification.type)}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIconElement(notification.type)}
                     </div>
                   )}
                 </div>

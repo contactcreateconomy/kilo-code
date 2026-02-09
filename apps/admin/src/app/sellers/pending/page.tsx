@@ -83,7 +83,7 @@ export default function PendingApplicationsPage() {
 
       <div className="rounded-lg border bg-card p-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="text-yellow-500">⚠️</span>
+          <span className="text-warning">⚠️</span>
           <span>
             Review each application carefully. Approved sellers will be able to
             list products on the marketplace.
@@ -187,10 +187,10 @@ export default function PendingApplicationsPage() {
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <button className="rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50">
+                <button className="rounded-md border border-destructive px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
                   Reject
                 </button>
-                <button className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                <button className="rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90">
                   Approve
                 </button>
               </div>

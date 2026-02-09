@@ -1,7 +1,7 @@
 "use client";
 
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@createconomy/ui";
 
 /**
  * AuthGuard — Client component that redirects unauthenticated users to sign-in.
@@ -23,7 +23,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Spinner size="xl" className="text-muted-foreground" />
       </div>
     );
   }

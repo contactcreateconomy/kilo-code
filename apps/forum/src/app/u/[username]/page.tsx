@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { ThreadList } from '@/components/forum/thread-list';
-import { Skeleton, Button } from '@createconomy/ui';
+import { Skeleton, Button, Spinner } from '@createconomy/ui';
 import { useUserProfile, useUserThreads } from '@/hooks/use-user-profile';
 import { useFollow } from '@/hooks/use-follow';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2, UserPlus, UserCheck, Users } from 'lucide-react';
+import { UserPlus, UserCheck, Users } from 'lucide-react';
 
 function ActivitySkeleton() {
   return (
@@ -47,17 +47,17 @@ export default function UserProfilePage() {
   const isOwnProfile = user?.id === profile?.userId;
 
   const roleColors: Record<string, string> = {
-    admin: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    moderator: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    customer: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-    seller: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    admin: 'bg-destructive/10 text-destructive',
+    moderator: 'bg-primary/10 text-primary',
+    customer: 'bg-muted text-muted-foreground',
+    seller: 'bg-success/10 text-success',
   };
 
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="xl" className="text-muted-foreground" />
         </div>
       </div>
     );
@@ -128,7 +128,7 @@ export default function UserProfilePage() {
                   className="mt-3 w-full max-w-[180px]"
                 >
                   {isToggling ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner size="sm" className="mr-2" />
                   ) : isFollowing ? (
                     <UserCheck className="mr-2 h-4 w-4" />
                   ) : (

@@ -77,8 +77,8 @@ export default function CheckoutPage() {
     return (
       <div className="container py-8">
         <div className="mx-auto max-w-lg text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-            <ErrorIcon className="h-8 w-8 text-red-600" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+            <ErrorIcon className="h-8 w-8 text-destructive" />
           </div>
           <h1 className="mt-6 text-3xl font-bold tracking-tight">Checkout Error</h1>
           <p className="mt-4 text-muted-foreground">{error}</p>
