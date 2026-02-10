@@ -1,85 +1,38 @@
 'use client';
 
-import type { Metadata } from 'next';
-import Link from 'next/link';
 import { useState } from 'react';
-
-// Mock data - in production this would come from Convex
-const initialCategories = [
-  {
-    id: '1',
-    name: 'Digital Art',
-    slug: 'digital-art',
-    description: 'Digital artwork and illustrations',
-    productCount: 125,
-    order: 1,
-  },
-  {
-    id: '2',
-    name: 'Design',
-    slug: 'design',
-    description: 'UI kits, templates, and design resources',
-    productCount: 89,
-    order: 2,
-  },
-  {
-    id: '3',
-    name: 'Photography',
-    slug: 'photography',
-    description: 'Stock photos and photography presets',
-    productCount: 234,
-    order: 3,
-  },
-  {
-    id: '4',
-    name: '3D Assets',
-    slug: '3d-assets',
-    description: '3D models and assets',
-    productCount: 67,
-    order: 4,
-  },
-  {
-    id: '5',
-    name: 'Audio',
-    slug: 'audio',
-    description: 'Music, sound effects, and audio resources',
-    productCount: 156,
-    order: 5,
-  },
-];
+import Link from 'next/link';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@createconomy/convex';
+import { Loader2 } from 'lucide-react';
+import type { Id } from '@createconomy/convex/dataModel';
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState(initialCategories);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const categories = useQuery(api.functions.categories.listCategories, {
+    includeInactive: true,
+  });
+  const deleteCategory = useMutation(api.functions.categories.deleteCategory);
 
   const handleDragStart = (id: string) => {
     setDraggedItem(id);
   };
 
-  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!draggedItem || draggedItem === targetId) return;
-
-    const draggedIndex = categories.findIndex((c) => c.id === draggedItem);
-    const targetIndex = categories.findIndex((c) => c.id === targetId);
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    const newCategories = [...categories];
-    const removed = newCategories.splice(draggedIndex, 1)[0];
-    if (!removed) return;
-    newCategories.splice(targetIndex, 0, removed);
-
-    // Update order numbers
-    newCategories.forEach((cat, index) => {
-      cat.order = index + 1;
-    });
-
-    setCategories(newCategories);
   };
 
   const handleDragEnd = () => {
     setDraggedItem(null);
-    // In production, save the new order to Convex
+  };
+
+  const handleDelete = async (categoryId: Id<'productCategories'>) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+    try {
+      await deleteCategory({ categoryId });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete category');
+    }
   };
 
   return (
@@ -100,81 +53,92 @@ export default function CategoriesPage() {
       </div>
 
       <div className="rounded-lg border bg-card shadow-sm">
-        <div className="p-4 border-b bg-muted/50">
+        <div className="border-b bg-muted/50 p-4">
           <div className="grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground">
             <div className="col-span-1">#</div>
             <div className="col-span-3">Name</div>
             <div className="col-span-4">Description</div>
-            <div className="col-span-2">Products</div>
+            <div className="col-span-2">Status</div>
             <div className="col-span-2">Actions</div>
           </div>
         </div>
-        <div>
-          {categories.map((category) => (
-            <div
-              key={category.id}
-              draggable
-              onDragStart={() => handleDragStart(category.id)}
-              onDragOver={(e) => handleDragOver(e, category.id)}
-              onDragEnd={handleDragEnd}
-              className={`grid grid-cols-12 gap-4 p-4 border-b last:border-b-0 items-center cursor-move hover:bg-muted/50 transition-colors ${
-                draggedItem === category.id ? 'opacity-50 bg-muted' : ''
-              }`}
-            >
-              <div className="col-span-1 text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-4 h-4 text-muted-foreground"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+        {!categories ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="py-20 text-center text-muted-foreground">
+            No categories found. Create your first category.
+          </div>
+        ) : (
+          <div>
+            {categories.map((category, index) => (
+              <div
+                key={String(category._id)}
+                draggable
+                onDragStart={() => handleDragStart(String(category._id))}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                className={`grid grid-cols-12 items-center gap-4 border-b p-4 last:border-b-0 transition-colors cursor-move hover:bg-muted/50 ${
+                  draggedItem === String(category._id)
+                    ? 'opacity-50 bg-muted'
+                    : ''
+                }`}
+              >
+                <div className="col-span-1 text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 text-muted-foreground"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 8h16M4 16h16"
+                      />
+                    </svg>
+                    {category.sortOrder ?? index + 1}
+                  </div>
+                </div>
+                <div className="col-span-3">
+                  <div>
+                    <span className="font-medium">{category.name}</span>
+                    <p className="text-xs text-muted-foreground">
+                      /{category.slug}
+                    </p>
+                  </div>
+                </div>
+                <div className="col-span-4 text-sm text-muted-foreground">
+                  {category.description ?? '—'}
+                </div>
+                <div className="col-span-2">
+                  <span
+                    className={`badge ${category.isActive ? 'badge-success' : 'badge-error'}`}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 8h16M4 16h16"
-                    />
-                  </svg>
-                  {category.order}
+                    {category.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div className="col-span-2 flex items-center gap-2">
+                  <Link
+                    href={`/categories/${String(category._id)}`}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(category._id)}
+                    className="text-sm text-destructive hover:underline"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
-              <div className="col-span-3">
-                <div>
-                  <span className="font-medium">{category.name}</span>
-                  <p className="text-xs text-muted-foreground">
-                    /{category.slug}
-                  </p>
-                </div>
-              </div>
-              <div className="col-span-4 text-muted-foreground text-sm">
-                {category.description}
-              </div>
-              <div className="col-span-2">
-                <span className="badge badge-info">
-                  {category.productCount} products
-                </span>
-              </div>
-              <div className="col-span-2 flex items-center gap-2">
-                <Link
-                  href={`/categories/${category.id}`}
-                  className="text-primary hover:underline text-sm"
-                >
-                  Edit
-                </Link>
-                <button className="text-destructive hover:underline text-sm">
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          Save Order
-        </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

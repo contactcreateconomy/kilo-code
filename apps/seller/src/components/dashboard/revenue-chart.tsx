@@ -14,22 +14,13 @@ import {
   type ChartConfig,
 } from "@createconomy/ui/components/chart";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
 
-// Mock data — in production this would come from Convex
-const data = [
-  { name: "Jan", revenue: 1200, orders: 48 },
-  { name: "Feb", revenue: 1800, orders: 72 },
-  { name: "Mar", revenue: 2200, orders: 95 },
-  { name: "Apr", revenue: 1950, orders: 83 },
-  { name: "May", revenue: 2800, orders: 112 },
-  { name: "Jun", revenue: 3200, orders: 128 },
-  { name: "Jul", revenue: 2900, orders: 119 },
-  { name: "Aug", revenue: 3500, orders: 142 },
-  { name: "Sep", revenue: 4100, orders: 168 },
-  { name: "Oct", revenue: 3800, orders: 155 },
-  { name: "Nov", revenue: 4600, orders: 189 },
-  { name: "Dec", revenue: 5200, orders: 213 },
-];
+function centsToDollars(cents: number): number {
+  return cents / 100;
+}
 
 const chartConfig = {
   revenue: {
@@ -39,6 +30,33 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function RevenueChart() {
+  const monthlyData = useQuery(
+    api.functions.orders.getSellerMonthlyRevenue,
+    {}
+  );
+
+  if (!monthlyData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue Overview</CardTitle>
+          <CardDescription>Monthly revenue for the current year</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-80 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const chartData = monthlyData.map((m) => ({
+    name: m.name,
+    revenue: centsToDollars(m.revenue),
+    orders: m.orders,
+  }));
+
   return (
     <Card>
       <CardHeader>
@@ -48,7 +66,7 @@ export function RevenueChart() {
       <CardContent>
         <ChartContainer config={chartConfig} className="h-80 w-full">
           <AreaChart
-            data={data}
+            data={chartData}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           >
             <defs>

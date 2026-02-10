@@ -1,22 +1,66 @@
 "use client";
 
+import { use } from "react";
+import Link from "next/link";
 import { SellerLayout } from "@/components/layout/seller-layout";
 import { SellerGuard } from "@/components/auth/seller-guard";
 import { ImageUpload } from "@/components/products/image-upload";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@createconomy/convex";
+import type { Id } from "@createconomy/convex/dataModel";
+import { Loader2 } from "lucide-react";
 
 interface ProductImagesPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function ProductImagesPage({ params }: ProductImagesPageProps) {
-  const { id } = await params;
-  
-  // Mock images - in real app, fetch from Convex
-  const images = [
-    { id: "1", url: "/placeholder-product.jpg", alt: "Product image 1", isPrimary: true },
-    { id: "2", url: "/placeholder-product.jpg", alt: "Product image 2", isPrimary: false },
-    { id: "3", url: "/placeholder-product.jpg", alt: "Product image 3", isPrimary: false },
-  ];
+export default function ProductImagesPage({ params }: ProductImagesPageProps) {
+  const { id } = use(params);
+
+  const product = useQuery(api.functions.products.getProduct, {
+    productId: id as Id<"products">,
+  });
+  const removeImage = useMutation(api.functions.products.removeProductImage);
+
+  if (product === undefined) {
+    return (
+      <SellerGuard>
+        <SellerLayout>
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </SellerLayout>
+      </SellerGuard>
+    );
+  }
+
+  if (product === null) {
+    return (
+      <SellerGuard>
+        <SellerLayout>
+          <div className="text-center py-20">
+            <h2 className="text-xl font-semibold">Product not found</h2>
+            <Link
+              href="/products"
+              className="mt-4 inline-block text-primary hover:underline"
+            >
+              ← Back to products
+            </Link>
+          </div>
+        </SellerLayout>
+      </SellerGuard>
+    );
+  }
+
+  const images = product.images ?? [];
+
+  const handleDeleteImage = async (imageId: string) => {
+    try {
+      await removeImage({ imageId: imageId as Id<"productImages"> });
+    } catch (error) {
+      console.error("Failed to delete image:", error);
+    }
+  };
 
   return (
     <SellerGuard>
@@ -27,15 +71,15 @@ export default async function ProductImagesPage({ params }: ProductImagesPagePro
             <div>
               <h1 className="text-2xl font-bold">Product Images</h1>
               <p className="text-[var(--muted-foreground)]">
-                Manage images for your product
+                Manage images for &quot;{product.name}&quot;
               </p>
             </div>
-            <a
+            <Link
               href={`/products/${id}`}
               className="px-4 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
             >
               ← Back to Product
-            </a>
+            </Link>
           </div>
 
           {/* Image Upload Component */}
@@ -46,11 +90,13 @@ export default async function ProductImagesPage({ params }: ProductImagesPagePro
 
           {/* Current Images */}
           <div className="seller-card">
-            <h2 className="text-lg font-semibold mb-4">Current Images</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              Current Images ({images.length})
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {images.map((image) => (
                 <div
-                  key={image.id}
+                  key={image._id}
                   className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
                     image.isPrimary
                       ? "border-[var(--primary)]"
@@ -59,7 +105,7 @@ export default async function ProductImagesPage({ params }: ProductImagesPagePro
                 >
                   <img
                     src={image.url}
-                    alt={image.alt}
+                    alt={image.altText ?? "Product image"}
                     className="w-full h-full object-cover"
                   />
                   {image.isPrimary && (
@@ -69,12 +115,10 @@ export default async function ProductImagesPage({ params }: ProductImagesPagePro
                   )}
                   <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent">
                     <div className="flex gap-2 justify-end">
-                      {!image.isPrimary && (
-                        <button className="p-1 bg-white/90 rounded text-xs hover:bg-white">
-                          Set Primary
-                        </button>
-                      )}
-                      <button className="p-1 bg-destructive text-white rounded text-xs hover:bg-destructive/90">
+                      <button
+                        onClick={() => handleDeleteImage(image._id)}
+                        className="p-1 bg-destructive text-white rounded text-xs hover:bg-destructive/90"
+                      >
                         Delete
                       </button>
                     </div>

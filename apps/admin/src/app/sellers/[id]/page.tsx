@@ -1,95 +1,27 @@
-import type { Metadata } from 'next';
+'use client';
+
+import { use } from 'react';
 import Link from 'next/link';
+import { useQuery } from 'convex/react';
+import { api } from '@createconomy/convex';
+import { Loader2 } from 'lucide-react';
+import type { Id } from '@createconomy/convex/dataModel';
 
-export const metadata: Metadata = {
-  title: 'Seller Details',
-  description: 'View and manage seller details',
+type Props = {
+  params: Promise<{ id: string }>;
 };
 
-// Mock data - in production this would come from Convex
-const seller = {
-  id: '1',
-  name: 'Jane Smith',
-  email: 'jane@example.com',
-  storeName: 'Creative Designs',
-  storeDescription:
-    'Premium digital assets and creative templates for designers and developers.',
-  status: 'active',
-  products: 45,
-  totalSales: 12500.0,
-  totalOrders: 234,
-  rating: 4.8,
-  reviewCount: 189,
-  joinedAt: '2024-01-01',
-  verifiedAt: '2024-01-05',
-  payoutMethod: 'Stripe',
-  payoutEmail: 'jane.payments@example.com',
-  commissionRate: 15,
-  avatar: null,
-  banner: null,
-  socialLinks: {
-    website: 'https://creativedesigns.com',
-    twitter: '@creativedesigns',
-    instagram: '@creativedesigns',
-  },
-};
+function centsToDollars(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
 
-const products = [
-  {
-    id: '1',
-    name: 'Premium UI Kit',
-    price: 49.99,
-    sales: 89,
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Icon Pack Pro',
-    price: 29.99,
-    sales: 156,
-    status: 'active',
-  },
-  {
-    id: '3',
-    name: 'Landing Page Templates',
-    price: 79.99,
-    sales: 45,
-    status: 'draft',
-  },
-];
-
-const recentOrders = [
-  {
-    id: 'ORD-001',
-    product: 'Premium UI Kit',
-    customer: 'John Doe',
-    amount: 49.99,
-    date: '2024-01-25',
-  },
-  {
-    id: 'ORD-002',
-    product: 'Icon Pack Pro',
-    customer: 'Alice Brown',
-    amount: 29.99,
-    date: '2024-01-24',
-  },
-  {
-    id: 'ORD-003',
-    product: 'Premium UI Kit',
-    customer: 'Bob Wilson',
-    amount: 49.99,
-    date: '2024-01-23',
-  },
-];
-
-const salesStats = [
-  { month: 'Aug', sales: 1200 },
-  { month: 'Sep', sales: 1800 },
-  { month: 'Oct', sales: 2100 },
-  { month: 'Nov', sales: 2800 },
-  { month: 'Dec', sales: 3200 },
-  { month: 'Jan', sales: 3500 },
-];
+function formatDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 const statusColors: Record<string, string> = {
   active: 'badge-success',
@@ -98,14 +30,36 @@ const statusColors: Record<string, string> = {
   draft: 'badge-secondary',
 };
 
-interface SellerDetailPageProps {
-  params: Promise<{ id: string }>;
-}
+export default function SellerDetailPage({ params }: Props) {
+  const { id } = use(params);
+  const seller = useQuery(api.functions.admin.getSellerById, {
+    sellerId: id as Id<'sellers'>,
+  });
 
-export default async function SellerDetailPage({
-  params,
-}: SellerDetailPageProps) {
-  const { id } = await params;
+  if (seller === undefined) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (seller === null) {
+    return (
+      <div className="space-y-4">
+        <Link href="/sellers" className="text-muted-foreground hover:text-foreground">
+          ← Back to Sellers
+        </Link>
+        <p className="py-20 text-center text-muted-foreground">Seller not found</p>
+      </div>
+    );
+  }
+
+  const sellerStatus = !seller.isApproved
+    ? 'pending'
+    : seller.isActive
+      ? 'active'
+      : 'suspended';
 
   return (
     <div className="space-y-6">
@@ -119,26 +73,11 @@ export default async function SellerDetailPage({
           </Link>
           <span className="text-muted-foreground">/</span>
           <h1 className="text-3xl font-bold tracking-tight">
-            {seller.storeName}
+            {seller.businessName ?? 'Unnamed Store'}
           </h1>
-          <span className={`badge ${statusColors[seller.status]}`}>
-            {seller.status}
+          <span className={`badge ${statusColors[sellerStatus] ?? ''}`}>
+            {sellerStatus}
           </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {seller.status === 'active' && (
-            <button className="rounded-md border border-destructive px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
-              Suspend Seller
-            </button>
-          )}
-          {seller.status === 'suspended' && (
-            <button className="rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90">
-              Reactivate Seller
-            </button>
-          )}
-          <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Message Seller
-          </button>
         </div>
       </div>
 
@@ -147,61 +86,61 @@ export default async function SellerDetailPage({
         <div className="lg:col-span-1 space-y-6">
           <div className="rounded-lg border bg-card p-6 shadow-sm">
             <div className="flex flex-col items-center text-center">
-              <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-2xl font-bold">
-                {seller.name.charAt(0)}
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-2xl font-bold">
+                {(seller.user?.name ?? '?').charAt(0)}
               </div>
-              <h2 className="mt-4 text-xl font-semibold">{seller.name}</h2>
-              <p className="text-muted-foreground">{seller.email}</p>
-              <div className="mt-2 flex items-center gap-1">
-                <span className="text-warning">★</span>
-                <span className="font-medium">{seller.rating}</span>
-                <span className="text-muted-foreground">
-                  ({seller.reviewCount} reviews)
-                </span>
-              </div>
+              <h2 className="mt-4 text-xl font-semibold">
+                {seller.user?.name ?? 'Unknown'}
+              </h2>
+              <p className="text-muted-foreground">{seller.user?.email}</p>
             </div>
 
             <div className="mt-6 space-y-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Joined</span>
-                <span>{seller.joinedAt}</span>
+                <span>{formatDate(seller.createdAt)}</span>
               </div>
+              {seller.approvedAt && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Approved</span>
+                  <span>{formatDate(seller.approvedAt)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Verified</span>
-                <span>{seller.verifiedAt}</span>
+                <span className="text-muted-foreground">Stripe Onboarded</span>
+                <span>{seller.stripeOnboarded ? 'Yes' : 'No'}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Commission Rate</span>
-                <span>{seller.commissionRate}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Payout Method</span>
-                <span>{seller.payoutMethod}</span>
-              </div>
+              {seller.connectAccount && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Charges Enabled</span>
+                    <span>{seller.connectAccount.chargesEnabled ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payouts Enabled</span>
+                    <span>{seller.connectAccount.payoutsEnabled ? 'Yes' : 'No'}</span>
+                  </div>
+                </>
+              )}
             </div>
 
-            {seller.socialLinks && (
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="font-medium mb-3">Social Links</h3>
+            {(seller.websiteUrl || seller.twitterHandle) && (
+              <div className="mt-6 border-t pt-6">
+                <h3 className="mb-3 font-medium">Social Links</h3>
                 <div className="space-y-2 text-sm">
-                  {seller.socialLinks.website && (
+                  {seller.websiteUrl && (
                     <a
-                      href={seller.socialLinks.website}
+                      href={seller.websiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block text-primary hover:underline"
                     >
-                      🌐 {seller.socialLinks.website}
+                      🌐 {seller.websiteUrl}
                     </a>
                   )}
-                  {seller.socialLinks.twitter && (
+                  {seller.twitterHandle && (
                     <p className="text-muted-foreground">
-                      𝕏 {seller.socialLinks.twitter}
-                    </p>
-                  )}
-                  {seller.socialLinks.instagram && (
-                    <p className="text-muted-foreground">
-                      📷 {seller.socialLinks.instagram}
+                      𝕏 {seller.twitterHandle}
                     </p>
                   )}
                 </div>
@@ -210,12 +149,14 @@ export default async function SellerDetailPage({
           </div>
 
           {/* Store Description */}
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h3 className="font-semibold mb-3">Store Description</h3>
-            <p className="text-muted-foreground text-sm">
-              {seller.storeDescription}
-            </p>
-          </div>
+          {seller.description && (
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <h3 className="mb-3 font-semibold">Store Description</h3>
+              <p className="text-sm text-muted-foreground">
+                {seller.description}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Main Content */}
@@ -223,160 +164,125 @@ export default async function SellerDetailPage({
           {/* Stats Cards */}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border bg-card p-4 shadow-sm">
-              <p className="text-sm text-muted-foreground">Total Sales</p>
+              <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">
-                ${seller.totalSales.toLocaleString()}
+                ${centsToDollars(seller.totalRevenue ?? 0)}
               </p>
             </div>
             <div className="rounded-lg border bg-card p-4 shadow-sm">
-              <p className="text-sm text-muted-foreground">Total Orders</p>
-              <p className="text-2xl font-bold">{seller.totalOrders}</p>
+              <p className="text-sm text-muted-foreground">Total Sales</p>
+              <p className="text-2xl font-bold">{seller.totalSales ?? 0}</p>
             </div>
             <div className="rounded-lg border bg-card p-4 shadow-sm">
               <p className="text-sm text-muted-foreground">Products</p>
-              <p className="text-2xl font-bold">{seller.products}</p>
+              <p className="text-2xl font-bold">{seller.products.length}</p>
             </div>
             <div className="rounded-lg border bg-card p-4 shadow-sm">
-              <p className="text-sm text-muted-foreground">Avg. Rating</p>
-              <p className="text-2xl font-bold">{seller.rating}</p>
-            </div>
-          </div>
-
-          {/* Sales Chart */}
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h3 className="font-semibold mb-4">Sales Overview</h3>
-            <div className="h-48 flex items-end gap-2">
-              {salesStats.map((stat) => (
-                <div key={stat.month} className="flex-1 flex flex-col items-center">
-                  <div
-                    className="w-full bg-primary rounded-t"
-                    style={{ height: `${(stat.sales / 3500) * 100}%` }}
-                  />
-                  <span className="text-xs text-muted-foreground mt-2">
-                    {stat.month}
-                  </span>
-                </div>
-              ))}
+              <p className="text-sm text-muted-foreground">Recent Orders</p>
+              <p className="text-2xl font-bold">{seller.recentOrders.length}</p>
             </div>
           </div>
 
           {/* Products */}
           <div className="rounded-lg border bg-card shadow-sm">
-            <div className="p-4 border-b flex items-center justify-between">
+            <div className="flex items-center justify-between border-b p-4">
               <h3 className="font-semibold">Products</h3>
-              <Link
-                href={`/products?seller=${id}`}
-                className="text-sm text-primary hover:underline"
-              >
-                View All →
-              </Link>
             </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Price</th>
-                  <th>Sales</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id}>
-                    <td className="font-medium">{product.name}</td>
-                    <td>${product.price}</td>
-                    <td>{product.sales}</td>
-                    <td>
-                      <span className={`badge ${statusColors[product.status]}`}>
-                        {product.status}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="text-primary hover:underline text-sm"
-                      >
-                        View
-                      </Link>
-                    </td>
+            {seller.products.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                No products yet
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Sales</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {seller.products.map((product) => (
+                    <tr key={String(product.id)}>
+                      <td className="font-medium">{product.name}</td>
+                      <td>${centsToDollars(product.price)}</td>
+                      <td>{product.salesCount}</td>
+                      <td>
+                        <span
+                          className={`badge ${statusColors[product.status] ?? ''}`}
+                        >
+                          {product.status}
+                        </span>
+                      </td>
+                      <td>
+                        <Link
+                          href={`/products/${String(product.id)}`}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Recent Orders */}
           <div className="rounded-lg border bg-card shadow-sm">
-            <div className="p-4 border-b flex items-center justify-between">
+            <div className="flex items-center justify-between border-b p-4">
               <h3 className="font-semibold">Recent Orders</h3>
-              <Link
-                href={`/orders?seller=${id}`}
-                className="text-sm text-primary hover:underline"
-              >
-                View All →
-              </Link>
             </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Order ID</th>
-                  <th>Product</th>
-                  <th>Customer</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td>
-                      <Link
-                        href={`/orders/${order.id}`}
-                        className="text-primary hover:underline"
-                      >
-                        {order.id}
-                      </Link>
-                    </td>
-                    <td>{order.product}</td>
-                    <td>{order.customer}</td>
-                    <td className="font-medium">${order.amount}</td>
-                    <td className="text-muted-foreground">{order.date}</td>
+            {seller.recentOrders.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                No orders yet
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Product</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Admin Actions */}
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h3 className="font-semibold mb-4">Admin Actions</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <button className="rounded-md border px-4 py-3 text-sm font-medium hover:bg-muted text-left">
-                <span className="block font-medium">Adjust Commission Rate</span>
-                <span className="text-muted-foreground">
-                  Current: {seller.commissionRate}%
-                </span>
-              </button>
-              <button className="rounded-md border px-4 py-3 text-sm font-medium hover:bg-muted text-left">
-                <span className="block font-medium">View Payout History</span>
-                <span className="text-muted-foreground">
-                  Last payout: $2,450.00
-                </span>
-              </button>
-              <button className="rounded-md border px-4 py-3 text-sm font-medium hover:bg-muted text-left">
-                <span className="block font-medium">Feature Seller</span>
-                <span className="text-muted-foreground">
-                  Promote on homepage
-                </span>
-              </button>
-              <button className="rounded-md border border-destructive/30 px-4 py-3 text-sm font-medium hover:bg-destructive/10 text-left text-destructive">
-                <span className="block font-medium">Delete Seller Account</span>
-                <span className="text-destructive/70">
-                  This action cannot be undone
-                </span>
-              </button>
-            </div>
+                </thead>
+                <tbody>
+                  {seller.recentOrders.map((order) =>
+                    order ? (
+                      <tr key={String(order.id)}>
+                        <td>
+                          <Link
+                            href={`/orders/${String(order.id)}`}
+                            className="text-primary hover:underline"
+                          >
+                            {order.orderNumber}
+                          </Link>
+                        </td>
+                        <td>{order.productName}</td>
+                        <td>{order.buyerName ?? 'Unknown'}</td>
+                        <td className="font-medium">
+                          ${centsToDollars(order.total)}
+                        </td>
+                        <td>
+                          <span className="badge badge-secondary capitalize">
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="text-muted-foreground">
+                          {formatDate(order.createdAt)}
+                        </td>
+                      </tr>
+                    ) : null
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

@@ -1,22 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
 
 export default function ShippingSettingsPage() {
+  const settings = useQuery(api.functions.users.getSellerSettings, {});
+  const updateSettings = useMutation(api.functions.users.updateSellerSettings);
+
   const [processingTime, setProcessingTime] = useState("1-3");
   const [domesticShipping, setDomesticShipping] = useState(true);
   const [internationalShipping, setInternationalShipping] = useState(false);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState("50");
+  const [standardPrice, setStandardPrice] = useState("5.99");
+  const [standardDays, setStandardDays] = useState("5-7");
+  const [expressPrice, setExpressPrice] = useState("12.99");
+  const [expressDays, setExpressDays] = useState("2-3");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  const shippingMethods = [
-    { id: "standard", name: "Standard Shipping", price: "5.99", days: "5-7" },
-    { id: "express", name: "Express Shipping", price: "12.99", days: "2-3" },
-    { id: "overnight", name: "Overnight Shipping", price: "24.99", days: "1" },
-  ];
+  // Populate form from saved settings
+  useEffect(() => {
+    if (settings) {
+      setProcessingTime((settings['processingTime'] as string) ?? "1-3");
+      setDomesticShipping(settings['domesticShipping'] !== false);
+      setInternationalShipping(settings['internationalShipping'] === true);
+      setFreeShippingThreshold((settings['freeShippingThreshold'] as string) ?? "50");
+      setStandardPrice((settings['standardShippingPrice'] as string) ?? "5.99");
+      setStandardDays((settings['standardShippingDays'] as string) ?? "5-7");
+      setExpressPrice((settings['expressShippingPrice'] as string) ?? "12.99");
+      setExpressDays((settings['expressShippingDays'] as string) ?? "2-3");
+    }
+  }, [settings]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  if (settings === undefined) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--muted-foreground)]" />
+      </div>
+    );
+  }
+
+  if (settings === null) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-[var(--muted-foreground)]">No seller profile found.</p>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Save shipping settings via Convex mutation
+    setIsSaving(true);
+    setSaveMessage("");
+    try {
+      await updateSettings({
+        settings: {
+          processingTime,
+          domesticShipping,
+          internationalShipping,
+          freeShippingThreshold,
+          standardShippingPrice: standardPrice,
+          standardShippingDays: standardDays,
+          expressShippingPrice: expressPrice,
+          expressShippingDays: expressDays,
+        },
+      });
+      setSaveMessage("Shipping settings saved successfully!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Failed to save");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -28,6 +85,18 @@ export default function ShippingSettingsPage() {
           Configure your shipping options and rates
         </p>
       </div>
+
+      {saveMessage && (
+        <div
+          className={`rounded-lg p-3 text-sm ${
+            saveMessage.includes("success")
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Processing Time */}
@@ -92,34 +161,56 @@ export default function ShippingSettingsPage() {
         <div className="seller-card">
           <h2 className="text-lg font-semibold mb-4">Shipping Methods</h2>
           <div className="space-y-3">
-            {shippingMethods.map((method) => (
-              <div
-                key={method.id}
-                className="flex items-center justify-between p-4 border border-[var(--border)] rounded-lg"
-              >
-                <div>
-                  <p className="font-medium">{method.name}</p>
-                  <p className="text-sm text-[var(--muted-foreground)]">
-                    {method.days} business days
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">${method.price}</p>
-                  <button
-                    type="button"
-                    className="text-sm text-[var(--primary)] hover:underline"
-                  >
-                    Edit
-                  </button>
+            <div className="flex items-center justify-between p-4 border border-[var(--border)] rounded-lg">
+              <div className="flex-1">
+                <p className="font-medium">Standard Shipping</p>
+                <div className="flex gap-4 mt-2">
+                  <div>
+                    <label className="text-xs text-[var(--muted-foreground)]">Days</label>
+                    <input
+                      type="text"
+                      value={standardDays}
+                      onChange={(e) => setStandardDays(e.target.value)}
+                      className="w-20 px-2 py-1 border border-[var(--border)] rounded bg-[var(--background)] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[var(--muted-foreground)]">Price ($)</label>
+                    <input
+                      type="text"
+                      value={standardPrice}
+                      onChange={(e) => setStandardPrice(e.target.value)}
+                      className="w-20 px-2 py-1 border border-[var(--border)] rounded bg-[var(--background)] text-sm"
+                    />
+                  </div>
                 </div>
               </div>
-            ))}
-            <button
-              type="button"
-              className="w-full py-3 border-2 border-dashed border-[var(--border)] rounded-lg text-[var(--muted-foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
-            >
-              + Add Shipping Method
-            </button>
+            </div>
+            <div className="flex items-center justify-between p-4 border border-[var(--border)] rounded-lg">
+              <div className="flex-1">
+                <p className="font-medium">Express Shipping</p>
+                <div className="flex gap-4 mt-2">
+                  <div>
+                    <label className="text-xs text-[var(--muted-foreground)]">Days</label>
+                    <input
+                      type="text"
+                      value={expressDays}
+                      onChange={(e) => setExpressDays(e.target.value)}
+                      className="w-20 px-2 py-1 border border-[var(--border)] rounded bg-[var(--background)] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[var(--muted-foreground)]">Price ($)</label>
+                    <input
+                      type="text"
+                      value={expressPrice}
+                      onChange={(e) => setExpressPrice(e.target.value)}
+                      className="w-20 px-2 py-1 border border-[var(--border)] rounded bg-[var(--background)] text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -149,16 +240,11 @@ export default function ShippingSettingsPage() {
         {/* Submit Button */}
         <div className="flex justify-end gap-4">
           <button
-            type="button"
-            className="px-6 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
             type="submit"
-            className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
+            disabled={isSaving}
+            className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            Save Changes
+            {isSaving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>

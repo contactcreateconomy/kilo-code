@@ -1,20 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
 
 export default function StoreSettingsPage() {
-  const [storeName, setStoreName] = useState("Artisan Crafts Co.");
-  const [storeDescription, setStoreDescription] = useState(
-    "Handcrafted goods made with love and care. We specialize in unique, artisanal products that bring warmth to your home."
-  );
-  const [storeEmail, setStoreEmail] = useState("contact@artisancrafts.com");
-  const [storePhone, setStorePhone] = useState("+1 (555) 123-4567");
-  const [storeWebsite, setStoreWebsite] = useState("https://artisancrafts.com");
-  const [storeLocation, setStoreLocation] = useState("Portland, Oregon");
+  const sellerProfile = useQuery(api.functions.users.getMySellerProfile, {});
+  const updateProfile = useMutation(api.functions.users.updateSellerProfile);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [storeName, setStoreName] = useState("");
+  const [storeDescription, setStoreDescription] = useState("");
+  const [storeEmail, setStoreEmail] = useState("");
+  const [storePhone, setStorePhone] = useState("");
+  const [storeWebsite, setStoreWebsite] = useState("");
+  const [storeLocation, setStoreLocation] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  // Populate form when data loads
+  useEffect(() => {
+    if (sellerProfile) {
+      setStoreName(sellerProfile.businessName ?? "");
+      setStoreDescription(sellerProfile.description ?? "");
+      setStoreEmail(sellerProfile.businessEmail ?? "");
+      setStorePhone(sellerProfile.businessPhone ?? "");
+      setStoreWebsite(sellerProfile.websiteUrl ?? "");
+      setStoreLocation(
+        sellerProfile.businessAddress
+          ? [sellerProfile.businessAddress.city, sellerProfile.businessAddress.state]
+              .filter(Boolean)
+              .join(", ")
+          : ""
+      );
+    }
+  }, [sellerProfile]);
+
+  if (sellerProfile === undefined) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--muted-foreground)]" />
+      </div>
+    );
+  }
+
+  if (sellerProfile === null) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-[var(--muted-foreground)]">No seller profile found. Please apply to become a seller first.</p>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Save store settings via Convex mutation
+    setIsSaving(true);
+    setSaveMessage("");
+    try {
+      const parts = storeLocation.split(",").map((s) => s.trim());
+      await updateProfile({
+        businessName: storeName,
+        description: storeDescription,
+        businessEmail: storeEmail,
+        businessPhone: storePhone,
+        websiteUrl: storeWebsite,
+        businessAddress: {
+          city: parts[0] ?? "",
+          state: parts[1] ?? "",
+        },
+      });
+      setSaveMessage("Settings saved successfully!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Failed to save");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -27,42 +88,40 @@ export default function StoreSettingsPage() {
         </p>
       </div>
 
+      {saveMessage && (
+        <div
+          className={`rounded-lg p-3 text-sm ${
+            saveMessage.includes("success")
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Store Logo */}
         <div className="seller-card">
           <h2 className="text-lg font-semibold mb-4">Store Logo</h2>
           <div className="flex items-center gap-6">
             <div className="w-24 h-24 bg-[var(--muted)] rounded-lg flex items-center justify-center text-4xl">
-              🏪
+              {sellerProfile.logoUrl ? (
+                <img
+                  src={sellerProfile.logoUrl}
+                  alt="Store logo"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              ) : (
+                "🏪"
+              )}
             </div>
             <div>
-              <button
-                type="button"
-                className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
-              >
-                Upload Logo
-              </button>
-              <p className="text-sm text-[var(--muted-foreground)] mt-2">
-                Recommended: 400x400px, PNG or JPG
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Logo upload coming soon. Currently managed via Stripe Connect.
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Store Banner */}
-        <div className="seller-card">
-          <h2 className="text-lg font-semibold mb-4">Store Banner</h2>
-          <div className="w-full h-32 bg-[var(--muted)] rounded-lg flex items-center justify-center">
-            <button
-              type="button"
-              className="px-4 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--background)] transition-colors"
-            >
-              Upload Banner Image
-            </button>
-          </div>
-          <p className="text-sm text-[var(--muted-foreground)] mt-2">
-            Recommended: 1200x300px, PNG or JPG
-          </p>
         </div>
 
         {/* Basic Information */}
@@ -76,6 +135,7 @@ export default function StoreSettingsPage() {
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
                 className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                required
               />
             </div>
             <div>
@@ -96,6 +156,7 @@ export default function StoreSettingsPage() {
                 type="text"
                 value={storeLocation}
                 onChange={(e) => setStoreLocation(e.target.value)}
+                placeholder="City, State"
                 className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               />
             </div>
@@ -130,8 +191,52 @@ export default function StoreSettingsPage() {
                 type="url"
                 value={storeWebsite}
                 onChange={(e) => setStoreWebsite(e.target.value)}
+                placeholder="https://example.com"
                 className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Account Status */}
+        <div className="seller-card">
+          <h2 className="text-lg font-semibold mb-4">Account Status</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--muted-foreground)]">Approved:</span>
+              <span
+                className={`px-2 py-0.5 text-xs rounded-full ${
+                  sellerProfile.isApproved
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                }`}
+              >
+                {sellerProfile.isApproved ? "Yes" : "Pending"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--muted-foreground)]">Active:</span>
+              <span
+                className={`px-2 py-0.5 text-xs rounded-full ${
+                  sellerProfile.isActive
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
+                }`}
+              >
+                {sellerProfile.isActive ? "Yes" : "No"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--muted-foreground)]">Stripe:</span>
+              <span
+                className={`px-2 py-0.5 text-xs rounded-full ${
+                  sellerProfile.stripeOnboarded
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                }`}
+              >
+                {sellerProfile.stripeOnboarded ? "Connected" : "Not Connected"}
+              </span>
             </div>
           </div>
         </div>
@@ -139,16 +244,11 @@ export default function StoreSettingsPage() {
         {/* Submit Button */}
         <div className="flex justify-end gap-4">
           <button
-            type="button"
-            className="px-6 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
             type="submit"
-            className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
+            disabled={isSaving}
+            className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            Save Changes
+            {isSaving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>

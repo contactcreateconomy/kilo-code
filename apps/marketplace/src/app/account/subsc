@@ -1,0 +1,11 @@
+import type { Metadata } from "next";
+import { MySubscriptions } from "@/components/account/my-subscriptions";
+
+export const metadata: Metadata = {
+  title: "Subscriptions",
+  description: "Manage your recurring memberships and subscriptions.",
+};
+
+export default function SubscriptionsPage() {
+  return <MySubscriptions />;
+}

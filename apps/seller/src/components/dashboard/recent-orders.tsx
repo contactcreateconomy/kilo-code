@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Card,
@@ -16,60 +18,50 @@ import {
 } from "@createconomy/ui/components/table";
 import { Badge } from "@createconomy/ui/components/badge";
 import { Button } from "@createconomy/ui/components/button";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
 
-// Mock data — in production this would come from Convex
-const recentOrders = [
-  {
-    id: "ORD-001",
-    customer: "Sarah Johnson",
-    product: "Premium UI Kit",
-    amount: 49.99,
-    status: "delivered",
-    date: "2024-01-25",
-  },
-  {
-    id: "ORD-002",
-    customer: "Mike Chen",
-    product: "Icon Pack Pro",
-    amount: 29.99,
-    status: "shipped",
-    date: "2024-01-25",
-  },
-  {
-    id: "ORD-003",
-    customer: "Lisa Park",
-    product: "Landing Page Templates",
-    amount: 79.99,
-    status: "processing",
-    date: "2024-01-24",
-  },
-  {
-    id: "ORD-004",
-    customer: "Alex Rivera",
-    product: "Photo Presets Collection",
-    amount: 39.99,
-    status: "pending",
-    date: "2024-01-24",
-  },
-  {
-    id: "ORD-005",
-    customer: "Emma Wilson",
-    product: "React Component Library",
-    amount: 99.99,
-    status: "delivered",
-    date: "2024-01-23",
-  },
-];
+function centsToDollars(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
 
 const statusStyles: Record<string, string> = {
   delivered: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   shipped: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   processing: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   pending: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
+  refunded: "bg-purple-500/10 text-purple-500 border-purple-500/20",
 };
 
 export function RecentOrders() {
+  const rawOrders = useQuery(api.functions.orders.getSellerOrders, { limit: 5 });
+
+  if (!rawOrders) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="space-y-1.5">
+            <CardTitle className="text-lg">Recent Orders</CardTitle>
+            <CardDescription>Latest customer transactions</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Filter out null entries from the backend
+  const orders = rawOrders.filter(
+    (o): o is NonNullable<typeof o> => o !== null
+  );
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -82,51 +74,55 @@ export function RecentOrders() {
         </Button>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recentOrders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell>
-                  <Link
-                    href={`/orders/${order.id}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {order.id}
-                  </Link>
-                </TableCell>
-                <TableCell>{order.customer}</TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {order.product}
-                </TableCell>
-                <TableCell className="font-medium">
-                  ${order.amount.toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={statusStyles[order.status]}
-                  >
-                    {order.status.charAt(0).toUpperCase() +
-                      order.status.slice(1)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {order.date}
-                </TableCell>
+        {orders.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No orders yet
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {orders.map((order) => (
+                <TableRow key={order._id}>
+                  <TableCell>
+                    <Link
+                      href={`/orders/${order._id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {order.orderNumber}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {order.buyer?.name ?? order.buyer?.email ?? "Unknown"}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    ${centsToDollars(order.total)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={statusStyles[order.status] ?? ""}
+                    >
+                      {order.status.charAt(0).toUpperCase() +
+                        order.status.slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2, ExternalLink } from "lucide-react";
 
 export default function PayoutSettingsPage() {
-  const [bankName, setBankName] = useState("Chase Bank");
-  const [accountNumber, setAccountNumber] = useState("****4567");
-  const [routingNumber, setRoutingNumber] = useState("****8901");
-  const [accountHolder, setAccountHolder] = useState("John Doe");
-  const [payoutSchedule, setPayoutSchedule] = useState("weekly");
-  const [minimumPayout, setMinimumPayout] = useState("50");
+  const sellerProfile = useQuery(api.functions.users.getMySellerProfile, {});
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    // TODO: Save payout settings via Convex mutation
-  };
+  if (sellerProfile === undefined) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--muted-foreground)]" />
+      </div>
+    );
+  }
+
+  if (sellerProfile === null) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-[var(--muted-foreground)]">No seller profile found.</p>
+      </div>
+    );
+  }
+
+  const isConnected = sellerProfile.stripeOnboarded;
+  const stripeAccountId = sellerProfile.stripeAccountId;
 
   return (
     <div className="space-y-6">
@@ -22,120 +32,120 @@ export default function PayoutSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">Payout Settings</h1>
         <p className="text-[var(--muted-foreground)]">
-          Configure how and when you receive your earnings
+          Manage your payout method and preferences through Stripe Connect
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Bank Account Information */}
-        <div className="seller-card">
-          <h2 className="text-lg font-semibold mb-4">Bank Account Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Bank Name</label>
-              <input
-                type="text"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Account Holder Name</label>
-              <input
-                type="text"
-                value={accountHolder}
-                onChange={(e) => setAccountHolder(e.target.value)}
-                className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Account Number</label>
-              <input
-                type="text"
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                placeholder="Enter account number"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Routing Number</label>
-              <input
-                type="text"
-                value={routingNumber}
-                onChange={(e) => setRoutingNumber(e.target.value)}
-                className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                placeholder="Enter routing number"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Payout Preferences */}
-        <div className="seller-card">
-          <h2 className="text-lg font-semibold mb-4">Payout Preferences</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Payout Schedule</label>
-              <select
-                value={payoutSchedule}
-                onChange={(e) => setPayoutSchedule(e.target.value)}
-                className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Bi-weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Minimum Payout Amount</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]">$</span>
-                <input
-                  type="number"
-                  value={minimumPayout}
-                  onChange={(e) => setMinimumPayout(e.target.value)}
-                  className="w-full pl-8 pr-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  min="10"
-                />
-              </div>
-              <p className="text-sm text-[var(--muted-foreground)] mt-1">
-                Minimum $10.00 required
+      {/* Stripe Connect Status */}
+      <div className="seller-card">
+        <h2 className="text-lg font-semibold mb-4">Stripe Connect Account</h2>
+        <div className="flex items-center justify-between p-4 bg-[var(--muted)] rounded-lg">
+          <div>
+            <p className="font-medium">Account Status</p>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              {isConnected
+                ? "Your Stripe Connect account is active and receiving payouts."
+                : "Complete Stripe onboarding to receive payouts."}
+            </p>
+            {stripeAccountId && (
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                Account ID: {stripeAccountId}
               </p>
-            </div>
+            )}
+          </div>
+          <span
+            className={`px-3 py-1 text-sm rounded-full ${
+              isConnected
+                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+            }`}
+          >
+            {isConnected ? "Connected" : "Not Connected"}
+          </span>
+        </div>
+      </div>
+
+      {/* Payout Information */}
+      <div className="seller-card">
+        <h2 className="text-lg font-semibold mb-4">Payout Details</h2>
+        {isConnected ? (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Bank account details, payout schedule, and tax information are managed directly
+              through your Stripe Dashboard. Click below to access your full payout settings.
+            </p>
+            <a
+              href="https://dashboard.stripe.com/settings/payouts"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Open Stripe Dashboard
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--muted-foreground)]">
+              You need to complete Stripe Connect onboarding before you can receive payouts.
+              This will set up your bank account, identity verification, and tax information.
+            </p>
+            <a
+              href="/payouts"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Start Stripe Onboarding
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Payout Schedule Info */}
+      <div className="seller-card">
+        <h2 className="text-lg font-semibold mb-4">Payout Schedule</h2>
+        <div className="space-y-3 text-sm">
+          <div className="flex justify-between py-2 border-b border-[var(--border)]">
+            <span className="text-[var(--muted-foreground)]">Schedule</span>
+            <span>{isConnected ? "Managed by Stripe" : "—"}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-[var(--border)]">
+            <span className="text-[var(--muted-foreground)]">Currency</span>
+            <span>USD</span>
+          </div>
+          <div className="flex justify-between py-2">
+            <span className="text-[var(--muted-foreground)]">Platform Fee</span>
+            <span>Applied per transaction</span>
           </div>
         </div>
+        <p className="text-xs text-[var(--muted-foreground)] mt-4">
+          Payout schedule and minimum thresholds are configured in your Stripe Dashboard.
+        </p>
+      </div>
 
-        {/* Tax Information */}
-        <div className="seller-card">
-          <h2 className="text-lg font-semibold mb-4">Tax Information</h2>
-          <div className="flex items-center justify-between p-4 bg-[var(--muted)] rounded-lg">
-            <div>
-              <p className="font-medium">W-9 Form</p>
-              <p className="text-sm text-[var(--muted-foreground)]">Required for US sellers</p>
-            </div>
-            <span className="status-badge status-active">Verified</span>
+      {/* Tax Information */}
+      <div className="seller-card">
+        <h2 className="text-lg font-semibold mb-4">Tax Information</h2>
+        <div className="flex items-center justify-between p-4 bg-[var(--muted)] rounded-lg">
+          <div>
+            <p className="font-medium">Tax Forms</p>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              {isConnected
+                ? "Tax forms (W-9/W-8) are managed through Stripe."
+                : "Complete onboarding to submit tax information."}
+            </p>
           </div>
+          {isConnected && (
+            <a
+              href="https://dashboard.stripe.com/settings/tax"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-[var(--primary)] hover:underline flex items-center gap-1"
+            >
+              Manage <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
         </div>
-
-        {/* Submit Button */}
-        <div className="flex justify-end gap-4">
-          <button
-            type="button"
-            className="px-6 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
-          >
-            Save Changes
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

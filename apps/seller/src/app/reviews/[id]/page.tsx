@@ -1,41 +1,40 @@
 "use client";
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
 
 export default function ReviewDetailPage() {
   const params = useParams();
   const reviewId = params["id"] as string;
 
-  // Mock review data
-  const review = {
-    id: reviewId,
-    productName: "Handcrafted Wooden Bowl",
-    productId: "prod-1",
-    productImage: "/placeholder-product.jpg",
-    customerName: "Sarah M.",
-    customerEmail: "sarah.m@example.com",
-    rating: 5,
-    comment:
-      "Absolutely beautiful craftsmanship! The bowl is even more stunning in person. The wood grain is gorgeous and the finish is smooth and professional. Will definitely order again.",
-    date: "2024-01-18",
-    hasResponse: true,
-    response:
-      "Thank you so much for your kind words, Sarah! We're thrilled you love the bowl. Each piece is handcrafted with care, and it means the world to us that you appreciate the details.",
-    responseDate: "2024-01-19",
-    helpful: 12,
-    orderId: "ORD-12345",
-  };
+  const reviews = useQuery(api.functions.orders.getSellerProductReviews, {});
 
-  const [response, setResponse] = useState(review.response || "");
-  const [isEditing, setIsEditing] = useState(!review.hasResponse);
+  const review = reviews?.find((r) => r._id === reviewId);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Submit review response via Convex mutation
-    setIsEditing(false);
-  };
+  if (reviews === undefined) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!review) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-xl font-semibold">Review not found</h2>
+        <Link
+          href="/reviews"
+          className="mt-4 inline-block text-primary hover:underline"
+        >
+          ← Back to reviews
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -45,15 +44,15 @@ export default function ReviewDetailPage() {
           Reviews
         </Link>
         <span>/</span>
-        <span>Review #{reviewId}</span>
+        <span>Review Detail</span>
       </nav>
 
       {/* Review Card */}
       <div className="seller-card">
         <div className="flex items-start gap-6">
-          {/* Product Image */}
+          {/* Product placeholder */}
           <div className="w-24 h-24 bg-[var(--muted)] rounded-lg flex-shrink-0 flex items-center justify-center">
-            <span className="text-4xl">🖼️</span>
+            <span className="text-4xl">📦</span>
           </div>
 
           {/* Review Content */}
@@ -61,10 +60,14 @@ export default function ReviewDetailPage() {
             <div className="flex items-start justify-between">
               <div>
                 <Link
-                  href={`/products/${review.productId}`}
+                  href={
+                    review.product
+                      ? `/products/${review.product.id}`
+                      : "#"
+                  }
                   className="text-lg font-semibold hover:text-[var(--primary)]"
                 >
-                  {review.productName}
+                  {review.product?.name ?? "Unknown Product"}
                 </Link>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex">
@@ -84,108 +87,64 @@ export default function ReviewDetailPage() {
                 </div>
               </div>
               <span className="text-sm text-[var(--muted-foreground)]">
-                {new Date(review.date).toLocaleDateString()}
+                {new Date(review.createdAt).toLocaleDateString()}
               </span>
             </div>
 
             <div className="mt-4">
               <p className="text-sm text-[var(--muted-foreground)] mb-2">
-                {review.customerName}
+                {review.user?.name ?? review.user?.email ?? "Anonymous"}
               </p>
-              <p className="text-[var(--foreground)]">{review.comment}</p>
+              {review.title && (
+                <p className="font-medium mb-2">{review.title}</p>
+              )}
+              <p className="text-[var(--foreground)]">{review.content}</p>
             </div>
 
             <div className="flex items-center gap-4 mt-4 text-sm text-[var(--muted-foreground)]">
-              <span>{review.helpful} people found this helpful</span>
-              <span>•</span>
-              <Link
-                href={`/orders/${review.orderId}`}
-                className="hover:text-[var(--primary)]"
-              >
-                Order #{review.orderId}
-              </Link>
+              <span>{review.helpfulCount ?? 0} people found this helpful</span>
+              {review.isVerifiedPurchase && (
+                <>
+                  <span>•</span>
+                  <span className="text-emerald-500">✓ Verified Purchase</span>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Response Section */}
+      {/* Review Info */}
       <div className="seller-card">
-        <h2 className="text-lg font-semibold mb-4">Your Response</h2>
-
-        {review.hasResponse && !isEditing ? (
+        <h2 className="text-lg font-semibold mb-4">Review Information</h2>
+        <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="bg-[var(--muted)] p-4 rounded-lg">
-              <p>{review.response}</p>
-              <p className="text-sm text-[var(--muted-foreground)] mt-2">
-                Responded on {new Date(review.responseDate!).toLocaleDateString()}
-              </p>
-            </div>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="mt-4 px-4 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
-            >
-              Edit Response
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <textarea
-              value={response}
-              onChange={(e) => setResponse(e.target.value)}
-              rows={5}
-              className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-              placeholder="Write a thoughtful response to this review..."
-            />
-            <p className="text-sm text-[var(--muted-foreground)] mt-2">
-              {response.length}/500 characters
-            </p>
-
-            <div className="flex items-center gap-4 mt-4">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
+            <dt className="text-[var(--muted-foreground)]">Status</dt>
+            <dd className="mt-1">
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  review.isApproved
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                }`}
               >
-                {review.hasResponse ? "Update Response" : "Post Response"}
-              </button>
-              {review.hasResponse && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResponse(review.response || "");
-                    setIsEditing(false);
-                  }}
-                  className="px-6 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
-        )}
-      </div>
-
-      {/* Response Tips */}
-      <div className="seller-card bg-[var(--muted)]">
-        <h3 className="font-semibold mb-3">Tips for Responding to Reviews</h3>
-        <ul className="space-y-2 text-sm text-[var(--muted-foreground)]">
-          <li className="flex items-start gap-2">
-            <span className="text-[var(--primary)]">•</span>
-            <span>Thank the customer for their feedback</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-[var(--primary)]">•</span>
-            <span>Address any specific concerns they mentioned</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-[var(--primary)]">•</span>
-            <span>Keep your response professional and friendly</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-[var(--primary)]">•</span>
-            <span>Offer solutions for negative experiences</span>
-          </li>
-        </ul>
+                {review.isApproved ? "Approved" : "Pending Approval"}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[var(--muted-foreground)]">Date</dt>
+            <dd className="mt-1">{new Date(review.createdAt).toLocaleDateString()}</dd>
+          </div>
+          <div>
+            <dt className="text-[var(--muted-foreground)]">Verified Purchase</dt>
+            <dd className="mt-1">{review.isVerifiedPurchase ? "Yes" : "No"}</dd>
+          </div>
+          <div>
+            <dt className="text-[var(--muted-foreground)]">Helpful Votes</dt>
+            <dd className="mt-1">{review.helpfulCount ?? 0}</dd>
+          </div>
+        </dl>
       </div>
     </div>
   );

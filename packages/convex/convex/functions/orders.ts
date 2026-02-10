@@ -695,3 +695,216 @@ export const cancelOrder = mutation({
     return true;
   },
 });
+
+// ============================================================================
+// Seller Dashboard Queries
+// ============================================================================
+
+/**
+ * Helper: require the current user to be a seller
+ */
+async function requireSeller(ctx: import("../_generated/server").QueryCtx) {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
+    throw new Error("Authentication required");
+  }
+
+  const profile = await ctx.db
+    .query("userProfiles")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .first();
+
+  if (
+    !profile ||
+    (profile.defaultRole !== "seller" && profile.defaultRole !== "admin")
+  ) {
+    throw new Error("Seller role required");
+  }
+
+  return userId;
+}
+
+/**
+ * Get seller dashboard statistics
+ *
+ * @returns Seller-specific stats: revenue, orders, products, views
+ */
+export const getSellerDashboardStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireSeller(ctx);
+
+    // Get seller's products
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_seller", (q) => q.eq("sellerId", userId))
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .collect();
+
+    const totalRevenue = products.reduce(
+      (sum, p) => sum + p.salesCount * p.price,
+      0
+    );
+    const totalViews = products.reduce((sum, p) => sum + (p.viewCount ?? 0), 0);
+    const totalSales = products.reduce((sum, p) => sum + p.salesCount, 0);
+
+    // Get seller's order items
+    const orderItems = await ctx.db
+      .query("orderItems")
+      .withIndex("by_seller", (q) => q.eq("sellerId", userId))
+      .collect();
+
+    const orderCount = new Set(orderItems.map((i) => String(i.orderId))).size;
+
+    return {
+      revenue: totalRevenue,
+      orders: orderCount,
+      products: products.length,
+      views: totalViews,
+      sales: totalSales,
+      activeProducts: products.filter((p) => p.status === "active").length,
+      draftProducts: products.filter((p) => p.status === "draft").length,
+    };
+  },
+});
+
+/**
+ * Get seller's monthly revenue for charts
+ *
+ * @returns Array of { name, revenue, orders } for last 12 months
+ */
+export const getSellerMonthlyRevenue = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireSeller(ctx);
+
+    const now = Date.now();
+    const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
+
+    // Get seller's order items from last 12 months
+    const orderItems = await ctx.db
+      .query("orderItems")
+      .withIndex("by_seller", (q) => q.eq("sellerId", userId))
+      .collect();
+
+    // Get order dates for each item
+    const itemsWithDates = await Promise.all(
+      orderItems.map(async (item) => {
+        const order = await ctx.db.get(item.orderId);
+        return order && order.createdAt > oneYearAgo
+          ? { subtotal: item.subtotal, createdAt: order.createdAt }
+          : null;
+      })
+    );
+
+    const validItems = itemsWithDates.filter(Boolean) as {
+      subtotal: number;
+      createdAt: number;
+    }[];
+
+    // Group by month
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    const monthlyData: Record<
+      string,
+      { revenue: number; orders: number }
+    > = {};
+
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now - i * 30 * 24 * 60 * 60 * 1000);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthlyData[key] = { revenue: 0, orders: 0 };
+    }
+
+    for (const item of validItems) {
+      const d = new Date(item.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (monthlyData[key]) {
+        monthlyData[key]!.revenue += item.subtotal;
+        monthlyData[key]!.orders += 1;
+      }
+    }
+
+    return Object.entries(monthlyData).map(([key, data]) => {
+      const [, month] = key.split("-");
+      return {
+        name: months[parseInt(month!, 10) - 1],
+        revenue: data.revenue,
+        orders: data.orders,
+      };
+    });
+  },
+});
+
+/**
+ * Get reviews for a seller's products
+ *
+ * @param limit - Number of reviews to return
+ * @returns Reviews with product and user info
+ */
+export const getSellerProductReviews = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireSeller(ctx);
+    const limit = args.limit ?? 20;
+
+    // Get seller's product IDs
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_seller", (q) => q.eq("sellerId", userId))
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .collect();
+
+    const productIds = new Set(products.map((p) => String(p._id)));
+
+    // Get reviews for these products
+    const allReviews = await ctx.db
+      .query("reviews")
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .order("desc")
+      .take(200); // fetch a batch, then filter
+
+    const sellerReviews = allReviews
+      .filter((r) => productIds.has(String(r.productId)))
+      .slice(0, limit);
+
+    // Enrich with product and user info
+    const reviewsWithDetails = await Promise.all(
+      sellerReviews.map(async (review) => {
+        const product = await ctx.db.get(review.productId);
+        const user = (await ctx.db.get(review.userId)) as {
+          _id: Id<"users">;
+          name?: string;
+          email?: string;
+        } | null;
+
+        return {
+          ...review,
+          product: product
+            ? { id: product._id, name: product.name }
+            : null,
+          user: user
+            ? { id: user._id, name: user.name, email: user.email }
+            : null,
+        };
+      })
+    );
+
+    return reviewsWithDetails;
+  },
+});

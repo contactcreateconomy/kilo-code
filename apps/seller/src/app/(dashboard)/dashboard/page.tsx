@@ -1,10 +1,29 @@
+"use client";
+
 import { SalesCard } from "@/components/dashboard/sales-card";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { RecentOrders } from "@/components/dashboard/recent-orders";
 import { LowStockAlert } from "@/components/dashboard/low-stock-alert";
 import { QuickActions } from "@/components/dashboard/quick-actions";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
+
+function centsToDollars(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
 
 export default function SellerDashboard() {
+  const stats = useQuery(api.functions.orders.getSellerDashboardStats, {});
+
+  if (!stats) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -18,31 +37,23 @@ export default function SellerDashboard() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <SalesCard
-          title="Total Sales"
-          value="$12,450.00"
-          change={12.5}
-          trend="up"
+          title="Total Revenue"
+          value={`$${centsToDollars(stats.revenue)}`}
           icon="dollar"
         />
         <SalesCard
           title="Orders"
-          value="156"
-          change={8.2}
-          trend="up"
+          value={String(stats.orders)}
           icon="shopping-cart"
         />
         <SalesCard
           title="Products"
-          value="42"
-          change={3}
-          trend="neutral"
+          value={String(stats.products)}
           icon="package"
         />
         <SalesCard
           title="Views"
-          value="8,432"
-          change={-2.1}
-          trend="down"
+          value={stats.views.toLocaleString()}
           icon="eye"
         />
       </div>

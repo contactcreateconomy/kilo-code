@@ -4,71 +4,56 @@ import { useState } from "react";
 import { SellerLayout } from "@/components/layout/seller-layout";
 import { SellerGuard } from "@/components/auth/seller-guard";
 import { OrderCard } from "@/components/orders/order-card";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
 
-const mockOrders = [
-  {
-    id: "ORD-001",
-    customer: "John D.",
-    items: 2,
-    total: 89.98,
-    status: "pending",
-    date: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: "ORD-002",
-    customer: "Sarah M.",
-    items: 1,
-    total: 45.99,
-    status: "processing",
-    date: "2024-01-15T09:15:00Z",
-  },
-  {
-    id: "ORD-003",
-    customer: "Mike R.",
-    items: 3,
-    total: 156.97,
-    status: "shipped",
-    date: "2024-01-14T16:45:00Z",
-  },
-  {
-    id: "ORD-004",
-    customer: "Emily K.",
-    items: 1,
-    total: 125.0,
-    status: "delivered",
-    date: "2024-01-13T11:20:00Z",
-  },
-  {
-    id: "ORD-005",
-    customer: "David L.",
-    items: 2,
-    total: 78.5,
-    status: "cancelled",
-    date: "2024-01-12T14:00:00Z",
-  },
-];
+function centsToDollars(cents: number): number {
+  return cents / 100;
+}
 
 export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState("all");
 
-  const filteredOrders = mockOrders.filter((order) => {
+  const rawOrders = useQuery(api.functions.orders.getSellerOrders, {});
+
+  if (!rawOrders) {
+    return (
+      <SellerGuard>
+        <SellerLayout>
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </SellerLayout>
+      </SellerGuard>
+    );
+  }
+
+  // Filter out any null entries from the backend
+  const orders = rawOrders.filter(
+    (o): o is NonNullable<typeof o> => o !== null
+  );
+
+  const filteredOrders = orders.filter((order) => {
     const matchesStatus =
       statusFilter === "all" || order.status === statusFilter;
     const matchesSearch =
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchQuery.toLowerCase());
+      (order.orderNumber ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.buyer?.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.buyer?.email ?? "").toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
   const statusCounts = {
-    all: mockOrders.length,
-    pending: mockOrders.filter((o) => o.status === "pending").length,
-    processing: mockOrders.filter((o) => o.status === "processing").length,
-    shipped: mockOrders.filter((o) => o.status === "shipped").length,
-    delivered: mockOrders.filter((o) => o.status === "delivered").length,
-    cancelled: mockOrders.filter((o) => o.status === "cancelled").length,
+    all: orders.length,
+    pending: orders.filter((o) => o.status === "pending").length,
+    confirmed: orders.filter((o) => o.status === "confirmed").length,
+    processing: orders.filter((o) => o.status === "processing").length,
+    shipped: orders.filter((o) => o.status === "shipped").length,
+    delivered: orders.filter((o) => o.status === "delivered").length,
+    cancelled: orders.filter((o) => o.status === "cancelled").length,
   };
 
   return (
@@ -85,19 +70,21 @@ export default function OrdersPage() {
 
           {/* Status Tabs */}
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {Object.entries(statusCounts).map(([status, count]) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  statusFilter === status
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]"
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)} ({count})
-              </button>
-            ))}
+            {Object.entries(statusCounts)
+              .filter(([status, count]) => count > 0 || status === "all" || status === "pending")
+              .map(([status, count]) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    statusFilter === status
+                      ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                      : "bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]"
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)} ({count})
+                </button>
+              ))}
           </div>
 
           {/* Filters */}
@@ -121,7 +108,7 @@ export default function OrdersPage() {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search by order ID or customer..."
+                    placeholder="Search by order number or customer..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
@@ -147,7 +134,18 @@ export default function OrdersPage() {
           {/* Orders List */}
           <div className="space-y-4">
             {filteredOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard
+                key={order._id}
+                order={{
+                  id: order._id,
+                  orderNumber: order.orderNumber,
+                  customer: order.buyer?.name ?? order.buyer?.email ?? "Unknown",
+                  items: order.items?.length ?? 0,
+                  total: centsToDollars(order.total),
+                  status: order.status,
+                  date: new Date(order.createdAt).toLocaleDateString(),
+                }}
+              />
             ))}
           </div>
 

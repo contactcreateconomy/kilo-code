@@ -1,11 +1,7 @@
-import type { Metadata } from 'next';
+'use client';
+
 import Link from 'next/link';
 import { ProductForm } from '@/components/forms/product-form';
-
-export const metadata: Metadata = {
-  title: 'New Product',
-  description: 'Create a new product',
-};
 
 export default function NewProductPage() {
   return (

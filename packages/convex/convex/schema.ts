@@ -254,6 +254,38 @@ export default defineSchema({
     reviewCount: v.number(),
     salesCount: v.number(),
     viewCount: v.number(),
+    // Gumroad-inspired product type & pricing fields
+    productType: v.optional(
+      v.union(
+        v.literal("digital"),       // One-time digital download
+        v.literal("course"),        // Online course / module-based
+        v.literal("membership"),    // Recurring access / subscription
+        v.literal("physical"),      // Physical goods
+        v.literal("service"),       // Service / consultation
+        v.literal("bundle")         // Bundle of multiple products
+      )
+    ),
+    pricingType: v.optional(
+      v.union(
+        v.literal("fixed"),         // Fixed price only
+        v.literal("pwyw"),          // Pay What You Want (with optional minimum)
+        v.literal("free")           // Free product (lead magnet)
+      )
+    ),
+    minPrice: v.optional(v.number()),        // Minimum price in cents (for PWYW)
+    suggestedPrice: v.optional(v.number()),  // Suggested price in cents (for PWYW)
+    // Digital delivery settings
+    maxDownloads: v.optional(v.number()),    // Max downloads per purchase (null = unlimited)
+    enableLicenseKeys: v.optional(v.boolean()), // Auto-generate license keys
+    // Subscription settings (for membership products)
+    billingPeriod: v.optional(
+      v.union(
+        v.literal("monthly"),
+        v.literal("quarterly"),
+        v.literal("yearly")
+      )
+    ),
+    trialDays: v.optional(v.number()),       // Free trial period in days
     isDeleted: v.boolean(),
     deletedAt: v.optional(v.number()),
     createdAt: v.number(),
@@ -342,6 +374,10 @@ export default defineSchema({
       })
     ),
     notes: v.optional(v.string()),
+    // Gumroad-inspired fields
+    offerCodeId: v.optional(v.id("offerCodes")),
+    offerCodeValue: v.optional(v.string()), // Snapshot of the code used
+    affiliateId: v.optional(v.id("affiliates")),
     metadata: metadataValidator, // Security fix (S5): replaced v.any()
     paidAt: v.optional(v.number()),
     shippedAt: v.optional(v.number()),
@@ -372,6 +408,13 @@ export default defineSchema({
     quantity: v.number(),
     subtotal: v.number(),
     status: orderStatusValidator,
+    // Gumroad-inspired fields
+    variantId: v.optional(v.id("productVariants")),
+    variantName: v.optional(v.string()),
+    offerCodeId: v.optional(v.id("offerCodes")),
+    discountAmount: v.optional(v.number()), // cents discount applied
+    affiliateId: v.optional(v.id("affiliates")),
+    licenseKeyId: v.optional(v.id("licenses")),
     metadata: metadataValidator, // Security fix (S5): replaced v.any()
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -416,6 +459,10 @@ export default defineSchema({
     quantity: v.number(),
     price: v.number(),
     subtotal: v.number(),
+    // Gumroad-inspired fields
+    variantId: v.optional(v.id("productVariants")),
+    variantName: v.optional(v.string()),
+    customPrice: v.optional(v.number()), // For PWYW products
     addedAt: v.number(),
     updatedAt: v.number(),
   })
@@ -837,6 +884,15 @@ export default defineSchema({
     ),
     description: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
+    // Gumroad-inspired seller profile fields
+    bannerUrl: v.optional(v.string()),       // Profile cover/banner image
+    websiteUrl: v.optional(v.string()),      // External website
+    twitterHandle: v.optional(v.string()),   // Social: Twitter/X
+    youtubeUrl: v.optional(v.string()),      // Social: YouTube
+    accentColor: v.optional(v.string()),     // Brand color (hex)
+    followerCount: v.optional(v.number()),   // Denormalized follower count
+    totalSales: v.optional(v.number()),      // Denormalized total sales count
+    totalRevenue: v.optional(v.number()),    // Denormalized total revenue (cents)
     stripeAccountId: v.optional(v.string()),
     stripeOnboarded: v.boolean(),
     isApproved: v.boolean(),
@@ -1149,6 +1205,295 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_category", ["userId", "categoryId"]),
+
+  // -------------------------------------------------------------------------
+  // Digital Product Delivery Tables (Gumroad Phase 1)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Product files — digital files attached to products for delivery.
+   * Supports multiple files per product with previews vs full content.
+   */
+  productFiles: defineTable({
+    productId: v.id("products"),
+    fileName: v.string(),
+    fileSize: v.number(), // bytes
+    mimeType: v.string(),
+    storageId: v.optional(v.string()), // Convex file storage ID
+    externalUrl: v.optional(v.string()), // External URL if not using Convex storage
+    isPreview: v.boolean(), // Preview file vs full deliverable
+    sortOrder: v.number(),
+    downloadCount: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_product", ["productId", "sortOrder"])
+    .index("by_product_preview", ["productId", "isPreview"])
+    .index("by_deleted", ["isDeleted"]),
+
+  /**
+   * Product downloads — tracks every download for audit and limits.
+   */
+  productDownloads: defineTable({
+    userId: v.id("users"),
+    productFileId: v.id("productFiles"),
+    productId: v.id("products"),
+    orderId: v.id("orders"),
+    downloadedAt: v.number(),
+    ipAddress: v.optional(v.string()),
+  })
+    .index("by_user", ["userId", "downloadedAt"])
+    .index("by_product", ["productId"])
+    .index("by_order", ["orderId"])
+    .index("by_file", ["productFileId"]),
+
+  /**
+   * License keys — auto-generated keys for software/digital products.
+   */
+  licenses: defineTable({
+    productId: v.id("products"),
+    orderId: v.id("orders"),
+    userId: v.id("users"),
+    licenseKey: v.string(),
+    maxActivations: v.number(),
+    currentActivations: v.number(),
+    isDisabled: v.boolean(),
+    disabledReason: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    lastActivatedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_product", ["productId"])
+    .index("by_order", ["orderId"])
+    .index("by_user", ["userId"])
+    .index("by_license_key", ["licenseKey"]),
+
+  // -------------------------------------------------------------------------
+  // Product Variants & Pricing Tables (Gumroad Phase 2)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Product variants — pricing tiers for products (e.g., Basic, Pro, Enterprise).
+   */
+  productVariants: defineTable({
+    productId: v.id("products"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    price: v.number(), // cents
+    compareAtPrice: v.optional(v.number()),
+    maxQuantity: v.optional(v.number()),
+    sortOrder: v.number(),
+    isDefault: v.boolean(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_product", ["productId", "sortOrder"])
+    .index("by_deleted", ["isDeleted"]),
+
+  /**
+   * Offer codes / discount codes — seller-created coupons.
+   */
+  offerCodes: defineTable({
+    sellerId: v.id("users"),
+    tenantId: v.optional(v.id("tenants")),
+    code: v.string(), // uppercase normalized
+    discountType: v.union(v.literal("percent"), v.literal("fixed")),
+    discountValue: v.number(), // percent (0-100) or cents
+    productId: v.optional(v.id("products")), // null = store-wide
+    maxUses: v.optional(v.number()),
+    currentUses: v.number(),
+    minOrderAmount: v.optional(v.number()), // cents
+    startsAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_seller", ["sellerId"])
+    .index("by_code", ["code"])
+    .index("by_seller_code", ["sellerId", "code"])
+    .index("by_active", ["isActive"]),
+
+  // -------------------------------------------------------------------------
+  // Affiliate Tables (Gumroad Phase 2)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Affiliates — links between sellers and affiliate marketers.
+   */
+  affiliates: defineTable({
+    sellerId: v.id("users"),
+    affiliateUserId: v.id("users"),
+    productId: v.optional(v.id("products")), // null = all products
+    commissionPercent: v.number(), // 0-100
+    affiliateCode: v.string(), // unique referral code
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("suspended")
+    ),
+    totalClicks: v.number(),
+    totalSales: v.number(),
+    totalEarned: v.number(), // cents
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_seller", ["sellerId"])
+    .index("by_affiliate", ["affiliateUserId"])
+    .index("by_code", ["affiliateCode"])
+    .index("by_status", ["status"]),
+
+  /**
+   * Affiliate credits — commission records for affiliate sales.
+   */
+  affiliateCredits: defineTable({
+    affiliateId: v.id("affiliates"),
+    orderId: v.id("orders"),
+    orderItemId: v.optional(v.id("orderItems")),
+    amount: v.number(), // cents
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("paid"),
+      v.literal("cancelled")
+    ),
+    paidAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_affiliate", ["affiliateId", "createdAt"])
+    .index("by_order", ["orderId"])
+    .index("by_status", ["status"]),
+
+  // -------------------------------------------------------------------------
+  // Wishlist Tables (Gumroad Phase 3)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Wishlists — buyer's saved products for later.
+   */
+  wishlists: defineTable({
+    userId: v.id("users"),
+    productId: v.id("products"),
+    addedAt: v.number(),
+  })
+    .index("by_user", ["userId", "addedAt"])
+    .index("by_product", ["productId"])
+    .index("by_user_product", ["userId", "productId"]),
+
+  // -------------------------------------------------------------------------
+  // Seller Posts / Blog (Gumroad Phase 3)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Seller posts — blog-style content from sellers.
+   */
+  sellerPosts: defineTable({
+    sellerId: v.id("users"),
+    tenantId: v.optional(v.id("tenants")),
+    title: v.string(),
+    slug: v.string(),
+    content: v.string(), // markdown or rich text
+    excerpt: v.optional(v.string()),
+    coverImageUrl: v.optional(v.string()),
+    isPublished: v.boolean(),
+    publishedAt: v.optional(v.number()),
+    viewCount: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_seller", ["sellerId", "createdAt"])
+    .index("by_seller_published", ["sellerId", "isPublished"])
+    .index("by_slug", ["slug"])
+    .index("by_deleted", ["isDeleted"]),
+
+  // -------------------------------------------------------------------------
+  // Subscription Tables (Gumroad Phase 4)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Subscriptions — recurring billing for membership/subscription products.
+   */
+  subscriptions: defineTable({
+    userId: v.id("users"),
+    productId: v.id("products"),
+    sellerId: v.id("users"),
+    tenantId: v.optional(v.id("tenants")),
+    stripeSubscriptionId: v.optional(v.string()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("cancelled"),
+      v.literal("past_due"),
+      v.literal("trialing"),
+      v.literal("incomplete")
+    ),
+    pricePerPeriod: v.number(), // cents
+    billingPeriod: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("yearly")
+    ),
+    currentPeriodStart: v.optional(v.number()),
+    currentPeriodEnd: v.optional(v.number()),
+    cancelAtPeriodEnd: v.boolean(),
+    cancelledAt: v.optional(v.number()),
+    trialEnd: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_product", ["productId"])
+    .index("by_seller", ["sellerId"])
+    .index("by_status", ["status"])
+    .index("by_stripe_subscription", ["stripeSubscriptionId"]),
+
+  // -------------------------------------------------------------------------
+  // Webhook & API Tables (Gumroad Phase 4)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Webhook endpoints — seller-configured outbound webhook URLs.
+   */
+  webhookEndpoints: defineTable({
+    sellerId: v.id("users"),
+    url: v.string(),
+    events: v.array(v.string()), // e.g., ["order.completed", "subscription.created"]
+    secret: v.string(), // HMAC signing secret
+    isActive: v.boolean(),
+    failureCount: v.number(),
+    lastDeliveredAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_seller", ["sellerId"])
+    .index("by_active", ["isActive"]),
+
+  /**
+   * Webhook deliveries — log of outbound webhook attempts.
+   */
+  webhookDeliveries: defineTable({
+    endpointId: v.id("webhookEndpoints"),
+    event: v.string(),
+    payload: v.string(), // JSON string
+    statusCode: v.optional(v.number()),
+    responseBody: v.optional(v.string()),
+    success: v.boolean(),
+    deliveredAt: v.optional(v.number()),
+    retryCount: v.number(),
+    nextRetryAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_endpoint", ["endpointId", "createdAt"])
+    .index("by_event", ["event"]),
 
   // -------------------------------------------------------------------------
   // Rate Limiting Tables

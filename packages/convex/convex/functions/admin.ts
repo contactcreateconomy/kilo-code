@@ -791,6 +791,567 @@ export const forceUpdateOrderStatus = mutation({
 });
 
 // ============================================================================
+// Single-Record Queries
+// ============================================================================
+
+/**
+ * Get a user by ID with full profile
+ *
+ * @param userId - User ID
+ * @returns User details with profile, orders, and activity
+ */
+export const getUserById = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const user = (await ctx.db.get(args.userId)) as {
+      _id: Id<"users">;
+      email?: string;
+      name?: string;
+      image?: string;
+    } | null;
+
+    if (!user) return null;
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    // Get user's orders
+    const orders = await ctx.db
+      .query("orders")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(20);
+
+    // Get seller record if any
+    const seller = await ctx.db
+      .query("sellers")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    return {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+      profile: profile
+        ? {
+            displayName: profile.displayName,
+            username: profile.username,
+            bio: profile.bio,
+            role: profile.defaultRole,
+            isBanned: profile.isBanned,
+            bannedAt: profile.bannedAt,
+            bannedReason: profile.bannedReason,
+            points: profile.points,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt,
+          }
+        : null,
+      orders: orders.map((o) => ({
+        id: o._id,
+        orderNumber: o.orderNumber,
+        total: o.total,
+        status: o.status,
+        createdAt: o.createdAt,
+      })),
+      seller: seller
+        ? {
+            id: seller._id,
+            businessName: seller.businessName,
+            isApproved: seller.isApproved,
+            isActive: seller.isActive,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * Get a single order by ID with items
+ *
+ * @param orderId - Order ID
+ * @returns Full order with items, user, and payment details
+ */
+export const getOrderById = query({
+  args: {
+    orderId: v.id("orders"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const order = await ctx.db.get(args.orderId);
+    if (!order) return null;
+
+    const user = (await ctx.db.get(order.userId)) as {
+      _id: Id<"users">;
+      email?: string;
+      name?: string;
+    } | null;
+
+    const items = await ctx.db
+      .query("orderItems")
+      .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
+      .collect();
+
+    // Get product & seller details for each item
+    const itemsWithDetails = await Promise.all(
+      items.map(async (item) => {
+        const product = (await ctx.db.get(item.productId)) as {
+          _id: Id<"products">;
+          name: string;
+          slug: string;
+        } | null;
+        const seller = (await ctx.db.get(item.sellerId)) as {
+          _id: Id<"users">;
+          name?: string;
+        } | null;
+        return {
+          ...item,
+          productName: product?.name ?? "Unknown Product",
+          productSlug: product?.slug,
+          sellerName: seller?.name ?? "Unknown Seller",
+        };
+      })
+    );
+
+    // Get payment record
+    const payment = await ctx.db
+      .query("stripePayments")
+      .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
+      .first();
+
+    return {
+      ...order,
+      user: user
+        ? { id: user._id, name: user.name, email: user.email }
+        : null,
+      items: itemsWithDetails,
+      payment: payment
+        ? {
+            id: payment._id,
+            amount: payment.amount,
+            status: payment.status,
+            paymentMethod: payment.paymentMethod,
+            receiptUrl: payment.receiptUrl,
+            createdAt: payment.createdAt,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * Get a single product by ID with full details
+ *
+ * @param productId - Product ID
+ * @returns Product with seller info, images, and stats
+ */
+export const getProductById = query({
+  args: {
+    productId: v.id("products"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const product = await ctx.db.get(args.productId);
+    if (!product) return null;
+
+    const seller = (await ctx.db.get(product.sellerId)) as {
+      _id: Id<"users">;
+      name?: string;
+      email?: string;
+    } | null;
+
+    const category = product.categoryId
+      ? await ctx.db.get(product.categoryId)
+      : null;
+
+    const images = await ctx.db
+      .query("productImages")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .collect();
+
+    return {
+      ...product,
+      seller: seller
+        ? { id: seller._id, name: seller.name, email: seller.email }
+        : null,
+      category: category
+        ? { id: category._id, name: category.name, slug: category.slug }
+        : null,
+      images: images.map((img) => ({
+        id: img._id,
+        url: img.url,
+        altText: img.altText,
+        isPrimary: img.isPrimary,
+        sortOrder: img.sortOrder,
+      })),
+    };
+  },
+});
+
+/**
+ * List all products with pagination (admin view)
+ *
+ * @param limit - Number per page
+ * @param status - Filter by status
+ * @returns Paginated product list
+ */
+export const listAllProducts = query({
+  args: {
+    limit: v.optional(v.number()),
+    status: v.optional(productStatusValidator),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const limit = args.limit ?? 20;
+
+    let productsQuery;
+    if (args.status) {
+      const status = args.status;
+      productsQuery = ctx.db
+        .query("products")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .filter((q) => q.eq(q.field("isDeleted"), false));
+    } else {
+      productsQuery = ctx.db
+        .query("products")
+        .filter((q) => q.eq(q.field("isDeleted"), false));
+    }
+
+    const products = await productsQuery.order("desc").take(limit + 1);
+    const hasMore = products.length > limit;
+    const items = hasMore ? products.slice(0, limit) : products;
+
+    const productsWithDetails = await Promise.all(
+      items.map(async (product) => {
+        const seller = (await ctx.db.get(product.sellerId)) as {
+          _id: Id<"users">;
+          name?: string;
+        } | null;
+        const category = product.categoryId
+          ? await ctx.db.get(product.categoryId)
+          : null;
+        return {
+          id: product._id,
+          name: product.name,
+          slug: product.slug,
+          price: product.price,
+          status: product.status,
+          salesCount: product.salesCount,
+          viewCount: product.viewCount,
+          reviewCount: product.reviewCount,
+          averageRating: product.averageRating,
+          createdAt: product.createdAt,
+          seller: seller ? { id: seller._id, name: seller.name } : null,
+          category: category
+            ? { id: category._id, name: category.name }
+            : null,
+        };
+      })
+    );
+
+    return {
+      items: productsWithDetails,
+      hasMore,
+    };
+  },
+});
+
+/**
+ * List all sellers with pagination (admin view)
+ *
+ * @param limit - Number per page
+ * @returns Paginated seller list with user details
+ */
+export const listAllSellers = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const limit = args.limit ?? 20;
+
+    const sellers = await ctx.db
+      .query("sellers")
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = sellers.length > limit;
+    const items = hasMore ? sellers.slice(0, limit) : sellers;
+
+    const sellersWithDetails = await Promise.all(
+      items.map(async (seller) => {
+        const user = (await ctx.db.get(seller.userId)) as {
+          _id: Id<"users">;
+          email?: string;
+          name?: string;
+        } | null;
+
+        // Count products for this seller
+        const products = await ctx.db
+          .query("products")
+          .withIndex("by_seller", (q) => q.eq("sellerId", seller.userId))
+          .filter((q) => q.eq(q.field("isDeleted"), false))
+          .collect();
+
+        return {
+          id: seller._id,
+          userId: seller.userId,
+          businessName: seller.businessName,
+          description: seller.description,
+          isApproved: seller.isApproved,
+          isActive: seller.isActive,
+          stripeOnboarded: seller.stripeOnboarded,
+          totalSales: seller.totalSales ?? 0,
+          totalRevenue: seller.totalRevenue ?? 0,
+          productCount: products.length,
+          createdAt: seller.createdAt,
+          user: user
+            ? { id: user._id, name: user.name, email: user.email }
+            : null,
+        };
+      })
+    );
+
+    return {
+      items: sellersWithDetails,
+      hasMore,
+    };
+  },
+});
+
+/**
+ * Get a seller by ID with full details
+ *
+ * @param sellerId - Seller record ID
+ * @returns Seller with user info, products, and orders
+ */
+export const getSellerById = query({
+  args: {
+    sellerId: v.id("sellers"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const seller = await ctx.db.get(args.sellerId);
+    if (!seller) return null;
+
+    const user = (await ctx.db.get(seller.userId)) as {
+      _id: Id<"users">;
+      email?: string;
+      name?: string;
+      image?: string;
+    } | null;
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", seller.userId))
+      .first();
+
+    // Get seller's products
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_seller", (q) => q.eq("sellerId", seller.userId))
+      .filter((q) => q.eq(q.field("isDeleted"), false))
+      .order("desc")
+      .take(10);
+
+    // Get seller's recent orders (via order items)
+    const orderItems = await ctx.db
+      .query("orderItems")
+      .withIndex("by_seller", (q) => q.eq("sellerId", seller.userId))
+      .order("desc")
+      .take(10);
+
+    const recentOrders = await Promise.all(
+      orderItems.map(async (item) => {
+        const order = await ctx.db.get(item.orderId);
+        const buyer = order
+          ? ((await ctx.db.get(order.userId)) as {
+              _id: Id<"users">;
+              name?: string;
+            } | null)
+          : null;
+        return order
+          ? {
+              id: order._id,
+              orderNumber: order.orderNumber,
+              productName: item.name,
+              total: item.subtotal,
+              status: order.status,
+              buyerName: buyer?.name,
+              createdAt: order.createdAt,
+            }
+          : null;
+      })
+    );
+
+    // Get Stripe connect account
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_seller", (q) => q.eq("sellerId", args.sellerId))
+      .first();
+
+    return {
+      ...seller,
+      user: user
+        ? { id: user._id, name: user.name, email: user.email, image: user.image }
+        : null,
+      profile: profile
+        ? { displayName: profile.displayName, bio: profile.bio }
+        : null,
+      products: products.map((p) => ({
+        id: p._id,
+        name: p.name,
+        price: p.price,
+        status: p.status,
+        salesCount: p.salesCount,
+      })),
+      recentOrders: recentOrders.filter(Boolean),
+      connectAccount: connectAccount
+        ? {
+            chargesEnabled: connectAccount.chargesEnabled,
+            payoutsEnabled: connectAccount.payoutsEnabled,
+            onboardingComplete: connectAccount.onboardingComplete,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * Get monthly revenue data for charts
+ *
+ * @returns Array of { month, year, revenue, orderCount } for last 12 months
+ */
+export const getMonthlyRevenue = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const now = Date.now();
+    const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
+
+    // Get completed orders from the last 12 months
+    const completedStatuses: OrderStatus[] = ["shipped", "delivered"];
+    const allCompletedOrders: Doc<"orders">[] = [];
+
+    for (const status of completedStatuses) {
+      const orders = await ctx.db
+        .query("orders")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .collect();
+      allCompletedOrders.push(
+        ...orders.filter((o) => o.createdAt > oneYearAgo)
+      );
+    }
+
+    // Group by month
+    const monthlyData: Record<
+      string,
+      { revenue: number; orderCount: number }
+    > = {};
+
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    // Initialize last 12 months
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now - i * 30 * 24 * 60 * 60 * 1000);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthlyData[key] = { revenue: 0, orderCount: 0 };
+    }
+
+    for (const order of allCompletedOrders) {
+      const d = new Date(order.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (monthlyData[key]) {
+        monthlyData[key]!.revenue += order.total;
+        monthlyData[key]!.orderCount += 1;
+      }
+    }
+
+    return Object.entries(monthlyData).map(([key, data]) => {
+      const [year, month] = key.split("-");
+      return {
+        name: months[parseInt(month!, 10) - 1],
+        year: parseInt(year!, 10),
+        revenue: data.revenue,
+        orders: data.orderCount,
+      };
+    });
+  },
+});
+
+/**
+ * Get recent orders for dashboard widget
+ *
+ * @param limit - Number of orders
+ * @returns Recent orders with user and product info
+ */
+export const getRecentOrders = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const limit = args.limit ?? 5;
+
+    const orders = await ctx.db.query("orders").order("desc").take(limit);
+
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        const user = (await ctx.db.get(order.userId)) as {
+          _id: Id<"users">;
+          name?: string;
+          email?: string;
+        } | null;
+
+        // Get first item name
+        const firstItem = await ctx.db
+          .query("orderItems")
+          .withIndex("by_order", (q) => q.eq("orderId", order._id))
+          .first();
+
+        return {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          customer: user?.name ?? user?.email ?? "Unknown",
+          productName: firstItem?.name ?? "N/A",
+          total: order.total,
+          status: order.status,
+          createdAt: order.createdAt,
+        };
+      })
+    );
+
+    return ordersWithDetails;
+  },
+});
+
+// ============================================================================
 // Content Moderation
 // ============================================================================
 
@@ -999,6 +1560,121 @@ export const moderatePost = mutation({
           updatedAt: now,
         });
       }
+    }
+
+    return true;
+  },
+});
+
+// ============================================================================
+// Platform Settings
+// ============================================================================
+
+/**
+ * Get platform settings
+ *
+ * Reads settings from the first (default) tenant record, which serves
+ * as the platform-level configuration store.
+ *
+ * @returns Platform settings or empty defaults
+ */
+export const getPlatformSettings = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    // Use the first tenant as the "default" platform
+    const tenant = await ctx.db.query("tenants").first();
+
+    if (!tenant) {
+      return {
+        platformName: "Createconomy",
+        supportEmail: "",
+        description: "",
+        currency: "USD",
+        theme: undefined as string | undefined,
+        logo: undefined as string | undefined,
+        primaryColor: undefined as string | undefined,
+        timezone: undefined as string | undefined,
+        isActive: true,
+      };
+    }
+
+    return {
+      id: tenant._id,
+      platformName: tenant.name,
+      slug: tenant.slug,
+      domain: tenant.domain,
+      subdomain: tenant.subdomain,
+      currency: tenant.settings?.currency ?? "USD",
+      theme: tenant.settings?.theme,
+      logo: tenant.settings?.logo,
+      primaryColor: tenant.settings?.primaryColor,
+      timezone: tenant.settings?.timezone,
+      isActive: tenant.isActive,
+      createdAt: tenant.createdAt,
+    };
+  },
+});
+
+/**
+ * Update platform settings
+ *
+ * Updates the default tenant record with new platform configuration.
+ * Creates a tenant record if none exists.
+ *
+ * @param platformName - Platform display name
+ * @param currency - Default currency code
+ * @param theme - Theme name
+ * @param primaryColor - Brand color
+ * @param timezone - Default timezone
+ * @returns Success boolean
+ */
+export const updatePlatformSettings = mutation({
+  args: {
+    platformName: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    theme: v.optional(v.string()),
+    logo: v.optional(v.string()),
+    primaryColor: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const now = Date.now();
+    const tenant = await ctx.db.query("tenants").first();
+
+    if (tenant) {
+      const existingSettings = tenant.settings ?? {};
+      await ctx.db.patch(tenant._id, {
+        ...(args.platformName !== undefined && { name: args.platformName }),
+        settings: {
+          ...existingSettings,
+          ...(args.currency !== undefined && { currency: args.currency }),
+          ...(args.theme !== undefined && { theme: args.theme }),
+          ...(args.logo !== undefined && { logo: args.logo }),
+          ...(args.primaryColor !== undefined && { primaryColor: args.primaryColor }),
+          ...(args.timezone !== undefined && { timezone: args.timezone }),
+        },
+        updatedAt: now,
+      });
+    } else {
+      // Create default tenant if none exists
+      await ctx.db.insert("tenants", {
+        name: args.platformName ?? "Createconomy",
+        slug: "default",
+        settings: {
+          currency: args.currency ?? "USD",
+          theme: args.theme,
+          logo: args.logo,
+          primaryColor: args.primaryColor,
+          timezone: args.timezone,
+        },
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
 
     return true;

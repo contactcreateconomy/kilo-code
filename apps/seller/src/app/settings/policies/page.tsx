@@ -1,23 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Loader2 } from "lucide-react";
 
 export default function PoliciesSettingsPage() {
-  const [returnPolicy, setReturnPolicy] = useState(
-    "We accept returns within 30 days of delivery. Items must be unused and in original packaging. Buyer is responsible for return shipping costs unless the item is defective or not as described."
-  );
-  const [refundPolicy, setRefundPolicy] = useState(
-    "Refunds will be processed within 5-7 business days after we receive the returned item. Original shipping costs are non-refundable."
-  );
-  const [shippingPolicy, setShippingPolicy] = useState(
-    "Orders are processed within 1-3 business days. Shipping times vary based on location and selected shipping method. Tracking information will be provided once your order ships."
-  );
+  const settings = useQuery(api.functions.users.getSellerSettings, {});
+  const updateSettings = useMutation(api.functions.users.updateSellerSettings);
+
+  const [returnPolicy, setReturnPolicy] = useState("");
+  const [refundPolicy, setRefundPolicy] = useState("");
+  const [shippingPolicy, setShippingPolicy] = useState("");
   const [returnWindow, setReturnWindow] = useState("30");
   const [acceptReturns, setAcceptReturns] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Populate form from saved settings
+  useEffect(() => {
+    if (settings) {
+      setReturnPolicy((settings['returnPolicy'] as string) ?? "");
+      setRefundPolicy((settings['refundPolicy'] as string) ?? "");
+      setShippingPolicy((settings['shippingPolicy'] as string) ?? "");
+      setReturnWindow((settings['returnWindow'] as string) ?? "30");
+      setAcceptReturns(settings['acceptReturns'] !== false);
+    }
+  }, [settings]);
+
+  if (settings === undefined) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--muted-foreground)]" />
+      </div>
+    );
+  }
+
+  if (settings === null) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-[var(--muted-foreground)]">No seller profile found.</p>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Save policies via Convex mutation
+    setIsSaving(true);
+    setSaveMessage("");
+    try {
+      await updateSettings({
+        settings: {
+          returnPolicy,
+          refundPolicy,
+          shippingPolicy,
+          returnWindow,
+          acceptReturns,
+        },
+      });
+      setSaveMessage("Policies saved successfully!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Failed to save");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -29,6 +76,18 @@ export default function PoliciesSettingsPage() {
           Define your return, refund, and shipping policies
         </p>
       </div>
+
+      {saveMessage && (
+        <div
+          className={`rounded-lg p-3 text-sm ${
+            saveMessage.includes("success")
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Return Settings */}
@@ -141,16 +200,11 @@ export default function PoliciesSettingsPage() {
         {/* Submit Button */}
         <div className="flex justify-end gap-4">
           <button
-            type="button"
-            className="px-6 py-2 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
             type="submit"
-            className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity"
+            disabled={isSaving}
+            className="px-6 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            Save Policies
+            {isSaving ? "Saving..." : "Save Policies"}
           </button>
         </div>
       </form>

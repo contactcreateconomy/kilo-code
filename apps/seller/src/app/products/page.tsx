@@ -5,52 +5,40 @@ import Link from "next/link";
 import { SellerLayout } from "@/components/layout/seller-layout";
 import { SellerGuard } from "@/components/auth/seller-guard";
 import { ProductCard } from "@/components/products/product-card";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import type { Id } from "@createconomy/convex/dataModel";
+import { Loader2 } from "lucide-react";
 
-const mockProducts = [
-  {
-    id: "1",
-    name: "Handcrafted Wooden Bowl",
-    price: 45.99,
-    stock: 12,
-    status: "active",
-    image: "/placeholder-product.jpg",
-    sales: 156,
-  },
-  {
-    id: "2",
-    name: "Ceramic Vase Set",
-    price: 89.99,
-    stock: 5,
-    status: "active",
-    image: "/placeholder-product.jpg",
-    sales: 89,
-  },
-  {
-    id: "3",
-    name: "Woven Wall Hanging",
-    price: 125.0,
-    stock: 0,
-    status: "out_of_stock",
-    image: "/placeholder-product.jpg",
-    sales: 234,
-  },
-  {
-    id: "4",
-    name: "Leather Journal",
-    price: 35.0,
-    stock: 28,
-    status: "draft",
-    image: "/placeholder-product.jpg",
-    sales: 0,
-  },
-];
+function centsToDollars(cents: number): number {
+  return cents / 100;
+}
 
 export default function ProductsPage() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
-  const filteredProducts = mockProducts.filter((product) => {
+  const products = useQuery(
+    api.functions.products.getProductsBySeller,
+    user?._id ? { sellerId: user._id as Id<"users"> } : "skip"
+  );
+
+  if (!products) {
+    return (
+      <SellerGuard>
+        <SellerLayout>
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </SellerLayout>
+      </SellerGuard>
+    );
+  }
+
+  const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -71,7 +59,7 @@ export default function ProductsPage() {
     if (selectedProducts.length === filteredProducts.length) {
       setSelectedProducts([]);
     } else {
-      setSelectedProducts(filteredProducts.map((p) => p.id));
+      setSelectedProducts(filteredProducts.map((p) => p._id));
     }
   };
 
@@ -139,7 +127,7 @@ export default function ProductsPage() {
 
               {/* Status Filter */}
               <div className="flex gap-2">
-                {["all", "active", "draft", "out_of_stock"].map((status) => (
+                {["all", "active", "draft", "archived"].map((status) => (
                   <button
                     key={status}
                     onClick={() => setStatusFilter(status)}
@@ -151,9 +139,7 @@ export default function ProductsPage() {
                   >
                     {status === "all"
                       ? "All"
-                      : status === "out_of_stock"
-                        ? "Out of Stock"
-                        : status.charAt(0).toUpperCase() + status.slice(1)}
+                      : status.charAt(0).toUpperCase() + status.slice(1)}
                   </button>
                 ))}
               </div>
@@ -195,10 +181,18 @@ export default function ProductsPage() {
 
             {filteredProducts.map((product) => (
               <ProductCard
-                key={product.id}
-                product={product}
-                isSelected={selectedProducts.includes(product.id)}
-                onSelect={() => toggleProductSelection(product.id)}
+                key={product._id}
+                product={{
+                  id: product._id,
+                  name: product.name,
+                  price: centsToDollars(product.price),
+                  stock: product.inventory ?? 0,
+                  status: product.status,
+                  sales: product.salesCount,
+                  image: product.primaryImage,
+                }}
+                isSelected={selectedProducts.includes(product._id)}
+                onSelect={() => toggleProductSelection(product._id)}
               />
             ))}
           </div>

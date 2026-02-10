@@ -1,5 +1,7 @@
 'use client';
 
+import { useQuery } from 'convex/react';
+import { api } from '@createconomy/convex';
 import {
   Card,
   CardContent,
@@ -14,22 +16,7 @@ import {
   type ChartConfig,
 } from '@createconomy/ui/components/chart';
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
-
-// Mock data - in production this would come from Convex
-const data = [
-  { name: 'Jan', revenue: 4000, orders: 240 },
-  { name: 'Feb', revenue: 3000, orders: 198 },
-  { name: 'Mar', revenue: 5000, orders: 320 },
-  { name: 'Apr', revenue: 4500, orders: 278 },
-  { name: 'May', revenue: 6000, orders: 389 },
-  { name: 'Jun', revenue: 5500, orders: 349 },
-  { name: 'Jul', revenue: 7000, orders: 430 },
-  { name: 'Aug', revenue: 6500, orders: 401 },
-  { name: 'Sep', revenue: 8000, orders: 512 },
-  { name: 'Oct', revenue: 7500, orders: 478 },
-  { name: 'Nov', revenue: 9000, orders: 589 },
-  { name: 'Dec', revenue: 10000, orders: 650 },
-];
+import { Loader2 } from 'lucide-react';
 
 const chartConfig = {
   revenue: {
@@ -38,7 +25,33 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+function centsToDollars(cents: number): number {
+  return cents / 100;
+}
+
 export function RevenueChart() {
+  const monthlyData = useQuery(api.functions.admin.getMonthlyRevenue, {});
+
+  if (!monthlyData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue Overview</CardTitle>
+          <CardDescription>Monthly revenue for the current year</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-80">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const chartData = monthlyData.map((d) => ({
+    name: d.name,
+    revenue: centsToDollars(d.revenue),
+    orders: d.orders,
+  }));
+
   return (
     <Card>
       <CardHeader>
@@ -46,54 +59,60 @@ export function RevenueChart() {
         <CardDescription>Monthly revenue for the current year</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-80 w-full">
-          <AreaChart
-            data={data}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-revenue)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-revenue)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="name"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  indicator="dot"
-                  formatter={(value) => (
-                    <span className="font-mono font-medium">
-                      ${Number(value).toLocaleString()}
-                    </span>
-                  )}
-                />
-              }
-            />
-            <Area
-              type="natural"
-              dataKey="revenue"
-              stroke="var(--color-revenue)"
-              fill="url(#fillRevenue)"
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ChartContainer>
+        {chartData.length === 0 ? (
+          <div className="flex items-center justify-center h-80 text-muted-foreground">
+            No revenue data yet
+          </div>
+        ) : (
+          <ChartContainer config={chartConfig} className="h-80 w-full">
+            <AreaChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-revenue)"
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-revenue)"
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    indicator="dot"
+                    formatter={(value) => (
+                      <span className="font-mono font-medium">
+                        ${Number(value).toLocaleString()}
+                      </span>
+                    )}
+                  />
+                }
+              />
+              <Area
+                type="natural"
+                dataKey="revenue"
+                stroke="var(--color-revenue)"
+                fill="url(#fillRevenue)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

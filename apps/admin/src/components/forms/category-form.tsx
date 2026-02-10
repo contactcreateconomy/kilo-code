@@ -1,6 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@createconomy/convex';
+import { useRouter } from 'next/navigation';
+import type { Id } from '@createconomy/convex/dataModel';
 
 interface CategoryFormProps {
   category?: {
@@ -11,8 +15,6 @@ interface CategoryFormProps {
     parentId: string | null;
     status: string;
   };
-  categories?: { id: string; name: string }[];
-  onSubmit?: (data: CategoryFormData) => void;
   onCancel?: () => void;
 }
 
@@ -26,10 +28,13 @@ interface CategoryFormData {
 
 export function CategoryForm({
   category,
-  categories = [],
-  onSubmit,
   onCancel,
 }: CategoryFormProps) {
+  const router = useRouter();
+  const categories = useQuery(api.functions.categories.listCategories, {});
+  const createCategory = useMutation(api.functions.categories.createCategory);
+  const updateCategoryMutation = useMutation(api.functions.categories.updateCategory);
+
   const [formData, setFormData] = useState<CategoryFormData>({
     name: category?.name || '',
     slug: category?.slug || '',
@@ -37,10 +42,40 @@ export function CategoryForm({
     parentId: category?.parentId || null,
     status: category?.status || 'active',
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit?.(formData);
+    setIsSaving(true);
+    setErrorMessage('');
+
+    try {
+      if (category) {
+        // Update existing category
+        await updateCategoryMutation({
+          categoryId: category.id as Id<'productCategories'>,
+          name: formData.name,
+          slug: formData.slug,
+          description: formData.description,
+          parentId: formData.parentId ? formData.parentId as Id<'productCategories'> : undefined,
+          isActive: formData.status === 'active',
+        });
+      } else {
+        // Create new category
+        await createCategory({
+          name: formData.name,
+          slug: formData.slug,
+          description: formData.description,
+          parentId: formData.parentId ? formData.parentId as Id<'productCategories'> : undefined,
+        });
+      }
+      router.push('/categories');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to save category');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const generateSlug = (name: string) => {
@@ -58,8 +93,18 @@ export function CategoryForm({
     });
   };
 
+  const parentCategories = (categories ?? []).filter(
+    (c) => c._id !== category?.id
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {errorMessage && (
+        <div className="rounded-md bg-red-100 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -115,13 +160,11 @@ export function CategoryForm({
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="">None (Top Level)</option>
-            {categories
-              .filter((c) => c.id !== category?.id)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+            {parentCategories.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -142,16 +185,17 @@ export function CategoryForm({
       <div className="flex justify-end gap-4">
         <button
           type="button"
-          onClick={onCancel}
+          onClick={onCancel ?? (() => router.push('/categories'))}
           className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          disabled={isSaving}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {category ? 'Update Category' : 'Create Category'}
+          {isSaving ? 'Saving...' : category ? 'Update Category' : 'Create Category'}
         </button>
       </div>
     </form>

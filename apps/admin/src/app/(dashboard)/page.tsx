@@ -1,9 +1,31 @@
+'use client';
+
+import { useQuery } from 'convex/react';
+import { api } from '@createconomy/convex';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { RevenueChart } from '@/components/dashboard/revenue-chart';
 import { RecentOrders } from '@/components/dashboard/recent-orders';
 import { QuickActions } from '@/components/dashboard/quick-actions';
+import { Loader2 } from 'lucide-react';
+
+function centsToDollars(cents: number): string {
+  return (cents / 100).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 export default function DashboardPage() {
+  const stats = useQuery(api.functions.admin.getDashboardStats, {});
+
+  if (!stats) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -17,30 +39,22 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Revenue"
-          value="$45,231.89"
-          change={20.1}
-          trend="up"
+          value={`$${centsToDollars(stats.revenue.total)}`}
           icon="dollar"
         />
         <StatsCard
           title="Orders"
-          value="2,350"
-          change={15.2}
-          trend="up"
+          value={stats.orders.total.toLocaleString()}
           icon="shopping-cart"
         />
         <StatsCard
-          title="Active Users"
-          value="12,234"
-          change={5.4}
-          trend="up"
+          title="Total Users"
+          value={stats.users.total.toLocaleString()}
           icon="users"
         />
         <StatsCard
-          title="Products"
-          value="573"
-          change={12}
-          trend="neutral"
+          title="Active Products"
+          value={stats.products.active.toLocaleString()}
           icon="package"
         />
       </div>

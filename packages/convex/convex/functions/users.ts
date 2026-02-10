@@ -535,6 +535,165 @@ export const deleteAccount = mutation({
 });
 
 // ============================================================================
+// Seller Profile Management
+// ============================================================================
+
+/**
+ * Get the current authenticated seller's profile
+ *
+ * @returns Seller record with user details, or null
+ */
+export const getMySellerProfile = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const seller = await ctx.db
+      .query("sellers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!seller) return null;
+
+    const user = await ctx.db.get(userId);
+
+    return {
+      ...seller,
+      user: user
+        ? { id: user._id, name: user.name, email: user.email, image: user.image }
+        : null,
+    };
+  },
+});
+
+/**
+ * Update the current seller's store profile
+ *
+ * @param businessName - Store/business name
+ * @param businessEmail - Contact email
+ * @param businessPhone - Contact phone
+ * @param description - Store description
+ * @param websiteUrl - External website
+ * @param businessAddress - Business address
+ */
+export const updateSellerProfile = mutation({
+  args: {
+    businessName: v.optional(v.string()),
+    businessEmail: v.optional(v.string()),
+    businessPhone: v.optional(v.string()),
+    description: v.optional(v.string()),
+    websiteUrl: v.optional(v.string()),
+    twitterHandle: v.optional(v.string()),
+    youtubeUrl: v.optional(v.string()),
+    accentColor: v.optional(v.string()),
+    businessAddress: v.optional(
+      v.object({
+        street: v.optional(v.string()),
+        city: v.optional(v.string()),
+        state: v.optional(v.string()),
+        postalCode: v.optional(v.string()),
+        country: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Authentication required");
+    }
+
+    const seller = await ctx.db
+      .query("sellers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!seller) {
+      throw new Error("Seller profile not found");
+    }
+
+    const now = Date.now();
+
+    await ctx.db.patch(seller._id, {
+      ...(args.businessName !== undefined && { businessName: args.businessName }),
+      ...(args.businessEmail !== undefined && { businessEmail: args.businessEmail }),
+      ...(args.businessPhone !== undefined && { businessPhone: args.businessPhone }),
+      ...(args.description !== undefined && { description: args.description }),
+      ...(args.websiteUrl !== undefined && { websiteUrl: args.websiteUrl }),
+      ...(args.twitterHandle !== undefined && { twitterHandle: args.twitterHandle }),
+      ...(args.youtubeUrl !== undefined && { youtubeUrl: args.youtubeUrl }),
+      ...(args.accentColor !== undefined && { accentColor: args.accentColor }),
+      ...(args.businessAddress !== undefined && { businessAddress: args.businessAddress }),
+      updatedAt: now,
+    });
+
+    return true;
+  },
+});
+
+/**
+ * Get seller store settings stored in seller metadata
+ *
+ * @returns Metadata record for the current seller, or null
+ */
+export const getSellerSettings = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const seller = await ctx.db
+      .query("sellers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!seller) return null;
+
+    return seller.metadata ?? {};
+  },
+});
+
+/**
+ * Save seller store settings into seller metadata
+ *
+ * Stores policies, shipping settings, and other configurable settings
+ * as key-value pairs in the sellers.metadata field.
+ *
+ * @param settings - Record of string keys to string/number/boolean/null values
+ */
+export const updateSellerSettings = mutation({
+  args: {
+    settings: v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Authentication required");
+    }
+
+    const seller = await ctx.db
+      .query("sellers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!seller) {
+      throw new Error("Seller profile not found");
+    }
+
+    // Merge with existing metadata
+    const existingMetadata = seller.metadata ?? {};
+    const merged = { ...existingMetadata, ...args.settings };
+
+    await ctx.db.patch(seller._id, {
+      metadata: merged,
+      updatedAt: Date.now(),
+    });
+
+    return true;
+  },
+});
+
+// ============================================================================
 // Search
 // ============================================================================
 

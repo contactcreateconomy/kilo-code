@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Card,
@@ -17,17 +19,50 @@ import {
 import { Badge } from "@createconomy/ui/components/badge";
 import { Progress } from "@createconomy/ui/components/progress";
 import { Button } from "@createconomy/ui/components/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { useAuth } from "@/hooks/use-auth";
+import type { Id } from "@createconomy/convex/dataModel";
 
-// Mock data — in production this would come from Convex
-const lowStockProducts = [
-  { id: "prod-001", name: "Premium UI Kit", stock: 3, threshold: 10 },
-  { id: "prod-002", name: "Icon Pack Pro", stock: 1, threshold: 5 },
-  { id: "prod-003", name: "Landing Templates", stock: 7, threshold: 15 },
-  { id: "prod-004", name: "Photo Presets", stock: 2, threshold: 10 },
-];
+const LOW_STOCK_THRESHOLD = 10;
 
 export function LowStockAlert() {
+  const { user } = useAuth();
+  const products = useQuery(
+    api.functions.products.getProductsBySeller,
+    user?._id ? { sellerId: user._id as Id<"users"> } : "skip"
+  );
+
+  if (!products) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-lg">Low Stock Alerts</CardTitle>
+          </div>
+          <CardDescription>Products that need attention</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Filter for products with trackInventory enabled and low inventory
+  const lowStockProducts = products.filter(
+    (p) =>
+      p.trackInventory &&
+      p.inventory !== undefined &&
+      p.inventory !== null &&
+      p.inventory < LOW_STOCK_THRESHOLD &&
+      p.status === "active"
+  );
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -35,7 +70,7 @@ export function LowStockAlert() {
           <AlertTriangle className="h-5 w-5 text-amber-500" />
           <CardTitle className="text-lg">Low Stock Alerts</CardTitle>
         </div>
-        <CardDescription>Products that need restocking</CardDescription>
+        <CardDescription>Products that need attention</CardDescription>
       </CardHeader>
       <CardContent>
         {lowStockProducts.length === 0 ? (
@@ -53,16 +88,17 @@ export function LowStockAlert() {
             </TableHeader>
             <TableBody>
               {lowStockProducts.map((product) => {
+                const stock = product.inventory ?? 0;
                 const stockPercent = Math.round(
-                  (product.stock / product.threshold) * 100
+                  (stock / LOW_STOCK_THRESHOLD) * 100
                 );
-                const isCritical = product.stock <= product.threshold * 0.3;
+                const isCritical = stock <= LOW_STOCK_THRESHOLD * 0.3;
 
                 return (
-                  <TableRow key={product.id}>
+                  <TableRow key={product._id}>
                     <TableCell>
                       <Link
-                        href={`/products/${product.id}`}
+                        href={`/products/${product._id}`}
                         className="font-medium text-primary hover:underline"
                       >
                         {product.name}
@@ -70,9 +106,12 @@ export function LowStockAlert() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm">{product.stock}</span>
+                        <span className="text-sm">{stock}</span>
                         {isCritical ? (
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                          <Badge
+                            variant="destructive"
+                            className="text-[10px] px-1.5 py-0"
+                          >
                             Critical
                           </Badge>
                         ) : (
@@ -86,10 +125,7 @@ export function LowStockAlert() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Progress
-                        value={stockPercent}
-                        className="h-2"
-                      />
+                      <Progress value={stockPercent} className="h-2" />
                     </TableCell>
                   </TableRow>
                 );
@@ -99,9 +135,7 @@ export function LowStockAlert() {
         )}
         <div className="mt-4 text-center">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/products?filter=low-stock">
-              View all low stock →
-            </Link>
+            <Link href="/products">View all products →</Link>
           </Button>
         </div>
       </CardContent>

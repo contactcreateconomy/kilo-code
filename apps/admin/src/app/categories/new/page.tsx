@@ -1,11 +1,7 @@
-import type { Metadata } from 'next';
+'use client';
+
 import Link from 'next/link';
 import { CategoryForm } from '@/components/forms/category-form';
-
-export const metadata: Metadata = {
-  title: 'New Category',
-  description: 'Create a new category',
-};
 
 export default function NewCategoryPage() {
   return (

@@ -1,24 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@createconomy/convex";
 import {
   Button,
   Input,
   Label,
-  Switch,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
 } from "@createconomy/ui";
+import { Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
-  const [sellerRegistration, setSellerRegistration] = useState(true);
-  const [reviewModeration, setReviewModeration] = useState(true);
-  const [forumEnabled, setForumEnabled] = useState(true);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const platformSettings = useQuery(api.functions.admin.getPlatformSettings, {});
+  const updateSettings = useMutation(api.functions.admin.updatePlatformSettings);
+
+  const [platformName, setPlatformName] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [primaryColor, setPrimaryColor] = useState("");
+  const [timezone, setTimezone] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  // Populate form from loaded settings
+  useEffect(() => {
+    if (platformSettings) {
+      setPlatformName(platformSettings.platformName ?? "");
+      setCurrency(platformSettings.currency ?? "USD");
+      setPrimaryColor(platformSettings.primaryColor ?? "");
+      setTimezone(platformSettings.timezone ?? "");
+    }
+  }, [platformSettings]);
+
+  if (platformSettings === undefined) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveMessage("");
+    try {
+      await updateSettings({
+        platformName,
+        currency,
+        primaryColor: primaryColor || undefined,
+        timezone: timezone || undefined,
+      });
+      setSaveMessage("Settings saved successfully!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Failed to save");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -29,6 +72,18 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {saveMessage && (
+        <div
+          className={`rounded-lg p-3 text-sm ${
+            saveMessage.includes("success")
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      )}
+
       {/* Platform Information */}
       <div className="rounded-lg border bg-card p-6 shadow-sm">
         <h2 className="text-lg font-semibold mb-4">Platform Information</h2>
@@ -38,28 +93,26 @@ export default function SettingsPage() {
               <Label htmlFor="platform-name" className="mb-1">
                 Platform Name
               </Label>
-              <Input id="platform-name" defaultValue="Createconomy" />
-            </div>
-            <div>
-              <Label htmlFor="support-email" className="mb-1">
-                Support Email
-              </Label>
               <Input
-                id="support-email"
-                type="email"
-                defaultValue="support@createconomy.com"
+                id="platform-name"
+                value={platformName}
+                onChange={(e) => setPlatformName(e.target.value)}
               />
             </div>
-          </div>
-          <div>
-            <Label htmlFor="platform-description" className="mb-1">
-              Platform Description
-            </Label>
-            <Textarea
-              id="platform-description"
-              rows={3}
-              defaultValue="A marketplace for digital creators to sell their products and connect with customers."
-            />
+            <div>
+              <Label className="mb-1">Status</Label>
+              <div className="flex items-center gap-2 mt-2">
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full ${
+                    platformSettings?.isActive !== false
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  }`}
+                >
+                  {platformSettings?.isActive !== false ? "Active" : "Inactive"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -70,33 +123,8 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label htmlFor="commission-rate" className="mb-1">
-                Default Commission Rate (%)
-              </Label>
-              <Input
-                id="commission-rate"
-                type="number"
-                defaultValue="15"
-                min={0}
-                max={100}
-              />
-            </div>
-            <div>
-              <Label htmlFor="min-payout" className="mb-1">
-                Minimum Payout Amount ($)
-              </Label>
-              <Input
-                id="min-payout"
-                type="number"
-                defaultValue="50"
-                min={0}
-              />
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
               <Label className="mb-1">Default Currency</Label>
-              <Select defaultValue="USD">
+              <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
@@ -108,107 +136,66 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div>
-              <Label className="mb-1">Payout Schedule</Label>
-              <Select defaultValue="weekly">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select schedule" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="primary-color" className="mb-1">
+                Brand Color
+              </Label>
+              <Input
+                id="primary-color"
+                value={primaryColor}
+                onChange={(e) => setPrimaryColor(e.target.value)}
+                placeholder="#007bff"
+              />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Feature Toggles */}
-      <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Feature Toggles</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">New Seller Registration</p>
-              <p className="text-sm text-muted-foreground">
-                Allow new sellers to register on the platform
-              </p>
-            </div>
-            <Switch
-              checked={sellerRegistration}
-              onCheckedChange={setSellerRegistration}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Review Moderation</p>
-              <p className="text-sm text-muted-foreground">
-                Require approval for new product reviews
-              </p>
-            </div>
-            <Switch
-              checked={reviewModeration}
-              onCheckedChange={setReviewModeration}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Forum</p>
-              <p className="text-sm text-muted-foreground">
-                Enable community forum features
-              </p>
-            </div>
-            <Switch
-              checked={forumEnabled}
-              onCheckedChange={setForumEnabled}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Maintenance Mode</p>
-              <p className="text-sm text-muted-foreground">
-                Put the platform in maintenance mode
-              </p>
-            </div>
-            <Switch
-              checked={maintenanceMode}
-              onCheckedChange={setMaintenanceMode}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* SEO Settings */}
-      <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">SEO Settings</h2>
-        <div className="space-y-4">
           <div>
-            <Label htmlFor="meta-title" className="mb-1">
-              Default Meta Title
+            <Label htmlFor="timezone" className="mb-1">
+              Default Timezone
             </Label>
             <Input
-              id="meta-title"
-              defaultValue="Createconomy - Digital Marketplace for Creators"
+              id="timezone"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              placeholder="America/New_York"
             />
           </div>
-          <div>
-            <Label htmlFor="meta-description" className="mb-1">
-              Default Meta Description
-            </Label>
-            <Textarea
-              id="meta-description"
-              rows={2}
-              defaultValue="Discover and purchase high-quality digital products from talented creators. Templates, graphics, code, and more."
-            />
-          </div>
+        </div>
+      </div>
+
+      {/* Platform Stats (read-only) */}
+      <div className="rounded-lg border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold mb-4">Platform Info</h2>
+        <div className="grid gap-4 md:grid-cols-3 text-sm">
+          {platformSettings && "slug" in platformSettings && (
+            <div>
+              <span className="text-muted-foreground">Slug: </span>
+              <span className="font-medium">{platformSettings.slug}</span>
+            </div>
+          )}
+          {platformSettings && "domain" in platformSettings && platformSettings.domain && (
+            <div>
+              <span className="text-muted-foreground">Domain: </span>
+              <span className="font-medium">{platformSettings.domain}</span>
+            </div>
+          )}
+          {platformSettings && "createdAt" in platformSettings && platformSettings.createdAt && (
+            <div>
+              <span className="text-muted-foreground">Created: </span>
+              <span className="font-medium">
+                {new Date(platformSettings.createdAt as number).toLocaleDateString()}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Save Button */}
       <div className="flex justify-end gap-4">
-        <Button variant="outline">Reset to Defaults</Button>
-        <Button>Save Changes</Button>
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? "Saving..." : "Save Changes"}
+        </Button>
       </div>
     </div>
   );
