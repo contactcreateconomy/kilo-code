@@ -4,14 +4,10 @@ import { useState } from "react";
 import { Button } from "@createconomy/ui";
 import { useCart } from "@/hooks/use-cart";
 import { cn } from "@createconomy/ui";
-import { ShoppingCart, Check, Loader2 } from "lucide-react";
+import { ShoppingCart, Check, Loader2, LogIn } from "lucide-react";
 
 interface AddToCartButtonProps {
   productId: string;
-  productName: string;
-  productPrice: number;
-  productImage: string;
-  productSlug?: string;
   size?: "default" | "sm" | "lg";
   variant?: "default" | "outline" | "secondary";
   className?: string;
@@ -19,15 +15,11 @@ interface AddToCartButtonProps {
 
 export function AddToCartButton({
   productId,
-  productName,
-  productPrice,
-  productImage,
-  productSlug,
   size = "default",
   variant = "default",
   className,
 }: AddToCartButtonProps) {
-  const { addItem, isInCart } = useCart();
+  const { addItem, isInCart, isAuthenticated } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
@@ -36,15 +28,15 @@ export function AddToCartButton({
   const handleAddToCart = async () => {
     if (inCart) return;
 
+    if (!isAuthenticated) {
+      // addItem will redirect to sign-in, but we can also handle it here
+      window.location.href = "/auth/signin?redirect=" + encodeURIComponent(window.location.pathname);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await addItem({
-        id: productId,
-        name: productName,
-        price: productPrice,
-        image: productImage,
-        slug: productSlug,
-      });
+      await addItem(productId, 1);
       setIsAdded(true);
       setTimeout(() => setIsAdded(false), 2000);
     } catch (error) {
@@ -53,6 +45,20 @@ export function AddToCartButton({
       setIsLoading(false);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <Button
+        size={size}
+        variant={variant}
+        className={className}
+        onClick={handleAddToCart}
+      >
+        <LogIn className="mr-2 h-4 w-4" />
+        Sign in to Buy
+      </Button>
+    );
+  }
 
   if (inCart) {
     return (

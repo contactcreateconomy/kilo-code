@@ -1,25 +1,19 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Input, Label } from "@createconomy/ui";
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
+import { Button, Input, Label, Skeleton } from "@createconomy/ui";
 import { Card, CardContent } from "@createconomy/ui/components/card";
 import { Badge } from "@createconomy/ui/components/badge";
 import { SlidersHorizontal, X } from "lucide-react";
+import { flattenCategoryTree } from "@/lib/convex-mappers";
 
 interface ProductFiltersProps {
   selectedCategory?: string;
   minPrice?: string;
   maxPrice?: string;
 }
-
-const categories = [
-  { slug: "templates", name: "Templates" },
-  { slug: "courses", name: "Courses" },
-  { slug: "graphics", name: "Graphics" },
-  { slug: "plugins", name: "Plugins" },
-  { slug: "fonts", name: "Fonts" },
-  { slug: "audio", name: "Audio" },
-];
 
 export function ProductFilters({
   selectedCategory,
@@ -28,6 +22,11 @@ export function ProductFilters({
 }: ProductFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Fetch categories from Convex
+  const categoryTree = useQuery(api.functions.categories.listCategories, {});
+  const categories = categoryTree ? flattenCategoryTree(categoryTree) : [];
+  const categoriesLoading = categoryTree === undefined;
 
   const updateFilters = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -73,29 +72,40 @@ export function ProductFilters({
             Categories
           </h3>
           <div className="space-y-1">
-            {categories.map((category) => (
-              <button
-                key={category.slug}
-                onClick={() =>
-                  updateFilters(
-                    "category",
-                    selectedCategory === category.slug ? null : category.slug
-                  )
-                }
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  selectedCategory === category.slug
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted"
-                }`}
-              >
-                {category.name}
-                {selectedCategory === category.slug && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">
-                    ✓
-                  </Badge>
-                )}
-              </button>
-            ))}
+            {categoriesLoading ? (
+              // Loading skeleton for categories
+              Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-full rounded-lg" />
+              ))
+            ) : categories.length === 0 ? (
+              <p className="text-sm text-muted-foreground px-3 py-2">
+                No categories available
+              </p>
+            ) : (
+              categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() =>
+                    updateFilters(
+                      "category",
+                      selectedCategory === category.slug ? null : category.slug
+                    )
+                  }
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    selectedCategory === category.slug
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  {category.name}
+                  {selectedCategory === category.slug && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">
+                      ✓
+                    </Badge>
+                  )}
+                </button>
+              ))
+            )}
           </div>
         </div>
 

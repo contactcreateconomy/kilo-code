@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
 import { CartItem } from "@/components/cart/cart-item";
 import { CartSummary } from "@/components/cart/cart-summary";
@@ -16,14 +17,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@createconomy/ui/components/card";
-import { Button } from "@createconomy/ui";
+import { Button, Skeleton } from "@createconomy/ui";
 import { Separator } from "@createconomy/ui/components/separator";
 import { ShoppingCart } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Shopping Cart",
-  description: "Review your cart and proceed to checkout.",
-};
+import { useCart } from "@/hooks/use-cart";
 
 export default function CartPage() {
   return (
@@ -59,19 +56,29 @@ export default function CartPage() {
 }
 
 function CartItemsList() {
-  // This would use the useCart hook in a client component
-  // For now, showing a placeholder structure
-  const items: Array<{
-    id: string;
-    productId: string;
-    name: string;
-    price: number;
-    image: string;
-    seller: string;
-    quantity: number;
-    slug?: string;
-    variant?: string;
-  }> = [];
+  const { items, itemCount, isLoading } = useCart();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex gap-4 py-4">
+              <Skeleton className="h-24 w-24 rounded-lg" />
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-8 w-32 mt-auto" />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -95,9 +102,7 @@ function CartItemsList() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          Cart Items ({items.reduce((sum, item) => sum + item.quantity, 0)})
-        </CardTitle>
+        <CardTitle>Cart Items ({itemCount})</CardTitle>
       </CardHeader>
       <CardContent>
         {items.map((item, index) => (

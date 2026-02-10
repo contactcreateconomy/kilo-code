@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Button, Badge, Card, CardContent } from "@createconomy/ui";
 import {
   Package,
@@ -12,8 +11,8 @@ import {
   Tag,
   Headphones,
   ArrowRight,
-  Star,
 } from "lucide-react";
+import { TrendingProducts } from "@/components/home/trending-products";
 
 export default function HomePage() {
   return (
@@ -108,43 +107,7 @@ export default function HomePage() {
               </Link>
             </Button>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredProducts.map((product) => (
-              <Link
-                key={product.slug}
-                href={`/products/${product.slug}`}
-                className="group"
-              >
-                <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-                  <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-cover transition-transform group-hover:scale-105"
-                    />
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="line-clamp-1 font-semibold group-hover:text-primary">
-                      {product.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      by {product.seller}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="font-bold">
-                        ${product.price.toFixed(2)}
-                      </span>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                        <span>{product.rating}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+          <TrendingProducts />
         </div>
       </section>
 
@@ -212,45 +175,6 @@ const statsData = [
   { icon: Users, value: "50,000+", label: "Happy Customers" },
   { icon: Store, value: "5,000+", label: "Creators" },
   { icon: ShieldCheck, value: "100%", label: "Secure Transactions" },
-];
-
-const featuredProducts = [
-  {
-    slug: "premium-website-template",
-    name: "Premium Website Template",
-    seller: "Creative Studio",
-    price: 49.99,
-    rating: 4.9,
-    image:
-      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400",
-  },
-  {
-    slug: "complete-react-course",
-    name: "Complete React Course",
-    seller: "Code Academy",
-    price: 79.99,
-    rating: 4.8,
-    image:
-      "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400",
-  },
-  {
-    slug: "icon-pack-pro",
-    name: "Icon Pack Pro",
-    seller: "Design Hub",
-    price: 29.99,
-    rating: 4.7,
-    image:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400",
-  },
-  {
-    slug: "ui-component-library",
-    name: "UI Component Library",
-    seller: "UI Masters",
-    price: 99.99,
-    rating: 4.9,
-    image:
-      "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=400",
-  },
 ];
 
 const features = [

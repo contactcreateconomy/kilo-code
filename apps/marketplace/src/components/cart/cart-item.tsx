@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button, Input } from "@createconomy/ui";
 import { useCart } from "@/hooks/use-cart";
-import type { CartItem as CartItemType } from "@/types";
+import type { ConvexCartItem } from "@/hooks/use-cart";
+import { formatPriceCents } from "@/lib/utils";
 import { Minus, Plus, Trash2 } from "lucide-react";
 
 interface CartItemProps {
-  item: CartItemType;
+  item: ConvexCartItem;
 }
 
 export function CartItem({ item }: CartItemProps) {
@@ -26,13 +27,19 @@ export function CartItem({ item }: CartItemProps) {
     <div className="flex gap-4 py-4">
       {/* Product Image */}
       <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-        <Image
-          src={item.image}
-          alt={item.name}
-          fill
-          className="object-cover"
-          sizes="96px"
-        />
+        {item.primaryImage ? (
+          <Image
+            src={item.primaryImage}
+            alt={item.name}
+            fill
+            className="object-cover"
+            sizes="96px"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground text-xs">
+            No image
+          </div>
+        )}
       </div>
 
       {/* Product Details */}
@@ -40,18 +47,16 @@ export function CartItem({ item }: CartItemProps) {
         <div className="flex justify-between">
           <div>
             <Link
-              href={`/products/${item.slug || item.id}`}
+              href={`/products/${item.slug}`}
               className="font-medium hover:underline"
             >
               {item.name}
             </Link>
-            {item.variant && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                {item.variant}
-              </p>
+            {!item.inStock && (
+              <p className="mt-1 text-sm text-destructive">Out of stock</p>
             )}
           </div>
-          <p className="font-semibold">${item.price.toFixed(2)}</p>
+          <p className="font-semibold">{formatPriceCents(item.price)}</p>
         </div>
 
         {/* Quantity Controls */}
@@ -70,7 +75,9 @@ export function CartItem({ item }: CartItemProps) {
               type="number"
               min="1"
               value={item.quantity}
-              onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+              onChange={(e) =>
+                handleQuantityChange(parseInt(e.target.value) || 1)
+              }
               className="h-8 w-14 text-center"
               aria-label="Quantity"
             />
@@ -85,15 +92,20 @@ export function CartItem({ item }: CartItemProps) {
             </Button>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => removeItem(item.id)}
-            className="h-8 w-8 text-destructive hover:text-destructive"
-            aria-label="Remove item"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {formatPriceCents(item.subtotal)}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => removeItem(item.id)}
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              aria-label="Remove item"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

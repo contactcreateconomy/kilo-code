@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 import { ProductGrid } from "@/components/products/product-grid";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductSortToolbar } from "@/components/products/product-sort-toolbar";
-import { Skeleton } from "@createconomy/ui";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,6 +11,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@createconomy/ui/components/breadcrumb";
+import { CategoryResolver } from "@/components/products/category-resolver";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -74,33 +73,18 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           {/* Sort Toolbar */}
           <ProductSortToolbar currentSort={params.sort} />
 
-          <Suspense fallback={<ProductGridSkeleton />}>
-            <ProductGrid
-              category={params.category}
-              search={params.search}
-              sort={params.sort}
-              page={params.page ? parseInt(params.page) : 1}
-              minPrice={params.minPrice ? parseFloat(params.minPrice) : undefined}
-              maxPrice={params.maxPrice ? parseFloat(params.maxPrice) : undefined}
-            />
-          </Suspense>
+          {/*
+            CategoryResolver is a client component that resolves category slug → ID
+            then renders ProductGrid with the resolved categoryId.
+            When there's no category filter, it passes undefined.
+          */}
+          <CategoryResolver
+            categorySlug={params.category}
+            search={params.search}
+            sort={params.sort}
+          />
         </main>
       </div>
-    </div>
-  );
-}
-
-function ProductGridSkeleton() {
-  return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 9 }).map((_, i) => (
-        <div key={i} className="space-y-3">
-          <Skeleton className="aspect-[4/3] rounded-lg" />
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-6 w-1/4" />
-        </div>
-      ))}
     </div>
   );
 }

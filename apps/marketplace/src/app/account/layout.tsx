@@ -12,7 +12,7 @@ import {
 } from "@createconomy/ui/components/breadcrumb";
 import { Card, CardContent } from "@createconomy/ui/components/card";
 import { cn } from "@createconomy/ui";
-import { User, ClipboardList, Settings } from "lucide-react";
+import { User, ClipboardList, Settings, Star, Heart, Download } from "lucide-react";
 
 interface AccountLayoutProps {
   children: React.ReactNode;
@@ -21,12 +21,18 @@ interface AccountLayoutProps {
 const navLinks = [
   { href: "/account", label: "My Account", icon: User, exact: true },
   { href: "/account/orders", label: "My Orders", icon: ClipboardList, exact: false },
+  { href: "/account/reviews", label: "My Reviews", icon: Star, exact: false },
+  { href: "/account/wishlist", label: "Wishlist", icon: Heart, exact: false },
+  { href: "/account/downloads", label: "Downloads", icon: Download, exact: false },
   { href: "/account/settings", label: "Settings", icon: Settings, exact: false },
 ] as const;
 
 function getBreadcrumbLabel(pathname: string): string | null {
   if (pathname === "/account") return null;
   if (pathname.startsWith("/account/orders")) return "Orders";
+  if (pathname.startsWith("/account/reviews")) return "Reviews";
+  if (pathname.startsWith("/account/wishlist")) return "Wishlist";
+  if (pathname.startsWith("/account/downloads")) return "Downloads";
   if (pathname.startsWith("/account/settings")) return "Settings";
   return null;
 }

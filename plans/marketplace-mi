@@ -1,0 +1,118 @@
+# Phase 05 — Seller Profile & Search Pages
+
+## Goal
+
+Create the two most important missing pages: seller profile/storefront page and dedicated search results page.
+
+---
+
+## Task 1: Create Seller Profile Page
+
+**File:** `apps/marketplace/src/app/sellers/[id]/page.tsx` (new)
+
+**Why Needed:** The product detail page has a "View profile" link pointing to `/sellers/${product.seller.id}`, but this page does not exist. This is a 404 for users.
+
+**Page Content:**
+- Seller profile header:
+  - Avatar / logo
+  - Business name
+  - Description/bio
+  - Member since date
+  - Verified badge if applicable
+- Stats row:
+  - Total products
+  - Average rating
+  - Total sales
+- Product grid:
+  - List all active products by this seller
+  - Reuse `ProductCard` component
+  - Use `api.functions.products.getProductsBySeller`
+- Reviews section (optional):
+  - Aggregate seller rating from their products
+
+**Backend Functions:**
+- [`getUserById`](../../packages/convex/convex/functions/users.ts:71) — basic user info
+- [`getProductsBySeller`](../../packages/convex/convex/functions/products.ts:281) — seller's products
+- Check if seller record exists via sellers table query
+
+**Data Flow:**
+```mermaid
+graph LR
+    A[Seller Page /sellers/id] --> B[getUserById - user info]
+    A --> C[getProductsBySeller - products]
+    A --> D[sellers table - business info]
+    C --> E[ProductCard components]
+```
+
+---
+
+## Task 2: Create Seller Page Metadata
+
+**File:** Same as Task 1
+
+**Description:**
+- Dynamic metadata from seller info
+- OpenGraph tags for social sharing
+- Structured data (JSON-LD) for seller/organization
+
+---
+
+## Task 3: Create Search Results Page
+
+**File:** `apps/marketplace/src/app/search/page.tsx` (new)
+
+**Why Needed:** The header search form submits to `/products?search=...` which works, but a dedicated `/search` page provides a better UX with:
+- Prominent search input
+- Real-time search suggestions
+- Results from multiple categories
+- Filter sidebar
+
+**Page Content:**
+- Large search input at top
+- Search query display: 'Results for "query"'
+- Result count
+- Filter options (category, price range)
+- Product grid with results
+- Empty state with suggestions
+
+**Implementation:**
+- Read `?q=` search param
+- Use `api.functions.products.searchProducts` for product search
+- Reuse `ProductGrid` and `ProductFilters` components
+
+**Backend Function:**
+- [`searchProducts`](../../packages/convex/convex/functions/products.ts:341)
+
+---
+
+## Task 4: Update Header Search to Navigate to Search Page
+
+**File:** `apps/marketplace/src/components/layout/header.tsx`
+
+**Required Changes:**
+- Update search form `action` to `/search` instead of `/products`
+- Change search param name to `q` for consistency
+- Add search icon button that navigates to `/search`
+
+---
+
+## Task 5: Create Sellers Directory Page (optional bonus)
+
+**File:** `apps/marketplace/src/app/sellers/page.tsx` (new, optional)
+
+**Description:**
+- Browse all active sellers
+- Grid of seller cards with basic info
+- Search/filter sellers
+- This is a nice-to-have, not referenced from any existing page
+
+---
+
+## Files Created/Modified
+
+| File | Change Type |
+|------|------------|
+| `src/app/sellers/[id]/page.tsx` | New — seller profile page |
+| `src/app/search/page.tsx` | New — search results page |
+| `src/components/layout/header.tsx` | Modify — search form target |
+| `src/app/sellers/page.tsx` | New (optional) — sellers directory |

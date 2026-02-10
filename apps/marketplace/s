@@ -1,0 +1,20 @@
+import type { Metadata } from "next";
+import { use } from "react";
+import { SellerProfileContent } from "@/components/sellers/seller-profile-content";
+
+interface SellerPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export function generateMetadata(): Metadata {
+  return {
+    title: "Seller Profile",
+    description: "View seller profile and their products on Createconomy.",
+  };
+}
+
+export default function SellerPage({ params }: SellerPageProps) {
+  const { id } = use(params);
+
+  return <SellerProfileContent sellerId={id} />;
+}

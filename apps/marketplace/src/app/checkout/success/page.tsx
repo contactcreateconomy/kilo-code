@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useMutation } from "convex/react";
+import { api } from "@createconomy/convex";
 import { Button } from "@createconomy/ui";
 import {
   Card,
@@ -19,7 +21,7 @@ import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
  * Checkout Success Page
  *
  * Displays order confirmation after successful Stripe Checkout.
- * Verifies the session and shows order details.
+ * Verifies the session and clears the Convex cart.
  */
 
 interface OrderDetails {
@@ -43,6 +45,9 @@ export default function CheckoutSuccessPage() {
   const [error, setError] = useState<string | null>(null);
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
 
+  const clearCart = useMutation(api.functions.cart.clearCart);
+  const cartClearedRef = useRef(false);
+
   useEffect(() => {
     async function verifyPayment() {
       if (!sessionId) {
@@ -62,8 +67,16 @@ export default function CheckoutSuccessPage() {
 
         setOrderDetails(result.session as OrderDetails);
 
-        // Clear cart after successful payment
-        localStorage.removeItem("cart");
+        // Clear cart in Convex after successful payment
+        if (!cartClearedRef.current) {
+          cartClearedRef.current = true;
+          try {
+            await clearCart({});
+          } catch (clearErr) {
+            // Cart clearing is not critical — don't block the success page
+            console.error("Failed to clear cart:", clearErr);
+          }
+        }
       } catch (err) {
         console.error("Verification error:", err);
         setError(err instanceof Error ? err.message : "Verification failed");
@@ -73,7 +86,7 @@ export default function CheckoutSuccessPage() {
     }
 
     verifyPayment();
-  }, [sessionId]);
+  }, [sessionId, clearCart]);
 
   if (isLoading) {
     return (
@@ -81,7 +94,9 @@ export default function CheckoutSuccessPage() {
         <Card className="mx-auto max-w-lg">
           <CardContent className="py-12 text-center">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Verifying your payment...</p>
+            <p className="mt-4 text-muted-foreground">
+              Verifying your payment...
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -99,12 +114,10 @@ export default function CheckoutSuccessPage() {
             <h1 className="mt-6 text-3xl font-bold tracking-tight">
               Verification Issue
             </h1>
-            <p className="mt-4 text-muted-foreground">
-              {error}
-            </p>
+            <p className="mt-4 text-muted-foreground">{error}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              If you completed your payment, please check your email for confirmation
-              or contact support.
+              If you completed your payment, please check your email for
+              confirmation or contact support.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Button asChild>
@@ -141,7 +154,10 @@ export default function CheckoutSuccessPage() {
           {/* Order Reference */}
           {sessionId && (
             <p className="mt-4 text-sm text-muted-foreground">
-              Order reference: <code className="font-mono bg-muted px-2 py-1 rounded">{sessionId.slice(0, 20)}...</code>
+              Order reference:{" "}
+              <code className="rounded bg-muted px-2 py-1 font-mono">
+                {sessionId.slice(0, 20)}...
+              </code>
             </p>
           )}
         </CardContent>
@@ -170,7 +186,10 @@ export default function CheckoutSuccessPage() {
                         {item.name} × {item.quantity}
                       </span>
                       <span className="font-medium">
-                        {formatPrice(item.amount, orderDetails.currency || "usd")}
+                        {formatPrice(
+                          item.amount,
+                          orderDetails.currency || "usd"
+                        )}
                       </span>
                     </div>
                   ))}
@@ -184,7 +203,10 @@ export default function CheckoutSuccessPage() {
                   <div className="flex justify-between font-semibold">
                     <span>Total</span>
                     <span>
-                      {formatPrice(orderDetails.amountTotal, orderDetails.currency || "usd")}
+                      {formatPrice(
+                        orderDetails.amountTotal,
+                        orderDetails.currency || "usd"
+                      )}
                     </span>
                   </div>
                 </>
@@ -192,16 +214,24 @@ export default function CheckoutSuccessPage() {
 
               {/* Payment Status */}
               <div className="mt-4 flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Payment Status:</span>
+                <span className="text-sm text-muted-foreground">
+                  Payment Status:
+                </span>
                 <Badge
-                  variant={orderDetails.paymentStatus === "paid" ? "default" : "secondary"}
+                  variant={
+                    orderDetails.paymentStatus === "paid"
+                      ? "default"
+                      : "secondary"
+                  }
                   className={
                     orderDetails.paymentStatus === "paid"
                       ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
                       : ""
                   }
                 >
-                  {orderDetails.paymentStatus === "paid" ? "Paid" : "Processing"}
+                  {orderDetails.paymentStatus === "paid"
+                    ? "Paid"
+                    : "Processing"}
                 </Badge>
               </div>
             </CardContent>

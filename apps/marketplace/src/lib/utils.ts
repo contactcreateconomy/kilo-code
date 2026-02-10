@@ -2,7 +2,36 @@
 export { cn } from "@createconomy/ui";
 
 /**
- * Format price with currency
+ * Convert price from cents (backend) to dollars (display)
+ */
+export function centsToDollars(cents: number): number {
+  return cents / 100;
+}
+
+/**
+ * Convert price from dollars (input) to cents (backend)
+ */
+export function dollarsToCents(dollars: number): number {
+  return Math.round(dollars * 100);
+}
+
+/**
+ * Format price in cents as a currency string.
+ * @param cents — price in cents (e.g. 4999 → "$49.99")
+ */
+export function formatPriceCents(
+  cents: number,
+  currency: string = "USD",
+  locale: string = "en-US"
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+  }).format(cents / 100);
+}
+
+/**
+ * Format price with currency (dollars input)
  */
 export function formatPrice(
   price: number,

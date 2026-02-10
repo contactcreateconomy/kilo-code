@@ -10,12 +10,18 @@ import {
 } from "@createconomy/ui/components/card";
 import { Separator } from "@createconomy/ui/components/separator";
 import { useCart } from "@/hooks/use-cart";
+import { formatPriceCents } from "@/lib/utils";
 import { Lock, ShieldCheck } from "lucide-react";
 
 export function CartSummary() {
-  const { items, subtotal, tax, total } = useCart();
+  const { items, subtotal, tax, total, itemCount, isAuthenticated } = useCart();
 
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  // Convert dollar values back to cents for formatPriceCents
+  const subtotalCents = Math.round(subtotal * 100);
+  const taxCents = Math.round(tax * 100);
+  const totalCents = Math.round(total * 100);
+
+  const canCheckout = items.length > 0 && isAuthenticated;
 
   return (
     <Card className="sticky top-24">
@@ -29,27 +35,35 @@ export function CartSummary() {
             <span className="text-muted-foreground">
               Subtotal ({itemCount} {itemCount === 1 ? "item" : "items"})
             </span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span>{formatPriceCents(subtotalCents)}</span>
           </div>
 
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Estimated Tax</span>
-            <span>${tax.toFixed(2)}</span>
+            <span>{formatPriceCents(taxCents)}</span>
           </div>
 
           <Separator />
 
           <div className="flex justify-between font-semibold">
             <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+            <span>{formatPriceCents(totalCents)}</span>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <Button asChild className="w-full" size="lg">
-            <Link href="/checkout">Proceed to Checkout</Link>
-          </Button>
+          {canCheckout ? (
+            <Button asChild className="w-full" size="lg">
+              <Link href="/checkout">Proceed to Checkout</Link>
+            </Button>
+          ) : (
+            <Button className="w-full" size="lg" disabled>
+              {!isAuthenticated
+                ? "Sign in to Checkout"
+                : "Cart is Empty"}
+            </Button>
+          )}
 
           <Button asChild variant="outline" className="w-full">
             <Link href="/products">Continue Shopping</Link>

@@ -1,8 +1,15 @@
+"use client";
+
+import { useQuery } from "convex/react";
+import { api } from "@createconomy/convex";
 import { ProductCard } from "./product-card";
-import type { Product } from "@/types";
+import { Skeleton } from "@createconomy/ui";
+import { mapConvexProductListItem } from "@/lib/convex-mappers";
+import type { Id } from "@createconomy/convex/dataModel";
 
 interface ProductGridProps {
   category?: string;
+  categoryId?: string;
   search?: string;
   sort?: string;
   page?: number;
@@ -10,77 +17,75 @@ interface ProductGridProps {
   maxPrice?: number;
 }
 
-// Mock function to get products - replace with Convex query
-async function getProducts(filters: ProductGridProps): Promise<Product[]> {
-  // This would be replaced with actual Convex query
-  return [
-    {
-      id: "1",
-      slug: "premium-website-template",
-      name: "Premium Website Template",
-      description: "A beautiful, responsive website template",
-      price: 49.99,
-      images: [
-        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400",
-      ],
-      category: { id: "1", name: "Templates", slug: "templates" },
-      seller: { id: "1", name: "Creative Studio", avatar: "" },
-      rating: 4.9,
-      reviewCount: 128,
-      salesCount: 1250,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      slug: "complete-react-course",
-      name: "Complete React Course",
-      description: "Learn React from scratch",
-      price: 79.99,
-      images: [
-        "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400",
-      ],
-      category: { id: "2", name: "Courses", slug: "courses" },
-      seller: { id: "2", name: "Code Academy", avatar: "" },
-      rating: 4.8,
-      reviewCount: 256,
-      salesCount: 2100,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      slug: "icon-pack-pro",
-      name: "Icon Pack Pro",
-      description: "500+ premium icons",
-      price: 29.99,
-      images: [
-        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400",
-      ],
-      category: { id: "3", name: "Graphics", slug: "graphics" },
-      seller: { id: "3", name: "Design Hub", avatar: "" },
-      rating: 4.7,
-      reviewCount: 89,
-      salesCount: 890,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
+function ProductGridSkeleton() {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="space-y-3">
+          <Skeleton className="aspect-[4/3] rounded-lg" />
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-6 w-1/4" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export async function ProductGrid(props: ProductGridProps) {
-  const products = await getProducts(props);
+export function ProductGrid({
+  categoryId,
+  search,
+}: ProductGridProps) {
+  // Use search query when there's a search term, otherwise list products
+  const listResult = useQuery(
+    api.functions.products.listProducts,
+    !search
+      ? {
+          status: "active" as const,
+          includeDetails: true,
+          ...(categoryId
+            ? { categoryId: categoryId as Id<"productCategories"> }
+            : {}),
+        }
+      : "skip"
+  );
 
-  if (products.length === 0) {
+  const searchResult = useQuery(
+    api.functions.products.searchProducts,
+    search
+      ? {
+          query: search,
+          ...(categoryId
+            ? { categoryId: categoryId as Id<"productCategories"> }
+            : {}),
+        }
+      : "skip"
+  );
+
+  // Determine loading/data state
+  const isLoading = search ? searchResult === undefined : listResult === undefined;
+  const rawProducts = search
+    ? searchResult ?? []
+    : listResult?.items ?? [];
+
+  if (isLoading) {
+    return <ProductGridSkeleton />;
+  }
+
+  if (rawProducts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <p className="text-lg font-medium">No products found</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Try adjusting your filters or search terms
+          {search
+            ? `No results for "${search}". Try a different search term.`
+            : "Try adjusting your filters or check back later."}
         </p>
       </div>
     );
   }
+
+  const products = rawProducts.map(mapConvexProductListItem);
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

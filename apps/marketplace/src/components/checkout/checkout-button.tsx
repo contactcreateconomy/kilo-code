@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@createconomy/ui";
 import { initiateCheckout, getStripeErrorMessage } from "@/lib/stripe";
+import { useCart } from "@/hooks/use-cart";
 
 /**
  * Checkout Button Component
@@ -94,7 +95,7 @@ export function CheckoutButton({
 /**
  * Checkout Button with Cart Integration
  *
- * A version that automatically fetches cart items from localStorage.
+ * A version that automatically uses the Convex-backed cart.
  */
 interface CartCheckoutButtonProps {
   disabled?: boolean;
@@ -115,6 +116,7 @@ export function CartCheckoutButton({
   onError,
   onSuccess,
 }: CartCheckoutButtonProps) {
+  const { items: cartItems } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,19 +125,12 @@ export function CartCheckoutButton({
     setError(null);
 
     try {
-      // Get cart from localStorage
-      const storedCart = localStorage.getItem("cart");
-      if (!storedCart) {
+      if (!cartItems || cartItems.length === 0) {
         throw new Error("Your cart is empty");
       }
 
-      const cartItems = JSON.parse(storedCart);
-      if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        throw new Error("Your cart is empty");
-      }
-
-      // Map to checkout items
-      const items = cartItems.map((item: { productId: string; quantity: number }) => ({
+      // Map Convex cart items to checkout items
+      const items = cartItems.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
       }));

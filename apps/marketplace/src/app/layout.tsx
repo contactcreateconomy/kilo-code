@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/providers/convex-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { ToastProvider } from "@createconomy/ui";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { GoogleOneTapWrapper } from "@/components/auth/google-one-tap-wrapper";
@@ -85,12 +86,14 @@ export default function RootLayout({
           <ThemeProvider
             defaultTheme="system"
           >
-            <div className="dot-grid-background relative flex min-h-screen flex-col bg-background">
-              <GoogleOneTapWrapper />
-              <Header />
-              <main className="relative z-10 flex-1">{children}</main>
-              <Footer />
-            </div>
+            <ToastProvider>
+              <div className="dot-grid-background relative flex min-h-screen flex-col bg-background">
+                <GoogleOneTapWrapper />
+                <Header />
+                <main className="relative z-10 flex-1">{children}</main>
+                <Footer />
+              </div>
+            </ToastProvider>
           </ThemeProvider>
         </ConvexClientProvider>
       </body>
