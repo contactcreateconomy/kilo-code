@@ -162,22 +162,28 @@ async function resolveUserRole(
 // ============================================================================
 
 /** Shape of arguments accepted by wrapper functions */
-interface AuthenticatedFunctionArgs<Args extends PropertyValidators> {
+interface AuthenticatedFunctionArgs<
+  Args extends PropertyValidators,
+  ReturnValue,
+> {
   /** Convex argument validators (same as regular query/mutation args) */
   args: Args;
   /** Handler function that receives the authenticated context and validated args */
   handler: (
     ctx: AuthenticatedQueryCtx,
     args: ObjectType<Args>
-  ) => Promise<unknown>;
+  ) => Promise<ReturnValue>;
 }
 
-interface AuthenticatedMutationArgs<Args extends PropertyValidators> {
+interface AuthenticatedMutationArgs<
+  Args extends PropertyValidators,
+  ReturnValue,
+> {
   args: Args;
   handler: (
     ctx: AuthenticatedMutationCtx,
     args: ObjectType<Args>
-  ) => Promise<unknown>;
+  ) => Promise<ReturnValue>;
 }
 
 // ============================================================================
@@ -204,9 +210,10 @@ interface AuthenticatedMutationArgs<Args extends PropertyValidators> {
  * });
  * ```
  */
-export function authenticatedQuery<Args extends PropertyValidators>(
-  options: AuthenticatedFunctionArgs<Args>
-) {
+export function authenticatedQuery<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: AuthenticatedFunctionArgs<Args, ReturnValue>) {
   return query({
     args: options.args,
     handler: async (ctx: QueryCtx, args: ObjectType<Args>) => {
@@ -243,9 +250,10 @@ export function authenticatedQuery<Args extends PropertyValidators>(
  * });
  * ```
  */
-export function authenticatedMutation<Args extends PropertyValidators>(
-  options: AuthenticatedMutationArgs<Args>
-) {
+export function authenticatedMutation<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: AuthenticatedMutationArgs<Args, ReturnValue>) {
   return mutation({
     args: options.args,
     handler: async (ctx: MutationCtx, args: ObjectType<Args>) => {
@@ -277,15 +285,16 @@ export function authenticatedMutation<Args extends PropertyValidators>(
  * });
  * ```
  */
-export function authenticatedAction<Args extends PropertyValidators>(
-  options: {
-    args: Args;
-    handler: (
-      ctx: AuthenticatedActionCtx,
-      args: ObjectType<Args>
-    ) => Promise<unknown>;
-  }
-) {
+export function authenticatedAction<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: {
+  args: Args;
+  handler: (
+    ctx: AuthenticatedActionCtx,
+    args: ObjectType<Args>
+  ) => Promise<ReturnValue>;
+}) {
   return action({
     args: options.args,
     handler: async (ctx: ActionCtx, args: ObjectType<Args>) => {
@@ -315,9 +324,10 @@ export function authenticatedAction<Args extends PropertyValidators>(
  * Creates an **internal query** that requires authentication.
  * Same as `authenticatedQuery` but only callable from other Convex functions.
  */
-export function authenticatedInternalQuery<Args extends PropertyValidators>(
-  options: AuthenticatedFunctionArgs<Args>
-) {
+export function authenticatedInternalQuery<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: AuthenticatedFunctionArgs<Args, ReturnValue>) {
   return internalQuery({
     args: options.args,
     handler: async (ctx: QueryCtx, args: ObjectType<Args>) => {
@@ -335,9 +345,10 @@ export function authenticatedInternalQuery<Args extends PropertyValidators>(
  * Creates an **internal mutation** that requires authentication.
  * Same as `authenticatedMutation` but only callable from other Convex functions.
  */
-export function authenticatedInternalMutation<Args extends PropertyValidators>(
-  options: AuthenticatedMutationArgs<Args>
-) {
+export function authenticatedInternalMutation<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: AuthenticatedMutationArgs<Args, ReturnValue>) {
   return internalMutation({
     args: options.args,
     handler: async (ctx: MutationCtx, args: ObjectType<Args>) => {
@@ -355,15 +366,16 @@ export function authenticatedInternalMutation<Args extends PropertyValidators>(
  * Creates an **internal action** that requires authentication.
  * Same as `authenticatedAction` but only callable from other Convex functions.
  */
-export function authenticatedInternalAction<Args extends PropertyValidators>(
-  options: {
-    args: Args;
-    handler: (
-      ctx: AuthenticatedActionCtx,
-      args: ObjectType<Args>
-    ) => Promise<unknown>;
-  }
-) {
+export function authenticatedInternalAction<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: {
+  args: Args;
+  handler: (
+    ctx: AuthenticatedActionCtx,
+    args: ObjectType<Args>
+  ) => Promise<ReturnValue>;
+}) {
   return internalAction({
     args: options.args,
     handler: async (ctx: ActionCtx, args: ObjectType<Args>) => {
@@ -404,8 +416,8 @@ export function authenticatedInternalAction<Args extends PropertyValidators>(
  * });
  * ```
  */
-export function adminQuery<Args extends PropertyValidators>(
-  options: AuthenticatedFunctionArgs<Args>
+export function adminQuery<Args extends PropertyValidators, ReturnValue>(
+  options: AuthenticatedFunctionArgs<Args, ReturnValue>
 ) {
   return query({
     args: options.args,
@@ -450,8 +462,8 @@ export function adminQuery<Args extends PropertyValidators>(
  * });
  * ```
  */
-export function adminMutation<Args extends PropertyValidators>(
-  options: AuthenticatedMutationArgs<Args>
+export function adminMutation<Args extends PropertyValidators, ReturnValue>(
+  options: AuthenticatedMutationArgs<Args, ReturnValue>
 ) {
   return mutation({
     args: options.args,
@@ -491,9 +503,10 @@ export function adminMutation<Args extends PropertyValidators>(
  * });
  * ```
  */
-export function adminOrModeratorQuery<Args extends PropertyValidators>(
-  options: AuthenticatedFunctionArgs<Args>
-) {
+export function adminOrModeratorQuery<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: AuthenticatedFunctionArgs<Args, ReturnValue>) {
   return query({
     args: options.args,
     handler: async (ctx: QueryCtx, args: ObjectType<Args>) => {
@@ -518,9 +531,10 @@ export function adminOrModeratorQuery<Args extends PropertyValidators>(
  * Creates a **public mutation** that requires the user to have an admin or
  * moderator role. Useful for moderation actions.
  */
-export function adminOrModeratorMutation<Args extends PropertyValidators>(
-  options: AuthenticatedMutationArgs<Args>
-) {
+export function adminOrModeratorMutation<
+  Args extends PropertyValidators,
+  ReturnValue,
+>(options: AuthenticatedMutationArgs<Args, ReturnValue>) {
   return mutation({
     args: options.args,
     handler: async (ctx: MutationCtx, args: ObjectType<Args>) => {
@@ -558,8 +572,8 @@ export function adminOrModeratorMutation<Args extends PropertyValidators>(
  * });
  * ```
  */
-export function sellerQuery<Args extends PropertyValidators>(
-  options: AuthenticatedFunctionArgs<Args>
+export function sellerQuery<Args extends PropertyValidators, ReturnValue>(
+  options: AuthenticatedFunctionArgs<Args, ReturnValue>
 ) {
   return query({
     args: options.args,
@@ -600,8 +614,8 @@ export function sellerQuery<Args extends PropertyValidators>(
  * });
  * ```
  */
-export function sellerMutation<Args extends PropertyValidators>(
-  options: AuthenticatedMutationArgs<Args>
+export function sellerMutation<Args extends PropertyValidators, ReturnValue>(
+  options: AuthenticatedMutationArgs<Args, ReturnValue>
 ) {
   return mutation({
     args: options.args,

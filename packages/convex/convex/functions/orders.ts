@@ -1,30 +1,19 @@
-import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { orderStatusValidator } from "../schema";
 import { generateOrderNumber } from "../lib/orderUtils";
-
-/**
- * Typed update object for order status changes.
- * Mirrors the mutable fields on the orders table that may be set
- * when transitioning between statuses.
- */
-interface OrderStatusUpdate {
-  status: Doc<"orders">["status"];
-  updatedAt: number;
-  trackingNumber?: string;
-  trackingUrl?: string;
-  paidAt?: number;
-  shippedAt?: number;
-  deliveredAt?: number;
-  cancelledAt?: number;
-  cancelReason?: string;
-  refundedAt?: number;
-  refundAmount?: number;
-  refundReason?: string;
-  notes?: string;
-}
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  sellerQuery,
+} from "../lib/middleware";
+import { createError, ErrorCode } from "../lib/errors";
+import {
+  assertCanViewOrder,
+  buildOrderStatusUpdate,
+  resolveUserRole,
+  restoreInventoryForOrderItems,
+} from "../lib/orders";
 
 /**
  * Order Management Functions
@@ -43,46 +32,21 @@ interface OrderStatusUpdate {
  * @param orderId - Order ID
  * @returns Order with items or null
  */
-export const getOrder = query({
+export const getOrder = authenticatedQuery({
   args: {
     orderId: v.id("orders"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
     const order = await ctx.db.get(args.orderId);
     if (!order) {
       return null;
     }
 
-    // Check if user owns the order or is admin/seller
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
-    const isAdmin = profile?.defaultRole === "admin";
-    const isSeller = profile?.defaultRole === "seller";
-
-    if (order.userId !== userId && !isAdmin) {
-      // Check if user is a seller with items in this order
-      if (isSeller) {
-        const sellerItems = await ctx.db
-          .query("orderItems")
-          .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
-          .filter((q) => q.eq(q.field("sellerId"), userId))
-          .first();
-
-        if (!sellerItems) {
-          throw new Error("Not authorized to view this order");
-        }
-      } else {
-        throw new Error("Not authorized to view this order");
-      }
-    }
+    await assertCanViewOrder(ctx, {
+      viewerId: ctx.userId,
+      orderId: args.orderId,
+      orderUserId: order.userId,
+    });
 
     // Get order items
     const items = await ctx.db
@@ -144,16 +108,11 @@ export const getOrder = query({
  * @param orderNumber - Order number
  * @returns Order or null
  */
-export const getOrderByNumber = query({
+export const getOrderByNumber = authenticatedQuery({
   args: {
     orderNumber: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
     const order = await ctx.db
       .query("orders")
       .withIndex("by_order_number", (q) => q.eq("orderNumber", args.orderNumber))
@@ -163,15 +122,10 @@ export const getOrderByNumber = query({
       return null;
     }
 
-    // Check authorization
-    if (order.userId !== userId) {
-      const profile = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .first();
-
-      if (profile?.defaultRole !== "admin") {
-        throw new Error("Not authorized to view this order");
+    if (order.userId !== ctx.userId) {
+      const role = await resolveUserRole(ctx, ctx.userId);
+      if (role !== "admin") {
+        throw createError(ErrorCode.FORBIDDEN, "Not authorized to view this order");
       }
     }
 
@@ -186,17 +140,12 @@ export const getOrderByNumber = query({
  * @param limit - Number of orders to return
  * @returns List of user's orders
  */
-export const getUserOrders = query({
+export const getUserOrders = authenticatedQuery({
   args: {
     status: v.optional(orderStatusValidator),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
     const limit = args.limit ?? 20;
 
     let ordersQuery;
@@ -205,12 +154,12 @@ export const getUserOrders = query({
       ordersQuery = ctx.db
         .query("orders")
         .withIndex("by_user_status", (q) =>
-          q.eq("userId", userId).eq("status", args.status!)
+          q.eq("userId", ctx.userId).eq("status", args.status!)
         );
     } else {
       ordersQuery = ctx.db
         .query("orders")
-        .withIndex("by_user", (q) => q.eq("userId", userId));
+        .withIndex("by_user", (q) => q.eq("userId", ctx.userId));
     }
 
     const orders = await ordersQuery.order("desc").take(limit);
@@ -241,27 +190,12 @@ export const getUserOrders = query({
  * @param limit - Number of orders to return
  * @returns List of orders containing seller's products
  */
-export const getSellerOrders = query({
+export const getSellerOrders = sellerQuery({
   args: {
     status: v.optional(orderStatusValidator),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    // Verify user is a seller
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
-    if (!profile || (profile.defaultRole !== "seller" && profile.defaultRole !== "admin")) {
-      throw new Error("Seller role required");
-    }
-
     const limit = args.limit ?? 50;
 
     // Get order items for this seller
@@ -271,12 +205,12 @@ export const getSellerOrders = query({
       orderItemsQuery = ctx.db
         .query("orderItems")
         .withIndex("by_seller_status", (q) =>
-          q.eq("sellerId", userId).eq("status", args.status!)
+          q.eq("sellerId", ctx.userId).eq("status", args.status!)
         );
     } else {
       orderItemsQuery = ctx.db
         .query("orderItems")
-        .withIndex("by_seller", (q) => q.eq("sellerId", userId));
+        .withIndex("by_seller", (q) => q.eq("sellerId", ctx.userId));
     }
 
     const orderItems = await orderItemsQuery.order("desc").take(limit);
@@ -331,7 +265,7 @@ export const getSellerOrders = query({
  * @param notes - Order notes
  * @returns Created order ID
  */
-export const createOrder = mutation({
+export const createOrder = authenticatedMutation({
   args: {
     tenantId: v.optional(v.id("tenants")),
     shippingAddress: v.object({
@@ -356,10 +290,7 @@ export const createOrder = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
+    const userId = ctx.userId;
 
     // Get user's cart
     let cart;
@@ -378,7 +309,7 @@ export const createOrder = mutation({
     }
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw createError(ErrorCode.NOT_FOUND, "Cart not found");
     }
 
     // Get cart items
@@ -388,7 +319,7 @@ export const createOrder = mutation({
       .collect();
 
     if (cartItems.length === 0) {
-      throw new Error("Cart is empty");
+      throw createError(ErrorCode.VALIDATION_FAILED, "Cart is empty");
     }
 
     // BUG FIX B1: Store validated products in a Map during the validation phase
@@ -403,13 +334,19 @@ export const createOrder = mutation({
     for (const cartItem of cartItems) {
       const product = await ctx.db.get(cartItem.productId);
       if (!product || product.isDeleted || product.status !== "active") {
-        throw new Error(`Product ${cartItem.productId} is no longer available`);
+        throw createError(
+          ErrorCode.NOT_FOUND,
+          `Product ${cartItem.productId} is no longer available`
+        );
       }
 
       // Check inventory
       if (product.trackInventory && product.inventory !== undefined) {
         if (product.inventory < cartItem.quantity) {
-          throw new Error(`Insufficient inventory for ${product.name}`);
+          throw createError(
+            ErrorCode.INSUFFICIENT_INVENTORY,
+            `Insufficient inventory for ${product.name}`
+          );
         }
       }
 
@@ -515,35 +452,28 @@ export const createOrder = mutation({
  * @param status - New status
  * @returns Success boolean
  */
-export const updateOrderStatus = mutation({
+export const updateOrderStatus = authenticatedMutation({
   args: {
     orderId: v.id("orders"),
     status: orderStatusValidator,
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
     const order = await ctx.db.get(args.orderId);
     if (!order) {
-      throw new Error("Order not found");
+      throw createError(ErrorCode.NOT_FOUND, "Order not found");
     }
 
-    // Check authorization
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
-    const isAdmin = profile?.defaultRole === "admin";
-    const isSeller = profile?.defaultRole === "seller";
+    const role = await resolveUserRole(ctx, ctx.userId);
+    const isAdmin = role === "admin";
+    const isSeller = role === "seller";
 
     // Customers can only cancel pending orders
-    if (order.userId === userId && !isAdmin && !isSeller) {
+    if (order.userId === ctx.userId && !isAdmin && !isSeller) {
       if (args.status !== "cancelled" || order.status !== "pending") {
-        throw new Error("Customers can only cancel pending orders");
+        throw createError(
+          ErrorCode.ORDER_NOT_MODIFIABLE,
+          "Customers can only cancel pending orders"
+        );
       }
     }
 
@@ -552,11 +482,14 @@ export const updateOrderStatus = mutation({
       const sellerItems = await ctx.db
         .query("orderItems")
         .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
-        .filter((q) => q.eq(q.field("sellerId"), userId))
+        .filter((q) => q.eq(q.field("sellerId"), ctx.userId))
         .collect();
 
       if (sellerItems.length === 0) {
-        throw new Error("Not authorized to update this order");
+        throw createError(
+          ErrorCode.FORBIDDEN,
+          "Not authorized to update this order"
+        );
       }
 
       // Update only seller's items
@@ -572,23 +505,7 @@ export const updateOrderStatus = mutation({
     }
 
     const now = Date.now();
-    const updates: OrderStatusUpdate = {
-      status: args.status,
-      updatedAt: now,
-    };
-
-    // Set timestamp based on status
-    switch (args.status) {
-      case "shipped":
-        updates.shippedAt = now;
-        break;
-      case "delivered":
-        updates.deliveredAt = now;
-        break;
-      case "cancelled":
-        updates.cancelledAt = now;
-        break;
-    }
+    const updates = buildOrderStatusUpdate(args.status, now);
 
     await ctx.db.patch(args.orderId, updates);
 
@@ -607,15 +524,7 @@ export const updateOrderStatus = mutation({
 
     // If cancelled, restore inventory
     if (args.status === "cancelled") {
-      for (const item of orderItems) {
-        const product = await ctx.db.get(item.productId);
-        if (product && product.trackInventory && product.inventory !== undefined) {
-          await ctx.db.patch(item.productId, {
-            inventory: product.inventory + item.quantity,
-            salesCount: Math.max(0, product.salesCount - item.quantity),
-          });
-        }
-      }
+      await restoreInventoryForOrderItems(ctx, orderItems);
     }
 
     return true;
@@ -628,37 +537,31 @@ export const updateOrderStatus = mutation({
  * @param orderId - Order ID
  * @returns Success boolean
  */
-export const cancelOrder = mutation({
+export const cancelOrder = authenticatedMutation({
   args: {
     orderId: v.id("orders"),
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
     const order = await ctx.db.get(args.orderId);
     if (!order) {
-      throw new Error("Order not found");
+      throw createError(ErrorCode.NOT_FOUND, "Order not found");
     }
 
     // Only order owner can cancel
-    if (order.userId !== userId) {
-      const profile = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .first();
-
-      if (profile?.defaultRole !== "admin") {
-        throw new Error("Not authorized to cancel this order");
+    if (order.userId !== ctx.userId) {
+      const role = await resolveUserRole(ctx, ctx.userId);
+      if (role !== "admin") {
+        throw createError(ErrorCode.FORBIDDEN, "Not authorized to cancel this order");
       }
     }
 
     // Can only cancel pending or confirmed orders
     if (!["pending", "confirmed"].includes(order.status)) {
-      throw new Error("Order cannot be cancelled at this stage");
+      throw createError(
+        ErrorCode.ORDER_NOT_MODIFIABLE,
+        "Order cannot be cancelled at this stage"
+      );
     }
 
     const now = Date.now();
@@ -681,16 +584,9 @@ export const cancelOrder = mutation({
         status: "cancelled",
         updatedAt: now,
       });
-
-      // Restore inventory
-      const product = await ctx.db.get(item.productId);
-      if (product && product.trackInventory && product.inventory !== undefined) {
-        await ctx.db.patch(item.productId, {
-          inventory: product.inventory + item.quantity,
-          salesCount: Math.max(0, product.salesCount - item.quantity),
-        });
-      }
     }
+
+    await restoreInventoryForOrderItems(ctx, orderItems);
 
     return true;
   },
@@ -701,38 +597,14 @@ export const cancelOrder = mutation({
 // ============================================================================
 
 /**
- * Helper: require the current user to be a seller
- */
-async function requireSeller(ctx: import("../_generated/server").QueryCtx) {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) {
-    throw new Error("Authentication required");
-  }
-
-  const profile = await ctx.db
-    .query("userProfiles")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
-    .first();
-
-  if (
-    !profile ||
-    (profile.defaultRole !== "seller" && profile.defaultRole !== "admin")
-  ) {
-    throw new Error("Seller role required");
-  }
-
-  return userId;
-}
-
-/**
  * Get seller dashboard statistics
  *
  * @returns Seller-specific stats: revenue, orders, products, views
  */
-export const getSellerDashboardStats = query({
+export const getSellerDashboardStats = sellerQuery({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireSeller(ctx);
+    const userId = ctx.userId;
 
     // Get seller's products
     const products = await ctx.db
@@ -773,10 +645,10 @@ export const getSellerDashboardStats = query({
  *
  * @returns Array of { name, revenue, orders } for last 12 months
  */
-export const getSellerMonthlyRevenue = query({
+export const getSellerMonthlyRevenue = sellerQuery({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireSeller(ctx);
+    const userId = ctx.userId;
 
     const now = Date.now();
     const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
@@ -855,12 +727,12 @@ export const getSellerMonthlyRevenue = query({
  * @param limit - Number of reviews to return
  * @returns Reviews with product and user info
  */
-export const getSellerProductReviews = query({
+export const getSellerProductReviews = sellerQuery({
   args: {
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireSeller(ctx);
+    const userId = ctx.userId;
     const limit = args.limit ?? 20;
 
     // Get seller's product IDs
