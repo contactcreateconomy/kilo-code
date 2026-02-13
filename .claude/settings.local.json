@@ -66,7 +66,9 @@
       "Bash(git add -A -- . \":!nul\")",
       "Bash(git checkout HEAD -- .github/workflows/ci.yml)",
       "Bash(git reset HEAD .github/workflows/ci.yml)",
-      "Bash(git add -A -- . \":!nul\" \":!.github/workflows/ci.yml\")"
+      "Bash(git add -A -- . \":!nul\" \":!.github/workflows/ci.yml\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: SOLID refactor — domain extraction, auth consolidation, lint/type/build fixes\n\n- Extract Convex backend into layered domain modules \\(orders, forum, products, users\\)\n- Add shared authorization policies and cross-cutting utilities\n- Consolidate auth components into @createconomy/ui with shared hooks\n- Fix ESLint, TypeScript, and build errors across all 4 apps\n- Add ESLint configs per app, PR template\n- Remove obsolete plans/ directory\n- Update docs \\(architecture, api-reference\\) to reflect new structure\n- Add ADRs documenting architectural decisions\n- Add branch naming convention to CLAUDE.md\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push -u origin 014-refactor/solid-cleanup)"
     ]
   }
 }

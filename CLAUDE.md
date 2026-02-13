@@ -24,127 +24,111 @@ Createconomy is a pnpm + Turborepo monorepo with four Next.js apps backed by a s
 
 Run from repository root unless noted.
 
-### Install and run
+| Task | Command |
+|------|---------|
+| Install | `pnpm install` |
+| Dev all | `pnpm dev` |
+| Dev single | `pnpm --filter @createconomy/marketplace dev` |
+| Build all | `pnpm build` |
+| Build single | `pnpm --filter @createconomy/admin build` |
+| Typecheck | `pnpm typecheck` |
+| Lint | `pnpm lint` |
+| Format | `pnpm format` |
+| Test | `pnpm test` |
+| Convex dev | `cd packages/convex && npx convex dev` |
+| Convex deploy | `cd packages/convex && npx convex deploy` |
 
-- `pnpm install`
-- `pnpm dev` — run dev tasks across workspace packages
-- `pnpm --filter @createconomy/marketplace dev`
-- `pnpm --filter @createconomy/forum dev`
-- `pnpm --filter @createconomy/admin dev`
-- `pnpm --filter @createconomy/seller dev`
+Single test file: `pnpm --filter @createconomy/marketplace test -- <path>`
 
-### Convex backend
+## Architecture
 
-- `pnpm --filter @createconomy/convex dev` (or `cd packages/convex && npx convex dev`)
-- First-time initialization: `cd packages/convex && npx convex dev --once`
-- Deploy backend: `cd packages/convex && npx convex deploy`
+See [`docs/architecture.md`](docs/architecture.md) for diagrams and data flow.
 
-### Quality checks
+### Frontend apps
 
-- `pnpm build`
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm format`
-- `pnpm format:check`
+All four apps use Next.js App Router. Typical composition:
+- `apps/<app>/src/app` — routes/layouts
+- `apps/<app>/src/components` + `apps/<app>/src/hooks` — app-specific UI
+- `apps/<app>/src/providers` — Convex/auth/theme providers
 
-### Tests
+### Backend (`packages/convex/`)
 
-- `pnpm test`
-- `pnpm test:watch`
-- `pnpm test:coverage`
+Convex is the system of record. See [`docs/key-files.md`](docs/key-files.md) for full file map.
 
-Single test file (Vitest in packages that define test scripts):
+- Schema: `convex/schema.ts` — see [`docs/data-models.md`](docs/data-models.md)
+- Functions: `convex/functions/*.ts` — thin orchestration, delegate to `lib/<domain>/`
+- Domain modules: `lib/orders/`, `lib/forum/`, `lib/products/`, `lib/users/`, `lib/shared/`
+- Auth: `convex/auth.ts` + `convex/http.ts` (cross-subdomain sessions)
+- Middleware: `lib/middleware.ts` — `authenticatedQuery`, `adminMutation`, `sellerQuery`, etc.
 
-- Marketplace: `pnpm --filter @createconomy/marketplace test -- <path-to-test-file>`
-- UI package: `pnpm --filter @createconomy/ui test -- <path-to-test-file>`
+Pattern: Repository functions use `ReadCtx = Pick<QueryCtx, "db">` and `WriteCtx = Pick<MutationCtx, "db">`.
 
-Note: `forum`, `admin`, and `seller` currently do not define `test` scripts in their package manifests.
+### Shared packages
 
-## Architecture (big picture)
+- `@createconomy/ui`: design-system components, hooks, tokens — see [`docs/design-system.md`](docs/design-system.md)
+- `@createconomy/config`: ESLint, TS, Tailwind, security headers
+- `@createconomy/convex`: generated client API + backend implementation
 
-### 1) Frontend apps
+## Critical rules
 
-All four apps use Next.js App Router and consume shared code from `@createconomy/ui` and `@createconomy/convex`.
+### Always
 
-Typical app composition:
+- TypeScript strict mode. No `any` types.
+- All data ops through Convex. Never direct DB writes from client.
+- Use `createError(ErrorCode.*, message)` for user-facing errors.
+- Prices in **cents** (integer). Use `centsToDollars()`/`dollarsToCents()`.
+- Soft-delete: `isDeleted: true, deletedAt: Date.now()`. Never hard-delete.
+- Use auth middleware wrappers for new Convex functions.
+- `pnpm format` and `pnpm typecheck` before committing.
+- Prefix client env vars with `NEXT_PUBLIC_`.
+- Use consistent-type-imports with inline style.
 
-- app routes/layouts in `apps/<app>/src/app`
-- app-specific UI/hooks in `apps/<app>/src/components` and `apps/<app>/src/hooks`
-- Convex/auth provider wiring in `apps/<app>/src/providers`
+### Never
 
-### 2) Backend and data model
-
-Convex is the system of record for application data and business logic:
-
-- schema: `packages/convex/convex/schema.ts`
-- HTTP endpoints (including auth/session endpoints): `packages/convex/convex/http.ts`
-- role/auth wrappers: `packages/convex/convex/lib/middleware.ts`
-- domain functions: `packages/convex/convex/functions/**`
-
-Schema includes multi-tenant identity/auth, commerce, forum, Stripe, and rate-limiting tables. App clients access Convex via generated API/types exported from `@createconomy/convex`.
-
-### 3) Auth/session model
-
-Cross-subdomain auth is handled through Convex auth + a custom `sessions` model and HTTP endpoints in `packages/convex/convex/http.ts` (not only Next.js cookie-local session state).
-
-### 4) Shared packages
-
-- `@createconomy/ui`: design-system components, hooks, helpers, tokens
-- `@createconomy/config`: centralized shared config (TS/ESLint/Tailwind/security headers)
-- `@createconomy/convex`: generated client API plus backend implementation
-
-## Project-specific implementation notes
-
-- Do not edit `packages/convex/convex/_generated/*`; run Convex dev to regenerate.
-- Schema edits require Convex dev running (`npx convex dev`) or generated types drift.
-- Monetary values are stored in cents (integer).
-- Soft-delete patterns are used in domain models (`isDeleted`, `deletedAt`) rather than immediate hard deletes.
-- Rate limiting has a DB-backed path via `rateLimitRecords`.
-
-## ESLint setup
-
-- Next.js 16 removed `next lint`. Each app has `eslint.config.mjs` that re-exports from `@createconomy/config/eslint` with `projectService: true` and `tsconfigRootDir: import.meta.dirname`.
-- Lint individual app: `pnpm --filter @createconomy/admin lint`
-- `complexity` and `max-lines-per-function` are `warn` (many pre-existing violations in admin/forum pages).
+- Edit `packages/convex/convex/_generated/*`
+- Use `var`, `forwardRef`, `useContext`, `v.any()`
+- Commit `.env` / `.env.local` files
+- Use npm/yarn — only pnpm
+- Store prices in dollars/floats
+- Log sensitive data (passwords, tokens, PII)
 
 ## Build gotchas
 
-- `pnpm build` (all 4 apps in parallel) can OOM on Windows. Build individually: `pnpm --filter @createconomy/admin build`
-- Convex insert functions require `as never` casts due to Convex's strict table insert typing — this is a known pattern.
-- Index signature properties must use bracket notation (`patch["fieldName"]`) not dot access due to `noPropertyAccessFromIndexSignature`.
+- `pnpm build` (all 4 apps in parallel) can OOM on Windows. Build individually.
+- Convex insert functions require `as never` casts — known pattern.
+- Index signature properties must use bracket notation (`patch["fieldName"]`).
+- Schema changes require `npx convex dev` running or generated types drift.
 
-## Backend domain architecture
+## ESLint setup
 
-Convex backend functions delegate to layered domain modules in `packages/convex/convex/lib/`:
-
-- `lib/shared/` — cross-cutting: `author.ts` (enrichment), `authorization.ts`, `pagination.ts`
-- `lib/orders/` — order domain (reference pattern)
-- `lib/forum/` — forum domain: `forum.types.ts`, `forum.repository.ts`, `forum.policies.ts`, `forum.service.ts`, `forum.mappers.ts`
-- `lib/products/` — products domain (same layered pattern)
-- `lib/users/` — users domain (same layered pattern)
-- `lib/policies.ts` — shared authorization policy helpers
-
-Pattern: function files in `convex/functions/*.ts` are thin orchestration handlers that import from `lib/<domain>/`. Repository functions use `ReadCtx = Pick<QueryCtx, "db">` and `WriteCtx = Pick<MutationCtx, "db">`.
-
-ADRs documenting these decisions are in `docs/adr/`.
-
-## Guidance sources in this repo
-
-- `README.md` (monorepo layout, commands, deployment setup)
-- `docs/commands.md` (script reference)
-- `docs/conventions.md` and `docs/pitfalls.md` (repo coding patterns and gotchas)
-- `AGENTS.md` (existing AI-agent-oriented quick reference)
+- Each app has `eslint.config.mjs` re-exporting from `@createconomy/config/eslint` with `projectService: true`.
+- `complexity` and `max-lines-per-function` are `warn`.
+- Lint individual app: `pnpm --filter @createconomy/admin lint`
 
 ## Branch naming convention
 
-Branches use a sequential numeric prefix: `NNN-description`. The next branch number is **015**. Always increment from the highest existing branch number. Examples:
+Branches use a sequential numeric prefix: `NNN-type/description`. The next branch number is **015**. Always increment from the highest existing branch number. Examples:
 
 - `013-SOLID-principle`
 - `014-refactor/solid-cleanup`
 - `015-<next-feature>`
 
-Cursor/Copilot rule files were not found in this checkout:
+## Documentation index
 
-- No `.cursorrules`
-- No `.cursor/rules/**`
-- No `.github/copilot-instructions.md`
+All docs live in [`docs/`](docs/). Key references:
+
+| Document | What it covers |
+|----------|---------------|
+| [`architecture.md`](docs/architecture.md) | System design, data flow, auth flow |
+| [`key-files.md`](docs/key-files.md) | File locations, domain module structure |
+| [`data-models.md`](docs/data-models.md) | Database schema (all tables) |
+| [`api-reference.md`](docs/api-reference.md) | Convex functions, HTTP endpoints |
+| [`conventions.md`](docs/conventions.md) | Naming, imports, React/Convex patterns |
+| [`pitfalls.md`](docs/pitfalls.md) | Common mistakes, known issues |
+| [`design-system.md`](docs/design-system.md) | UI tokens, components, theming |
+| [`security.md`](docs/security.md) | Auth, headers, rate limiting, Stripe |
+| [`deployment.md`](docs/deployment.md) | Vercel setup, domains |
+| [`environment.md`](docs/environment.md) | Env vars reference |
+| [`contributing.md`](docs/contributing.md) | Branch naming, commits, PR process |
+| [`troubleshooting.md`](docs/troubleshooting.md) | Common issues, debug tips |
+| [`adr/`](docs/adr/) | Architecture Decision Records |
