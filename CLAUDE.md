@@ -69,6 +69,59 @@ Pattern: Repository functions use `ReadCtx = Pick<QueryCtx, "db">` and `WriteCtx
 - `@createconomy/config`: ESLint, TS, Tailwind, security headers
 - `@createconomy/convex`: generated client API + backend implementation
 
+## SOLID principles (mandatory for all code changes)
+
+Every modification — new feature, refactor, or bug fix — must follow these principles:
+
+### S — Single Responsibility
+
+- Each file/module/function does **one thing**. If a function name has "and" in it, split it.
+- Convex function files (`convex/functions/*.ts`) are thin orchestration only — business logic lives in `lib/<domain>/service.ts`.
+- React components render UI. Data fetching, transformation, and side effects go in hooks or service layers.
+- Max ~200 lines per file. If a component/module exceeds this, extract sub-components or helpers.
+
+### O — Open/Closed
+
+- Extend behavior through **composition**, not modification of existing code.
+- Use the domain module pattern: add new domain modules in `lib/<newdomain>/` following the existing `types → repository → policies → service → mappers` layering.
+- React: prefer compound components and render props over adding boolean prop flags to existing components.
+- Convex: add new functions rather than adding conditional branches to existing ones.
+
+### L — Liskov Substitution
+
+- Shared types/interfaces in `packages/ui/src/types/` must be substitutable across all 4 apps.
+- If a hook returns `{ data, loading, error }`, all hooks returning that shape must behave identically — no surprise `undefined` vs `null` differences.
+- Auth middleware wrappers (`authenticatedQuery`, `adminQuery`, etc.) must all provide the same `ctx.userId` contract.
+
+### I — Interface Segregation
+
+- Don't force consumers to depend on things they don't use.
+- Barrel exports (`index.ts`) should re-export granularly — apps import only what they need.
+- Convex function args: only declare validators for fields the function actually uses.
+- React component props: prefer small, focused prop interfaces. Split large components into smaller ones with their own props rather than one component with 15+ props.
+
+### D — Dependency Inversion
+
+- High-level modules (app pages/components) depend on abstractions (hooks, service interfaces), not concrete implementations.
+- Apps import from `@createconomy/ui` and `@createconomy/convex` — never reach into internal package paths.
+- Domain service functions accept `ReadCtx`/`WriteCtx` (abstractions over `QueryCtx`/`MutationCtx`), not concrete Convex context objects.
+- Shared utilities go in `packages/ui` or `packages/config` — app-specific code never imports from another app.
+
+### How this maps to the codebase
+
+| Layer | Responsibility | Location |
+|-------|---------------|----------|
+| Function handlers | Thin orchestration (auth + delegate) | `convex/functions/*.ts` |
+| Domain services | Business logic | `convex/lib/<domain>/service.ts` |
+| Repositories | DB read/write operations | `convex/lib/<domain>/repository.ts` |
+| Policies | Authorization rules | `convex/lib/<domain>/policies.ts` |
+| Types | Domain type definitions | `convex/lib/<domain>/types.ts` |
+| Mappers | Data transformation | `convex/lib/<domain>/mappers.ts` |
+| Shared | Cross-cutting concerns | `convex/lib/shared/` |
+| UI components | Presentation only | `packages/ui/src/components/` |
+| App hooks | Data fetching + state | `apps/<app>/src/hooks/` |
+| App pages | Route composition | `apps/<app>/src/app/` |
+
 ## Critical rules
 
 ### Always
