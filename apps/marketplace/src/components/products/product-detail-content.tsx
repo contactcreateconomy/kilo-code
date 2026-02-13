@@ -84,7 +84,7 @@ export function ProductDetailContent({ slug }: ProductDetailContentProps) {
   const incrementView = useMutation(api.functions.products.incrementViewCount);
   useEffect(() => {
     if (productBySlug?._id) {
-      incrementView({ productId: productBySlug._id as Id<"products"> });
+      void incrementView({ productId: productBySlug._id as Id<"products"> });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productBySlug?._id]);

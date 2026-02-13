@@ -6,7 +6,7 @@
  * `Seller` types used by UI components.
  */
 
-import type { Product, Category, Seller } from "@/types";
+import type { Product, Category } from "@/types";
 import { centsToDollars } from "@/lib/utils";
 
 // ============================================================================

@@ -2,10 +2,22 @@
 
 import { useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@createconomy/convex";
+import type { QueryEnvelope } from "@createconomy/ui/types/envelope";
 
 type TargetType = "thread" | "post" | "comment";
 type ReactionType = "upvote" | "downvote" | "bookmark";
+
+type ReactionMap = FunctionReturnType<typeof api.functions.forum.getUserReactions>;
+
+type UseReactionsResult = QueryEnvelope<ReactionMap> & {
+  reactions: ReactionMap;
+  toggle: (targetId: string, reactionType: ReactionType) => Promise<{ action: "added" | "removed" | "switched" }>;
+  hasReaction: (targetId: string, reactionType: ReactionType) => boolean;
+  hasUpvote: (targetId: string) => boolean;
+  hasDownvote: (targetId: string) => boolean;
+};
 
 /**
  * useReactions — Manages upvote/downvote/bookmark reactions via Convex.
@@ -16,11 +28,15 @@ type ReactionType = "upvote" | "downvote" | "bookmark";
  * @param targetType - "thread" | "post" | "comment"
  * @param targetIds - Array of target IDs to check for existing reactions
  */
-export function useReactions(targetType: TargetType, targetIds: string[]) {
+export function useReactions(
+  targetType: TargetType,
+  targetIds: string[]
+): UseReactionsResult {
   const reactions = useQuery(
     api.functions.forum.getUserReactions,
     targetIds.length > 0 ? { targetType, targetIds } : "skip"
   );
+  const data: ReactionMap = reactions ?? {};
 
   const toggleMutation = useMutation(api.functions.forum.toggleReaction);
 
@@ -36,10 +52,9 @@ export function useReactions(targetType: TargetType, targetIds: string[]) {
    */
   const hasReaction = useCallback(
     (targetId: string, reactionType: ReactionType): boolean => {
-      if (!reactions) return false;
-      return reactions[targetId] === reactionType;
+      return data[targetId] === reactionType;
     },
-    [reactions]
+    [data]
   );
 
   /**
@@ -47,10 +62,9 @@ export function useReactions(targetType: TargetType, targetIds: string[]) {
    */
   const hasUpvote = useCallback(
     (targetId: string): boolean => {
-      if (!reactions) return false;
-      return reactions[targetId] === "upvote";
+      return data[targetId] === "upvote";
     },
-    [reactions]
+    [data]
   );
 
   /**
@@ -58,18 +72,19 @@ export function useReactions(targetType: TargetType, targetIds: string[]) {
    */
   const hasDownvote = useCallback(
     (targetId: string): boolean => {
-      if (!reactions) return false;
-      return reactions[targetId] === "downvote";
+      return data[targetId] === "downvote";
     },
-    [reactions]
+    [data]
   );
 
   return {
-    reactions: reactions ?? {},
+    reactions: data,
+    data,
     toggle,
     hasReaction,
     hasUpvote,
     hasDownvote,
-    isLoading: reactions === undefined,
+    isLoading: targetIds.length > 0 && reactions === undefined,
+    error: null,
   };
 }

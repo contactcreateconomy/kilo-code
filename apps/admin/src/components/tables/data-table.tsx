@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { Checkbox } from '@createconomy/ui';
+import { useTableSort } from './use-table-sort';
+import { useTableSelection } from './use-table-selection';
 
-interface Column<T> {
+export interface Column<T> {
   key: keyof T | string;
   header: string;
   render?: (item: T) => React.ReactNode;
   sortable?: boolean;
 }
 
-interface DataTableProps<T> {
+export interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   keyField: keyof T;
@@ -27,50 +28,16 @@ export function DataTable<T>({
   selectable = false,
   onSelectionChange,
 }: DataTableProps<T>) {
-  const [selectedItems, setSelectedItems] = useState<Set<unknown>>(new Set());
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-
-  const handleSelectAll = () => {
-    if (selectedItems.size === data.length) {
-      setSelectedItems(new Set());
-      onSelectionChange?.([]);
-    } else {
-      const allKeys = new Set(data.map((item) => item[keyField]));
-      setSelectedItems(allKeys);
-      onSelectionChange?.(data);
-    }
-  };
-
-  const handleSelectItem = (item: T) => {
-    const key = item[keyField];
-    const newSelected = new Set(selectedItems);
-    if (newSelected.has(key)) {
-      newSelected.delete(key);
-    } else {
-      newSelected.add(key);
-    }
-    setSelectedItems(newSelected);
-    onSelectionChange?.(data.filter((d) => newSelected.has(d[keyField])));
-  };
-
-  const handleSort = (columnKey: string) => {
-    if (sortColumn === columnKey) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(columnKey);
-      setSortDirection('asc');
-    }
-  };
-
-  const sortedData = [...data].sort((a, b) => {
-    if (!sortColumn) return 0;
-    const aValue = (a as Record<string, unknown>)[sortColumn];
-    const bValue = (b as Record<string, unknown>)[sortColumn];
-    if (aValue === bValue) return 0;
-    const comparison = aValue! < bValue! ? -1 : 1;
-    return sortDirection === 'asc' ? comparison : -comparison;
+  const { sortedData, sortColumn, sortDirection, handleSort } = useTableSort({
+    data,
   });
+
+  const { isAllSelected, handleSelectAll, handleSelectItem, isSelected } =
+    useTableSelection({
+      data,
+      keyField,
+      onSelectionChange,
+    });
 
   const getValue = (item: T, key: string): unknown => {
     return (item as Record<string, unknown>)[key];
@@ -84,7 +51,7 @@ export function DataTable<T>({
             {selectable && (
               <th className="w-12">
                 <Checkbox
-                  checked={selectedItems.size === data.length && data.length > 0}
+                  checked={isAllSelected}
                   onCheckedChange={handleSelectAll}
                 />
               </th>
@@ -115,7 +82,7 @@ export function DataTable<T>({
               {selectable && (
                 <td onClick={(e) => e.stopPropagation()}>
                   <Checkbox
-                    checked={selectedItems.has(item[keyField])}
+                    checked={isSelected(item)}
                     onCheckedChange={() => handleSelectItem(item)}
                   />
                 </td>

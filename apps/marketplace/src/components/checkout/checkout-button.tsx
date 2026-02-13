@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@createconomy/ui";
 import { initiateCheckout, getStripeErrorMessage } from "@/lib/stripe";
 import { useCart } from "@/hooks/use-cart";
@@ -39,7 +38,6 @@ export function CheckoutButton({
   onError,
   onSuccess,
 }: CheckoutButtonProps) {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

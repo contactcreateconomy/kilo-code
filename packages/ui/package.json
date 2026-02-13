@@ -32,7 +32,8 @@
     "./tokens/shadows": "./src/tokens/shadows.ts",
     "./tokens/typography": "./src/tokens/typography.ts",
     "./tokens/layout": "./src/tokens/layout.ts",
-    "./tokens": "./src/tokens/index.ts"
+    "./tokens": "./src/tokens/index.ts",
+    "./types/envelope": "./src/types/envelope.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

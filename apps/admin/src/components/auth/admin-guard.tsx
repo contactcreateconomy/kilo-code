@@ -13,7 +13,7 @@ export function AdminGuard({
   children,
   requiredRole = 'moderator',
 }: AdminGuardProps) {
-  const { user, isLoading, isAuthenticated, isAdmin, isModerator, hasAdminAccess } = useAuth();
+  const { isLoading, isAuthenticated, isAdmin, hasAdminAccess } = useAuth();
   const router = useRouter();
 
   const hasRequiredAccess = requiredRole === 'admin' ? isAdmin : hasAdminAccess;

@@ -1,10 +1,25 @@
 import { query, mutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Id } from "../_generated/dataModel";
 import { productStatusValidator } from "../schema";
 import { createError, ErrorCode } from "../lib/errors";
 import { PRODUCT_LIMITS, SLUG_PATTERN } from "../lib/constants";
+import { authenticatedMutation, sellerMutation } from "../lib/middleware";
+
+// Domain modules
+import {
+  getProductById as repoGetProductById,
+  getProductBySlug as repoGetProductBySlug,
+  getPrimaryImage,
+  getProductImages,
+  insertProductImage,
+} from "../lib/products/products.repository";
+import { assertProductOwnership } from "../lib/products/products.policies";
+import {
+  validateProductSlug,
+  validateSlugUniqueness,
+  validateProductPrice,
+} from "../lib/products/products.service";
 
 /**
  * Product Management Functions
@@ -17,18 +32,6 @@ import { PRODUCT_LIMITS, SLUG_PATTERN } from "../lib/constants";
 // Queries
 // ============================================================================
 
-/**
- * List products with pagination and filters
- *
- * @param tenantId - Optional tenant filter
- * @param categoryId - Optional category filter
- * @param status - Optional status filter
- * @param sellerId - Optional seller filter
- * @param cursor - Pagination cursor
- * @param limit - Number of items per page
- * @param includeDetails - When true, enrich with seller name and category name (default: false)
- * @returns Paginated list of products
- */
 export const listProducts = query({
   args: {
     tenantId: v.optional(v.id("tenants")),
@@ -37,8 +40,6 @@ export const listProducts = query({
     sellerId: v.optional(v.id("users")),
     cursor: v.optional(v.string()),
     limit: v.optional(v.number()),
-    // PERF: Allow callers to opt-in to enrichment. List pages that only need
-    // product cards can skip the extra N queries for seller/category info.
     includeDetails: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -48,7 +49,6 @@ export const listProducts = query({
       .query("products")
       .withIndex("by_deleted", (q) => q.eq("isDeleted", false));
 
-    // Apply filters based on available indexes
     if (args.tenantId && args.status) {
       productsQuery = ctx.db
         .query("products")
@@ -83,22 +83,10 @@ export const listProducts = query({
     const hasMore = products.length > limit;
     const items = hasMore ? products.slice(0, limit) : products;
 
-    // PERF: Primary image uses the compound index "by_product_primary" with
-    // .first(), so each lookup is a single indexed read — not a full scan.
-    // This is an N+1 pattern (1 query per product) but each sub-query is
-    // O(1) via the index. Promise.all parallelizes the lookups.
     const productsWithDetails = await Promise.all(
       items.map(async (product) => {
-        const primaryImage = await ctx.db
-          .query("productImages")
-          .withIndex("by_product_primary", (q) =>
-            q.eq("productId", product._id).eq("isPrimary", true)
-          )
-          .first();
+        const primaryImage = await getPrimaryImage(ctx, product._id);
 
-        // PERF: Only fetch seller and category info when includeDetails is
-        // true. For list pages (cards/grids), callers should pass false or
-        // omit this flag to avoid 2 extra queries per product (N*2 savings).
         let sellerName: string | null = null;
         let categoryName: string | null = null;
 
@@ -136,29 +124,18 @@ export const listProducts = query({
   },
 });
 
-/**
- * Get a single product by ID
- *
- * @param productId - Product ID
- * @returns Product with images and seller info
- */
 export const getProduct = query({
   args: {
     productId: v.id("products"),
   },
   handler: async (ctx, args) => {
-    const product = await ctx.db.get(args.productId);
+    const product = await repoGetProductById(ctx, args.productId);
     if (!product || product.isDeleted) {
       return null;
     }
 
-    // Get all images
-    const images = await ctx.db
-      .query("productImages")
-      .withIndex("by_product", (q) => q.eq("productId", args.productId))
-      .collect();
+    const images = await getProductImages(ctx, args.productId);
 
-    // Get seller info
     const seller = await ctx.db.get(product.sellerId);
     const sellerProfile = seller
       ? await ctx.db
@@ -167,7 +144,6 @@ export const getProduct = query({
           .first()
       : null;
 
-    // Get category
     const category = product.categoryId
       ? await ctx.db.get(product.categoryId)
       : null;
@@ -194,44 +170,18 @@ export const getProduct = query({
   },
 });
 
-/**
- * Get product by slug
- *
- * @param slug - Product slug
- * @param tenantId - Optional tenant ID for scoped lookup
- * @returns Product or null
- */
 export const getProductBySlug = query({
   args: {
     slug: v.string(),
     tenantId: v.optional(v.id("tenants")),
   },
   handler: async (ctx, args) => {
-    let product;
-
-    if (args.tenantId) {
-      product = await ctx.db
-        .query("products")
-        .withIndex("by_tenant_slug", (q) =>
-          q.eq("tenantId", args.tenantId).eq("slug", args.slug)
-        )
-        .first();
-    } else {
-      product = await ctx.db
-        .query("products")
-        .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-        .first();
-    }
-
+    const product = await repoGetProductBySlug(ctx, args.slug, args.tenantId);
     if (!product || product.isDeleted) {
       return null;
     }
 
-    // Get images
-    const images = await ctx.db
-      .query("productImages")
-      .withIndex("by_product", (q) => q.eq("productId", product._id))
-      .collect();
+    const images = await getProductImages(ctx, product._id);
 
     return {
       ...product,
@@ -240,13 +190,6 @@ export const getProductBySlug = query({
   },
 });
 
-/**
- * Get products by category
- *
- * @param categoryId - Category ID
- * @param limit - Number of products to return
- * @returns List of products in the category
- */
 export const getProductsByCategory = query({
   args: {
     categoryId: v.id("productCategories"),
@@ -270,14 +213,6 @@ export const getProductsByCategory = query({
   },
 });
 
-/**
- * Get products by seller
- *
- * @param sellerId - Seller user ID
- * @param status - Optional status filter
- * @param limit - Number of products to return
- * @returns List of seller's products
- */
 export const getProductsBySeller = query({
   args: {
     sellerId: v.id("users"),
@@ -305,19 +240,9 @@ export const getProductsBySeller = query({
       .filter((q) => q.eq(q.field("isDeleted"), false))
       .take(limit);
 
-    // PERF: Primary image lookup uses "by_product_primary" compound index with
-    // .first() — each is an O(1) indexed read, parallelized via Promise.all.
-    // For seller list pages this is acceptable; for heavier pages consider
-    // denormalizing the primary image URL onto the product record.
     const productsWithImages = await Promise.all(
       products.map(async (product) => {
-        const primaryImage = await ctx.db
-          .query("productImages")
-          .withIndex("by_product_primary", (q) =>
-            q.eq("productId", product._id).eq("isPrimary", true)
-          )
-          .first();
-
+        const primaryImage = await getPrimaryImage(ctx, product._id);
         return {
           ...product,
           primaryImage: primaryImage?.url,
@@ -329,15 +254,6 @@ export const getProductsBySeller = query({
   },
 });
 
-/**
- * Search products by name
- *
- * @param query - Search query
- * @param tenantId - Optional tenant filter
- * @param categoryId - Optional category filter
- * @param limit - Number of results
- * @returns Search results
- */
 export const searchProducts = query({
   args: {
     query: v.string(),
@@ -364,16 +280,9 @@ export const searchProducts = query({
 
     const products = await searchQuery.take(limit);
 
-    // PERF: Same indexed .first() pattern as listProducts — O(1) per product.
     const productsWithImages = await Promise.all(
       products.map(async (product) => {
-        const primaryImage = await ctx.db
-          .query("productImages")
-          .withIndex("by_product_primary", (q) =>
-            q.eq("productId", product._id).eq("isPrimary", true)
-          )
-          .first();
-
+        const primaryImage = await getPrimaryImage(ctx, product._id);
         return {
           ...product,
           primaryImage: primaryImage?.url,
@@ -389,19 +298,7 @@ export const searchProducts = query({
 // Mutations
 // ============================================================================
 
-/**
- * Create a new product (seller only)
- *
- * @param name - Product name
- * @param description - Product description
- * @param price - Product price
- * @param currency - Currency code
- * @param categoryId - Category ID
- * @param tenantId - Tenant ID
- * @param images - Array of image URLs
- * @returns Created product ID
- */
-export const createProduct = mutation({
+export const createProduct = sellerMutation({
   args: {
     name: v.string(),
     slug: v.string(),
@@ -429,81 +326,21 @@ export const createProduct = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
+    // Validate slug format
+    validateProductSlug(args.slug);
 
-    // Verify user is a seller
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+    // Validate slug uniqueness
+    const existingBySlug = await repoGetProductBySlug(ctx, args.slug, args.tenantId);
+    validateSlugUniqueness(existingBySlug, args.slug, !!args.tenantId);
 
-    if (!profile || (profile.defaultRole !== "seller" && profile.defaultRole !== "admin")) {
-      throw new Error("Seller role required");
-    }
-
-    // A5: Validate slug format
-    if (!SLUG_PATTERN.test(args.slug)) {
-      throw createError(
-        ErrorCode.INVALID_INPUT,
-        'Slug must be lowercase alphanumeric characters separated by hyphens (e.g. "my-product")',
-        { field: 'slug' }
-      );
-    }
-
-    // A5: Validate slug uniqueness — check the same index used by getProductBySlug
-    if (args.tenantId) {
-      const existingByTenantSlug = await ctx.db
-        .query("products")
-        .withIndex("by_tenant_slug", (q) =>
-          q.eq("tenantId", args.tenantId).eq("slug", args.slug)
-        )
-        .first();
-      if (existingByTenantSlug && !existingByTenantSlug.isDeleted) {
-        throw createError(
-          ErrorCode.ALREADY_EXISTS,
-          `A product with slug "${args.slug}" already exists in this tenant`,
-          { field: 'slug' }
-        );
-      }
-    } else {
-      const existingBySlug = await ctx.db
-        .query("products")
-        .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-        .first();
-      if (existingBySlug && !existingBySlug.isDeleted) {
-        throw createError(
-          ErrorCode.ALREADY_EXISTS,
-          `A product with slug "${args.slug}" already exists`,
-          { field: 'slug' }
-        );
-      }
-    }
-
-    // A5: Validate price range using shared constants
-    if (args.price < PRODUCT_LIMITS.MIN_PRICE_CENTS) {
-      throw createError(
-        ErrorCode.INVALID_INPUT,
-        `Price must be at least ${PRODUCT_LIMITS.MIN_PRICE_CENTS} cents ($${(PRODUCT_LIMITS.MIN_PRICE_CENTS / 100).toFixed(2)})`,
-        { field: 'price', min: PRODUCT_LIMITS.MIN_PRICE_CENTS }
-      );
-    }
-    if (args.price > PRODUCT_LIMITS.MAX_PRICE_CENTS) {
-      throw createError(
-        ErrorCode.INVALID_INPUT,
-        `Price must not exceed ${PRODUCT_LIMITS.MAX_PRICE_CENTS} cents ($${(PRODUCT_LIMITS.MAX_PRICE_CENTS / 100).toFixed(2)})`,
-        { field: 'price', max: PRODUCT_LIMITS.MAX_PRICE_CENTS }
-      );
-    }
+    // Validate price range
+    validateProductPrice(args.price);
 
     const now = Date.now();
 
-    // Create product
     const productId = await ctx.db.insert("products", {
       tenantId: args.tenantId,
-      sellerId: userId,
+      sellerId: ctx.userId,
       categoryId: args.categoryId,
       name: args.name,
       slug: args.slug,
@@ -527,11 +364,10 @@ export const createProduct = mutation({
       updatedAt: now,
     });
 
-    // Create images
     if (args.images && args.images.length > 0) {
       for (let i = 0; i < args.images.length; i++) {
         const image = args.images[i]!;
-        await ctx.db.insert("productImages", {
+        await insertProductImage(ctx, {
           productId,
           url: image.url,
           altText: image.altText,
@@ -546,14 +382,7 @@ export const createProduct = mutation({
   },
 });
 
-/**
- * Update a product (seller only, own products)
- *
- * @param productId - Product ID
- * @param updates - Fields to update
- * @returns Success boolean
- */
-export const updateProduct = mutation({
+export const updateProduct = authenticatedMutation({
   args: {
     productId: v.id("products"),
     name: v.optional(v.string()),
@@ -573,29 +402,15 @@ export const updateProduct = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    const product = await ctx.db.get(args.productId);
+    const product = await repoGetProductById(ctx, args.productId);
     if (!product) {
-      throw new Error("Product not found");
+      throw createError(ErrorCode.NOT_FOUND, "Product not found");
     }
 
-    // Check ownership or admin
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+    await assertProductOwnership(ctx, product.sellerId, ctx.userId, "update this product");
 
-    if (product.sellerId !== userId && profile?.defaultRole !== "admin") {
-      throw new Error("Not authorized to update this product");
-    }
-
-    // Validate price if provided
     if (args.price !== undefined && args.price < 0) {
-      throw new Error("Price must be non-negative");
+      throw createError(ErrorCode.INVALID_INPUT, "Price must be non-negative", { field: "price" });
     }
 
     const { productId: _productId, ...updates } = args;
@@ -609,36 +424,17 @@ export const updateProduct = mutation({
   },
 });
 
-/**
- * Delete a product (soft delete)
- *
- * @param productId - Product ID
- * @returns Success boolean
- */
-export const deleteProduct = mutation({
+export const deleteProduct = authenticatedMutation({
   args: {
     productId: v.id("products"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    const product = await ctx.db.get(args.productId);
+    const product = await repoGetProductById(ctx, args.productId);
     if (!product) {
-      throw new Error("Product not found");
+      throw createError(ErrorCode.NOT_FOUND, "Product not found");
     }
 
-    // Check ownership or admin
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
-    if (product.sellerId !== userId && profile?.defaultRole !== "admin") {
-      throw new Error("Not authorized to delete this product");
-    }
+    await assertProductOwnership(ctx, product.sellerId, ctx.userId, "delete this product");
 
     await ctx.db.patch(args.productId, {
       isDeleted: true,
@@ -650,14 +446,7 @@ export const deleteProduct = mutation({
   },
 });
 
-/**
- * Add images to a product
- *
- * @param productId - Product ID
- * @param images - Array of images to add
- * @returns Success boolean
- */
-export const addProductImages = mutation({
+export const addProductImages = authenticatedMutation({
   args: {
     productId: v.id("products"),
     images: v.array(
@@ -669,33 +458,14 @@ export const addProductImages = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    const product = await ctx.db.get(args.productId);
+    const product = await repoGetProductById(ctx, args.productId);
     if (!product) {
-      throw new Error("Product not found");
+      throw createError(ErrorCode.NOT_FOUND, "Product not found");
     }
 
-    // Check ownership
-    if (product.sellerId !== userId) {
-      const profile = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .first();
+    await assertProductOwnership(ctx, product.sellerId, ctx.userId, "add images to this product");
 
-      if (profile?.defaultRole !== "admin") {
-        throw new Error("Not authorized");
-      }
-    }
-
-    // Get current max sort order
-    const existingImages = await ctx.db
-      .query("productImages")
-      .withIndex("by_product", (q) => q.eq("productId", args.productId))
-      .collect();
+    const existingImages = await getProductImages(ctx, args.productId);
 
     const maxSortOrder = existingImages.reduce(
       (max, img) => Math.max(max, img.sortOrder),
@@ -704,7 +474,6 @@ export const addProductImages = mutation({
 
     const now = Date.now();
 
-    // If setting a new primary, unset existing primary
     const hasPrimary = args.images.some((img) => img.isPrimary);
     if (hasPrimary) {
       for (const img of existingImages) {
@@ -714,10 +483,9 @@ export const addProductImages = mutation({
       }
     }
 
-    // Add new images
     for (let i = 0; i < args.images.length; i++) {
       const image = args.images[i]!;
-      await ctx.db.insert("productImages", {
+      await insertProductImage(ctx, {
         productId: args.productId,
         url: image.url,
         altText: image.altText,
@@ -731,43 +499,22 @@ export const addProductImages = mutation({
   },
 });
 
-/**
- * Remove an image from a product
- *
- * @param imageId - Image ID
- * @returns Success boolean
- */
-export const removeProductImage = mutation({
+export const removeProductImage = authenticatedMutation({
   args: {
     imageId: v.id("productImages"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
     const image = await ctx.db.get(args.imageId);
     if (!image) {
-      throw new Error("Image not found");
+      throw createError(ErrorCode.NOT_FOUND, "Image not found");
     }
 
-    const product = await ctx.db.get(image.productId);
+    const product = await repoGetProductById(ctx, image.productId);
     if (!product) {
-      throw new Error("Product not found");
+      throw createError(ErrorCode.NOT_FOUND, "Product not found");
     }
 
-    // Check ownership
-    if (product.sellerId !== userId) {
-      const profile = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .first();
-
-      if (profile?.defaultRole !== "admin") {
-        throw new Error("Not authorized");
-      }
-    }
+    await assertProductOwnership(ctx, product.sellerId, ctx.userId, "remove images from this product");
 
     await ctx.db.delete(args.imageId);
 
@@ -775,43 +522,21 @@ export const removeProductImage = mutation({
   },
 });
 
-/**
- * Increment product view count
- *
- * PERF: Rate-limited to one counted view per viewer per product per hour.
- * If a viewerId is provided, checks the productViews table for a recent
- * view before incrementing. Anonymous views (no viewerId) still increment
- * unconditionally as a fallback, but callers should pass a session token
- * or userId whenever possible.
- *
- * A3 NOTE: View count throttling is already handled via the productViews table
- * with a 1-hour deduplication window per viewer. Database-backed rate limiting
- * (checkRateLimitWithDb) is NOT applied here because the existing
- * per-viewer-per-product dedup is more granular and appropriate for view
- * counting. Generic rate limiting would be too coarse (it would limit total
- * views across all products for a single user).
- *
- * @param productId - Product ID
- * @param viewerId - Optional viewer identifier (userId or anonymous session token)
- */
 export const incrementViewCount = mutation({
   args: {
     productId: v.id("products"),
     viewerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const product = await ctx.db.get(args.productId);
+    const product = await repoGetProductById(ctx, args.productId);
     if (!product || product.isDeleted) {
       return;
     }
 
     const now = Date.now();
-    // PERF: 1-hour throttle window — same viewer seeing the same product
-    // within this window won't inflate the count.
     const VIEW_THROTTLE_MS = 60 * 60 * 1000; // 1 hour
 
     if (args.viewerId) {
-      // Check for a recent view from this viewer
       const recentView = await ctx.db
         .query("productViews")
         .withIndex("by_product_viewer", (q) =>
@@ -820,15 +545,12 @@ export const incrementViewCount = mutation({
         .first();
 
       if (recentView && now - recentView.viewedAt < VIEW_THROTTLE_MS) {
-        // PERF: Viewer already counted within the throttle window — skip.
         return;
       }
 
       if (recentView) {
-        // Update existing record's timestamp instead of creating a new row
         await ctx.db.patch(recentView._id, { viewedAt: now });
       } else {
-        // First view from this viewer — create tracking record
         await ctx.db.insert("productViews", {
           productId: args.productId,
           viewerId: args.viewerId!,
@@ -836,9 +558,6 @@ export const incrementViewCount = mutation({
         });
       }
     }
-    // PERF: If no viewerId is provided, we still increment (backward compat)
-    // but this path has no dedup protection. Callers should always provide
-    // a viewerId (user ID or session token) for accurate counting.
 
     await ctx.db.patch(args.productId, {
       viewCount: product.viewCount + 1,
@@ -850,27 +569,17 @@ export const incrementViewCount = mutation({
 // Internal Queries
 // ============================================================================
 
-/**
- * Get product by ID (internal use)
- *
- * @param productId - Product ID
- * @returns Product with images or null
- */
 export const getProductById = internalQuery({
   args: {
     productId: v.id("products"),
   },
   handler: async (ctx, args) => {
-    const product = await ctx.db.get(args.productId);
+    const product = await repoGetProductById(ctx, args.productId);
     if (!product || product.isDeleted) {
       return null;
     }
 
-    // Get images
-    const images = await ctx.db
-      .query("productImages")
-      .withIndex("by_product", (q) => q.eq("productId", args.productId))
-      .collect();
+    const images = await getProductImages(ctx, args.productId);
 
     return {
       ...product,

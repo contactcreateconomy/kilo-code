@@ -114,7 +114,7 @@ export function AccountSettings() {
     return <SettingsSkeleton />;
   }
 
-  async function handleSaveProfile(e: React.FormEvent) {
+  async function handleSaveProfile(e: React.SyntheticEvent) {
     e.preventDefault();
     setIsSavingProfile(true);
     try {

@@ -17,9 +17,9 @@ export function CartItem({ item }: CartItemProps) {
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) {
-      removeItem(item.id);
+      void removeItem(item.id);
     } else {
-      updateQuantity(item.id, newQuantity);
+      void updateQuantity(item.id, newQuantity);
     }
   };
 
@@ -99,7 +99,7 @@ export function CartItem({ item }: CartItemProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => removeItem(item.id)}
+              onClick={() => void removeItem(item.id)}
               className="h-8 w-8 text-destructive hover:text-destructive"
               aria-label="Remove item"
             >

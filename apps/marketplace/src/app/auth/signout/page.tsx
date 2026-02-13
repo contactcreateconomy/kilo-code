@@ -14,7 +14,7 @@ export default function SignOutPage() {
       router.push("/");
     };
 
-    handleSignOut();
+    void handleSignOut();
   }, [signOut, router]);
 
   return (

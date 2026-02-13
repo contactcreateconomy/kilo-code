@@ -56,7 +56,7 @@ export function SearchContent() {
 
   // Handle form submission
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    (e: React.SyntheticEvent) => {
       e.preventDefault();
       const trimmed = inputValue.trim();
       if (trimmed) {

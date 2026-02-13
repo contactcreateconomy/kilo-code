@@ -1,8 +1,23 @@
-import { query, mutation } from "../_generated/server";
+import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { userRoleValidator } from "../schema";
 import { checkRateLimitWithDb } from "../lib/security";
+import { authenticatedMutation, adminMutation } from "../lib/middleware";
+import { createError, ErrorCode } from "../lib/errors";
+
+// Domain modules
+import {
+  getProfileByUserId,
+  getSellerByUserId,
+  upsertProfile,
+  searchProfiles,
+} from "../lib/users/users.repository";
+import { assertTenantAdmin } from "../lib/users/users.policies";
+import {
+  buildProfilePatch,
+  buildSellerProfilePatch,
+} from "../lib/users/users.service";
 
 /**
  * User Management Functions
@@ -15,28 +30,16 @@ import { checkRateLimitWithDb } from "../lib/security";
 // Queries
 // ============================================================================
 
-/**
- * Get the currently authenticated user with their profile
- *
- * @returns User data with profile or null if not authenticated
- */
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return null;
-    }
+    if (!userId) return null;
 
     const user = await ctx.db.get(userId);
-    if (!user) {
-      return null;
-    }
+    if (!user) return null;
 
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+    const profile = await getProfileByUserId(ctx, userId);
 
     return {
       id: user._id,
@@ -62,28 +65,16 @@ export const getCurrentUser = query({
   },
 });
 
-/**
- * Get a user by their ID
- *
- * @param userId - The user's ID
- * @returns User data with profile or null if not found
- */
 export const getUserById = query({
   args: {
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) {
-      return null;
-    }
+    if (!user) return null;
 
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .first();
+    const profile = await getProfileByUserId(ctx, args.userId);
 
-    // Return limited public information
     return {
       id: user._id,
       name: user.name,
@@ -101,43 +92,24 @@ export const getUserById = query({
   },
 });
 
-/**
- * Get the current user's role
- *
- * @returns The user's role or null if not authenticated
- */
 export const getUserRole = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return null;
-    }
+    if (!userId) return null;
 
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const profile = await getProfileByUserId(ctx, userId);
     return profile?.defaultRole ?? "customer";
   },
 });
 
-/**
- * Get the current user's role for a specific tenant
- *
- * @param tenantId - The tenant ID
- * @returns The user's role in the tenant or null
- */
 export const getUserTenantRole = query({
   args: {
     tenantId: v.id("tenants"),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return null;
-    }
+    if (!userId) return null;
 
     const userTenant = await ctx.db
       .query("userTenants")
@@ -150,46 +122,24 @@ export const getUserTenantRole = query({
   },
 });
 
-/**
- * Check if the current user is an admin
- *
- * @returns True if user is admin
- */
 export const isAdmin = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return false;
-    }
+    if (!userId) return false;
 
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const profile = await getProfileByUserId(ctx, userId);
     return profile?.defaultRole === "admin";
   },
 });
 
-/**
- * Check if the current user is a seller
- *
- * @returns True if user is seller
- */
 export const isSeller = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return false;
-    }
+    if (!userId) return false;
 
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const profile = await getProfileByUserId(ctx, userId);
     return profile?.defaultRole === "seller";
   },
 });
@@ -198,18 +148,7 @@ export const isSeller = query({
 // Mutations
 // ============================================================================
 
-/**
- * Create or update user profile
- * Called after user registration or when updating profile
- *
- * @param displayName - Display name
- * @param bio - User bio
- * @param avatarUrl - Avatar URL
- * @param phone - Phone number
- * @param address - Address object
- * @param preferences - User preferences
- */
-export const updateUserProfile = mutation({
+export const updateUserProfile = authenticatedMutation({
   args: {
     displayName: v.optional(v.string()),
     bio: v.optional(v.string()),
@@ -234,86 +173,19 @@ export const updateUserProfile = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
     const now = Date.now();
-
-    // Check if profile exists
-    const existingProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
-    if (existingProfile) {
-      // Update existing profile
-      await ctx.db.patch(existingProfile._id, {
-        ...(args.displayName !== undefined && { displayName: args.displayName }),
-        ...(args.bio !== undefined && { bio: args.bio }),
-        ...(args.avatarUrl !== undefined && { avatarUrl: args.avatarUrl }),
-        ...(args.phone !== undefined && { phone: args.phone }),
-        ...(args.address !== undefined && { address: args.address }),
-        ...(args.preferences !== undefined && { preferences: args.preferences }),
-        updatedAt: now,
-      });
-
-      return existingProfile._id;
-    } else {
-      // Create new profile
-      const profileId = await ctx.db.insert("userProfiles", {
-        userId,
-        displayName: args.displayName,
-        bio: args.bio,
-        avatarUrl: args.avatarUrl,
-        phone: args.phone,
-        address: args.address,
-        preferences: args.preferences,
-        defaultRole: "customer",
-        isBanned: false,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      return profileId;
-    }
+    const patch = buildProfilePatch(args);
+    return await upsertProfile(ctx, ctx.userId, patch, now);
   },
 });
 
-/**
- * Set user role (admin only)
- *
- * @param userId - Target user ID
- * @param role - New role to assign
- */
-export const setUserRole = mutation({
+export const setUserRole = adminMutation({
   args: {
     userId: v.id("users"),
     role: userRoleValidator,
   },
   handler: async (ctx, args) => {
-    const currentUserId = await getAuthUserId(ctx);
-    if (!currentUserId) {
-      throw new Error("Authentication required");
-    }
-
-    // Check if current user is admin
-    const currentProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", currentUserId))
-      .first();
-
-    if (!currentProfile || currentProfile.defaultRole !== "admin") {
-      throw new Error("Admin role required");
-    }
-
-    // Get target user's profile
-    const targetProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .first();
-
+    const targetProfile = await getProfileByUserId(ctx, args.userId);
     const now = Date.now();
 
     if (targetProfile) {
@@ -322,7 +194,6 @@ export const setUserRole = mutation({
         updatedAt: now,
       });
     } else {
-      // Create profile with the specified role
       await ctx.db.insert("userProfiles", {
         userId: args.userId,
         defaultRole: args.role,
@@ -336,40 +207,17 @@ export const setUserRole = mutation({
   },
 });
 
-/**
- * Set user role for a specific tenant (admin only)
- *
- * @param userId - Target user ID
- * @param tenantId - Tenant ID
- * @param role - New role to assign
- */
-export const setUserTenantRole = mutation({
+export const setUserTenantRole = authenticatedMutation({
   args: {
     userId: v.id("users"),
     tenantId: v.id("tenants"),
     role: userRoleValidator,
   },
   handler: async (ctx, args) => {
-    const currentUserId = await getAuthUserId(ctx);
-    if (!currentUserId) {
-      throw new Error("Authentication required");
-    }
-
-    // Check if current user is admin in this tenant
-    const currentUserTenant = await ctx.db
-      .query("userTenants")
-      .withIndex("by_user_tenant", (q) =>
-        q.eq("userId", currentUserId).eq("tenantId", args.tenantId)
-      )
-      .first();
-
-    if (!currentUserTenant || currentUserTenant.role !== "admin") {
-      throw new Error("Admin role required for this tenant");
-    }
+    await assertTenantAdmin(ctx, ctx.userId, args.tenantId);
 
     const now = Date.now();
 
-    // Check if user-tenant relationship exists
     const existingUserTenant = await ctx.db
       .query("userTenants")
       .withIndex("by_user_tenant", (q) =>
@@ -397,71 +245,38 @@ export const setUserTenantRole = mutation({
   },
 });
 
-/**
- * Request to become a seller
- *
- * BUG FIX B6: Previously this mutation directly upgraded the user's role to
- * "seller", bypassing any approval process. Now it creates a pending seller
- * record in the `sellers` table with `isApproved: false` and keeps the user's
- * role as "customer" until an admin approves the request. The admin can approve
- * sellers via the admin dashboard (sellers/pending page) or a dedicated
- * `approveSeller` mutation.
- *
- * @param businessName - The seller's business name
- * @param businessEmail - Optional business email
- * @param description - Optional business description
- * @returns Object with status and message
- */
-export const requestSellerRole = mutation({
+export const requestSellerRole = authenticatedMutation({
   args: {
     businessName: v.string(),
     businessEmail: v.optional(v.string()),
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    // A3: Rate limit seller role requests — 3 per hour per user.
-    // Prevents abuse of the seller application flow.
-    await checkRateLimitWithDb(ctx, `requestSellerRole:${userId}`, {
+    await checkRateLimitWithDb(ctx, `requestSellerRole:${ctx.userId}`, {
       maxRequests: 3,
-      windowMs: 60 * 60 * 1000, // 1 hour
+      windowMs: 60 * 60 * 1000,
       action: "request_seller_role",
     });
 
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+    const profile = await getProfileByUserId(ctx, ctx.userId);
 
-    // BUG FIX B6: Check if the user already has a seller role — don't allow re-requesting
     if (profile?.defaultRole === "seller") {
-      throw new Error("User already has seller role");
+      throw createError(ErrorCode.CONFLICT, "User already has seller role");
     }
 
-    // BUG FIX B6: Check if there's already a pending (or active) seller record
-    const existingSeller = await ctx.db
-      .query("sellers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+    const existingSeller = await getSellerByUserId(ctx, ctx.userId);
 
     if (existingSeller) {
       if (existingSeller.isApproved) {
-        throw new Error("Seller account already approved");
+        throw createError(ErrorCode.ALREADY_EXISTS, "Seller account already approved");
       }
-      throw new Error("Seller request already pending approval");
+      throw createError(ErrorCode.ALREADY_EXISTS, "Seller request already pending approval");
     }
 
     const now = Date.now();
 
-    // BUG FIX B6: Create a seller record with isApproved: false instead of
-    // directly upgrading the user's role. The user's defaultRole stays as-is
-    // until an admin approves the seller application.
     await ctx.db.insert("sellers", {
-      userId,
+      userId: ctx.userId,
       businessName: args.businessName,
       businessEmail: args.businessEmail,
       description: args.description,
@@ -472,10 +287,9 @@ export const requestSellerRole = mutation({
       updatedAt: now,
     });
 
-    // Ensure the user has a profile (create one if missing)
     if (!profile) {
       await ctx.db.insert("userProfiles", {
-        userId,
+        userId: ctx.userId,
         defaultRole: "customer",
         isBanned: false,
         createdAt: now,
@@ -490,23 +304,10 @@ export const requestSellerRole = mutation({
   },
 });
 
-/**
- * Delete user account (soft delete)
- * Marks the user as banned and deactivates their profile
- */
-export const deleteAccount = mutation({
+export const deleteAccount = authenticatedMutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const profile = await getProfileByUserId(ctx, ctx.userId);
     const now = Date.now();
 
     if (profile) {
@@ -518,10 +319,9 @@ export const deleteAccount = mutation({
       });
     }
 
-    // Deactivate all sessions
     const sessions = await ctx.db
       .query("sessions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.userId))
       .collect();
 
     for (const session of sessions) {
@@ -538,22 +338,13 @@ export const deleteAccount = mutation({
 // Seller Profile Management
 // ============================================================================
 
-/**
- * Get the current authenticated seller's profile
- *
- * @returns Seller record with user details, or null
- */
 export const getMySellerProfile = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
 
-    const seller = await ctx.db
-      .query("sellers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const seller = await getSellerByUserId(ctx, userId);
     if (!seller) return null;
 
     const user = await ctx.db.get(userId);
@@ -567,17 +358,7 @@ export const getMySellerProfile = query({
   },
 });
 
-/**
- * Update the current seller's store profile
- *
- * @param businessName - Store/business name
- * @param businessEmail - Contact email
- * @param businessPhone - Contact phone
- * @param description - Store description
- * @param websiteUrl - External website
- * @param businessAddress - Business address
- */
-export const updateSellerProfile = mutation({
+export const updateSellerProfile = authenticatedMutation({
   args: {
     businessName: v.optional(v.string()),
     businessEmail: v.optional(v.string()),
@@ -598,89 +379,45 @@ export const updateSellerProfile = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    const seller = await ctx.db
-      .query("sellers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const seller = await getSellerByUserId(ctx, ctx.userId);
     if (!seller) {
-      throw new Error("Seller profile not found");
+      throw createError(ErrorCode.NOT_FOUND, "Seller profile not found");
     }
 
-    const now = Date.now();
+    const patch = buildSellerProfilePatch(args);
 
     await ctx.db.patch(seller._id, {
-      ...(args.businessName !== undefined && { businessName: args.businessName }),
-      ...(args.businessEmail !== undefined && { businessEmail: args.businessEmail }),
-      ...(args.businessPhone !== undefined && { businessPhone: args.businessPhone }),
-      ...(args.description !== undefined && { description: args.description }),
-      ...(args.websiteUrl !== undefined && { websiteUrl: args.websiteUrl }),
-      ...(args.twitterHandle !== undefined && { twitterHandle: args.twitterHandle }),
-      ...(args.youtubeUrl !== undefined && { youtubeUrl: args.youtubeUrl }),
-      ...(args.accentColor !== undefined && { accentColor: args.accentColor }),
-      ...(args.businessAddress !== undefined && { businessAddress: args.businessAddress }),
-      updatedAt: now,
-    });
+      ...patch,
+      updatedAt: Date.now(),
+    } as never);
 
     return true;
   },
 });
 
-/**
- * Get seller store settings stored in seller metadata
- *
- * @returns Metadata record for the current seller, or null
- */
 export const getSellerSettings = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
 
-    const seller = await ctx.db
-      .query("sellers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const seller = await getSellerByUserId(ctx, userId);
     if (!seller) return null;
 
     return seller.metadata ?? {};
   },
 });
 
-/**
- * Save seller store settings into seller metadata
- *
- * Stores policies, shipping settings, and other configurable settings
- * as key-value pairs in the sellers.metadata field.
- *
- * @param settings - Record of string keys to string/number/boolean/null values
- */
-export const updateSellerSettings = mutation({
+export const updateSellerSettings = authenticatedMutation({
   args: {
     settings: v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null())),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Authentication required");
-    }
-
-    const seller = await ctx.db
-      .query("sellers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
+    const seller = await getSellerByUserId(ctx, ctx.userId);
     if (!seller) {
-      throw new Error("Seller profile not found");
+      throw createError(ErrorCode.NOT_FOUND, "Seller profile not found");
     }
 
-    // Merge with existing metadata
     const existingMetadata = seller.metadata ?? {};
     const merged = { ...existingMetadata, ...args.settings };
 
@@ -697,15 +434,6 @@ export const updateSellerSettings = mutation({
 // Search
 // ============================================================================
 
-/**
- * Search users by username or display name.
- *
- * Used for @mention autocomplete in the rich text editor.
- * Returns minimal user info (id, name, username, avatar).
- *
- * @param query - Search string to match against username/displayName
- * @param limit - Max results (default 5)
- */
 export const searchUsers = query({
   args: {
     query: v.string(),
@@ -713,23 +441,7 @@ export const searchUsers = query({
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 5;
-    const search = args.query.toLowerCase().trim();
-
-    if (search.length === 0) return [];
-
-    // Fetch a batch of profiles and filter in-memory
-    const profiles = await ctx.db
-      .query("userProfiles")
-      .filter((q) => q.neq(q.field("isBanned"), true))
-      .take(200);
-
-    const matches = profiles
-      .filter(
-        (p) =>
-          p.username?.toLowerCase().includes(search) ||
-          p.displayName?.toLowerCase().includes(search)
-      )
-      .slice(0, limit);
+    const matches = await searchProfiles(ctx, args.query, limit);
 
     return matches.map((p) => ({
       id: p.userId,

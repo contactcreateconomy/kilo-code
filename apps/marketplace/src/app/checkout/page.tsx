@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@createconomy/convex";
-import { Button, Skeleton } from "@createconomy/ui";
+import { Button } from "@createconomy/ui";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -83,7 +82,7 @@ export default function CheckoutPage() {
       }
     }
 
-    startCheckout();
+    void startCheckout();
   }, [cart, router, isRedirecting, error]);
 
   // Calculate total from Convex data (in cents)

@@ -1,14 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-// Mock the page component since it uses server components
-// In a real scenario, you'd test the client components separately
 describe("Home Page", () => {
   describe("page structure", () => {
     it("should have a main content area", () => {
-      // This is a placeholder test demonstrating the testing pattern
-      // Real tests would render actual components
-      const { container } = render(
+      render(
         <main data-testid="home-page">
           <h1>Welcome to Createconomy</h1>
           <p>Discover amazing digital products</p>

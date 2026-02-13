@@ -8,3 +8,5 @@ export { useActiveCampaign } from './use-campaign';
 export { useReactions } from './use-reactions';
 export { useUserProfile, useUserThreads } from './use-user-profile';
 export { useCategoryBySlug, useCategoryThreads } from './use-category-threads';
+export { useThreadMutations } from './use-thread-mutations';
+export { usePostMutations } from './use-post-mutations';

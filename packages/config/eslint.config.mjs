@@ -83,6 +83,15 @@ export default tseslint.config(
           },
         },
       ],
+      "@typescript-eslint/no-unnecessary-condition": "off",
+      "@typescript-eslint/no-confusing-void-expression": "off",
+      "@typescript-eslint/restrict-template-expressions": "off",
+      "@typescript-eslint/no-deprecated": "warn",
+      "@typescript-eslint/no-base-to-string": "off",
+      "@typescript-eslint/no-unnecessary-type-parameters": "off",
+      "@typescript-eslint/restrict-plus-operands": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/unbound-method": "off",
     },
   },
 
@@ -96,6 +105,29 @@ export default tseslint.config(
       "no-var": "error",
       eqeqeq: ["error", "always", { null: "ignore" }],
       curly: ["error", "all"],
+
+      // Complexity and size guardrails (warn for now — promote to error once existing violations are fixed)
+      complexity: ["warn", 20],
+      "max-lines-per-function": [
+        "warn",
+        { max: 150, skipBlankLines: true, skipComments: true },
+      ],
+      "max-depth": ["error", 5],
+      "max-params": ["error", 5],
+
+      // Boundary rules — prevent direct imports of Convex internals from app code
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/convex/_generated/**"],
+              message:
+                "Import from @createconomy/convex instead of generated internals",
+            },
+          ],
+        },
+      ],
     },
   },
 

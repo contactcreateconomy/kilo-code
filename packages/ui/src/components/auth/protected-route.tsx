@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { useAuth } from "./auth-provider";
+import type { ReactNode } from "react";
+import { useAuthGuard } from "./use-auth-guard";
 
 /**
  * Props for ProtectedRoute component
@@ -67,71 +67,22 @@ export function ProtectedRoute({
   fallback,
   onAccessDenied,
 }: ProtectedRouteProps) {
-  const { isLoading, isAuthenticated, session, hasRole, hasAnyRole } = useAuth();
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (!isAuthenticated) {
-      onAccessDenied?.("unauthenticated");
-
-      if (!fallback && typeof window !== "undefined") {
-        // Store current URL for redirect after login
-        const currentUrl = window.location.href;
-        const redirectUrl = new URL(loginUrl, window.location.origin);
-        redirectUrl.searchParams.set("redirect", currentUrl);
-        window.location.href = redirectUrl.toString();
-      }
-      return;
-    }
-
-    // Check role requirements
-    if (requiredRole && !hasRole(requiredRole)) {
-      onAccessDenied?.("unauthorized");
-
-      if (!fallback && typeof window !== "undefined") {
-        window.location.href = unauthorizedUrl;
-      }
-      return;
-    }
-
-    if (requiredRoles && requiredRoles.length > 0 && !hasAnyRole(requiredRoles)) {
-      onAccessDenied?.("unauthorized");
-
-      if (!fallback && typeof window !== "undefined") {
-        window.location.href = unauthorizedUrl;
-      }
-      return;
-    }
-  }, [
-    isLoading,
-    isAuthenticated,
-    hasRole,
-    hasAnyRole,
+  const { decision, isLoading } = useAuthGuard({
     requiredRole,
     requiredRoles,
     loginUrl,
     unauthorizedUrl,
-    fallback,
     onAccessDenied,
-  ]);
+    hasFallback: !!fallback,
+  });
 
   // Show loading state
   if (isLoading) {
     return loadingComponent ? <>{loadingComponent}</> : <DefaultLoadingComponent />;
   }
 
-  // Not authenticated
-  if (!isAuthenticated) {
-    return fallback ? <>{fallback}</> : null;
-  }
-
-  // Check role requirements
-  if (requiredRole && !hasRole(requiredRole)) {
-    return fallback ? <>{fallback}</> : null;
-  }
-
-  if (requiredRoles && requiredRoles.length > 0 && !hasAnyRole(requiredRoles)) {
+  // Access denied — show fallback or render nothing (redirect is handled by the hook)
+  if (decision !== "allowed") {
     return fallback ? <>{fallback}</> : null;
   }
 

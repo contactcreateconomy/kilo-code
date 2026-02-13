@@ -1,577 +1,199 @@
 # Architecture Overview
 
-> Comprehensive technical architecture documentation for the Createconomy platform.
-
----
-
-## Table of Contents
-
-- [System Overview](#system-overview)
-- [Application Architecture](#application-architecture)
-- [Data Flow](#data-flow)
-- [Authentication Flow](#authentication-flow)
-- [Payment Flow](#payment-flow)
-- [Multi-Tenancy Design](#multi-tenancy-design)
-- [Security Architecture](#security-architecture)
+> Technical architecture for the Createconomy platform.
 
 ---
 
 ## System Overview
 
-### High-Level Architecture
-
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              CLIENTS                                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                     │
-│  │  Browser │  │  Mobile  │  │   PWA    │  │   API    │                     │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘                     │
-└───────┼─────────────┼─────────────┼─────────────┼───────────────────────────┘
-        │             │             │             │
-        └─────────────┴──────┬──────┴─────────────┘
-                             │
-┌────────────────────────────┼────────────────────────────────────────────────┐
-│                     VERCEL EDGE NETWORK                                      │
-│  ┌─────────────────────────┴─────────────────────────┐                      │
-│  │                   Edge Functions                   │                      │
-│  │              (Middleware, Auth, Routing)           │                      │
-│  └─────────────────────────┬─────────────────────────┘                      │
-│                             │                                                │
-│  ┌──────────────┬───────────┼───────────┬──────────────┐                    │
-│  │              │           │           │              │                    │
-│  ▼              ▼           ▼           ▼              │                    │
-│ ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐        │                    │
-│ │Market- │  │ Forum  │  │ Admin  │  │ Seller │        │                    │
-│ │ place  │  │  App   │  │  App   │  │  App   │        │                    │
-│ │:3000   │  │:3001   │  │:3002   │  │:3003   │        │                    │
-│ └───┬────┘  └───┬────┘  └───┬────┘  └───┬────┘        │                    │
-│     │           │           │           │              │                    │
-└─────┼───────────┼───────────┼───────────┼──────────────┘                    │
-      │           │           │           │                                    
-      └───────────┴─────┬─────┴───────────┘                                    
-                        │                                                      
-┌───────────────────────┼─────────────────────────────────────────────────────┐
-│                 CONVEX CLOUD                                                 │
-│  ┌────────────────────┴────────────────────┐                                │
-│  │           Convex Functions              │                                │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐   │                                │
-│  │  │ Queries │ │Mutations│ │ Actions │   │                                │
-│  │  └────┬────┘ └────┬────┘ └────┬────┘   │                                │
-│  └───────┼───────────┼───────────┼────────┘                                │
-│          │           │           │                                          │
-│  ┌───────┴───────────┴───────────┴────────┐                                │
-│  │              Convex Database            │                                │
-│  │  ┌─────────────────────────────────┐   │                                │
-│  │  │  Real-time Subscriptions        │   │                                │
-│  │  │  ACID Transactions              │   │                                │
-│  │  │  Automatic Indexing             │   │                                │
-│  │  └─────────────────────────────────┘   │                                │
-│  └────────────────────────────────────────┘                                │
-│                                                                             │
-│  ┌────────────────┐  ┌────────────────┐                                    │
-│  │  Convex Auth   │  │  File Storage  │                                    │
-│  └────────────────┘  └────────────────┘                                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-                        │
-┌───────────────────────┼─────────────────────────────────────────────────────┐
-│               EXTERNAL SERVICES                                              │
-│  ┌────────────────────┴────────────────────┐                                │
-│  │                                          │                                │
-│  │  ┌──────────┐  ┌──────────┐  ┌────────┐ │                                │
-│  │  │  Stripe  │  │  OAuth   │  │ Email  │ │                                │
-│  │  │ Payments │  │Providers │  │Service │ │                                │
-│  │  └──────────┘  └──────────┘  └────────┘ │                                │
-│  └──────────────────────────────────────────┘                                │
-└─────────────────────────────────────────────────────────────────────────────┘
+Clients (Browser)
+       │
+  Vercel Edge Network
+       │
+  ┌────┼────┬────┬────┐
+  │    │    │    │    │
+  v    v    v    v    │
+ Market Forum Admin Seller
+ :3000  :3001 :3002 :3003
+  │    │    │    │
+  └────┴──┬─┴────┘
+          │
+     Convex Cloud
+  (Functions + Database + Auth + File Storage)
+          │
+  External Services (Stripe, OAuth, Email)
 ```
 
 ### Technology Stack
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Frontend** | Next.js 16 | Server-side rendering, routing |
-| **UI** | React 19, Tailwind CSS 4 | Component library, styling |
-| **Backend** | Convex 1.31+ | Database, serverless functions |
-| **Auth** | Convex Auth | Authentication, session management |
-| **Payments** | Stripe | Payment processing, Connect |
-| **Deployment** | Vercel | Hosting, edge functions |
-| **Build** | Turborepo | Monorepo management |
+| Frontend | Next.js 16, React 19, Tailwind 4 | SSR, routing, UI |
+| Backend | Convex 1.31+ | Database, serverless functions, real-time |
+| Auth | Convex Auth + custom sessions | OAuth, cross-subdomain sessions |
+| Payments | Stripe (Connect) | Payments, seller payouts |
+| Deploy | Vercel | Hosting, edge functions |
+| Build | Turborepo + pnpm | Monorepo management |
 
 ---
 
-## Application Architecture
+## Application Structure
 
-### Marketplace Application
+### Apps
 
-```
-apps/marketplace/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── (shop)/             # Shopping routes
-│   │   │   ├── page.tsx        # Homepage
-│   │   │   ├── products/       # Product listings
-│   │   │   ├── categories/     # Category pages
-│   │   │   └── search/         # Search results
-│   │   ├── (checkout)/         # Checkout flow
-│   │   │   ├── cart/           # Shopping cart
-│   │   │   └── checkout/       # Payment page
-│   │   ├── (account)/          # User account
-│   │   │   ├── orders/         # Order history
-│   │   │   ├── downloads/      # Digital downloads
-│   │   │   └── settings/       # Account settings
-│   │   └── api/                # API routes
-│   │       ├── auth/           # Auth endpoints
-│   │       └── webhooks/       # Webhook handlers
-│   ├── components/             # App-specific components
-│   ├── hooks/                  # Custom hooks
-│   └── lib/                    # Utilities
-├── public/                     # Static assets
-└── next.config.ts              # Next.js configuration
-```
+| App | Port | Route Examples |
+|-----|------|----------------|
+| `apps/marketplace` | 3000 | `/products`, `/cart`, `/checkout`, `/account/orders` |
+| `apps/forum` | 3001 | `/c/[slug]`, `/t/[id]`, `/u/[username]`, `/leaderboard` |
+| `apps/admin` | 3002 | `/users`, `/products`, `/orders`, `/moderation`, `/analytics` |
+| `apps/seller` | 3003 | `/products`, `/orders`, `/analytics`, `/payouts`, `/settings` |
 
-### Forum Application
-
-```
-apps/forum/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx            # Forum homepage
-│   │   ├── c/[slug]/           # Category pages
-│   │   ├── t/[id]/             # Thread pages
-│   │   ├── t/new/              # Create thread
-│   │   ├── u/[username]/       # User profiles
-│   │   └── search/             # Search
-│   ├── components/
-│   │   └── forum/              # Forum-specific components
-│   └── hooks/
-│       └── use-forum.ts        # Forum hooks
-```
-
-### Admin Application
-
-```
-apps/admin/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx            # Dashboard
-│   │   ├── users/              # User management
-│   │   ├── products/           # Product moderation
-│   │   ├── orders/             # Order management
-│   │   ├── sellers/            # Seller management
-│   │   ├── categories/         # Category management
-│   │   ├── moderation/         # Content moderation
-│   │   ├── analytics/          # Platform analytics
-│   │   └── settings/           # Platform settings
-│   └── components/
-│       ├── dashboard/          # Dashboard widgets
-│       ├── tables/             # Data tables
-│       └── forms/              # Admin forms
-```
-
-### Seller Application
-
-```
-apps/seller/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx            # Seller dashboard
-│   │   ├── products/           # Product management
-│   │   ├── orders/             # Order fulfillment
-│   │   ├── analytics/          # Sales analytics
-│   │   ├── payouts/            # Payout management
-│   │   └── settings/           # Store settings
-│   └── components/
-│       ├── dashboard/          # Dashboard components
-│       └── products/           # Product management
-```
+Each app follows the same structure:
+- `src/app/` — Next.js App Router pages/layouts
+- `src/components/` — app-specific UI
+- `src/hooks/` — app-specific hooks
+- `src/providers/` — Convex/auth provider wiring
 
 ### Shared Packages
 
+| Package | Path | Purpose |
+|---------|------|---------|
+| `@createconomy/ui` | `packages/ui/` | Design system, shared components, hooks |
+| `@createconomy/config` | `packages/config/` | ESLint, TS, Tailwind, security headers |
+| `@createconomy/convex` | `packages/convex/` | Schema, functions, generated API |
+
+---
+
+## Backend Domain Architecture
+
+Convex functions follow a **layered domain architecture**. Each domain is extracted into `packages/convex/convex/lib/<domain>/`:
+
 ```
-packages/
-├── ui/                         # Shared UI components
-│   ├── src/
-│   │   ├── components/         # Reusable components
-│   │   │   ├── button.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── auth/           # Auth components
-│   │   │   ├── security/       # Security components
-│   │   │   └── seo/            # SEO components
-│   │   ├── hooks/              # Shared hooks
-│   │   └── lib/                # Utilities
-│   └── package.json
-├── config/                     # Shared configuration
-│   ├── eslint.config.mjs
-│   ├── tsconfig.base.json
-│   ├── tsconfig.nextjs.json
-│   └── tailwind.config.ts
-└── convex/                     # Backend
-    └── convex/
-        ├── schema.ts           # Database schema
-        ├── auth.ts             # Auth configuration
-        ├── http.ts             # HTTP endpoints
-        └── functions/          # Convex functions
-            ├── products.ts
-            ├── orders.ts
-            ├── users.ts
-            └── ...
+packages/convex/convex/
+├── functions/          # Thin orchestration handlers (API surface)
+│   ├── forum.ts        # Delegates to lib/forum/
+│   ├── products.ts     # Delegates to lib/products/
+│   ├── orders.ts       # Delegates to lib/orders/
+│   └── users.ts        # Delegates to lib/users/
+├── lib/
+│   ├── shared/         # Cross-cutting utilities
+│   │   ├── author.ts       # enrichAuthor(), enrichAuthorBatch()
+│   │   ├── authorization.ts # requireOwnerOrModAdmin(), requireOwnerOrAdmin()
+│   │   └── pagination.ts    # paginateWithCursor()
+│   ├── forum/          # Forum domain
+│   │   ├── forum.types.ts       # EnrichedThread, CommentTreeNode, etc.
+│   │   ├── forum.repository.ts  # All DB reads/writes (~25 functions)
+│   │   ├── forum.policies.ts    # canEditThread, canDeletePost, etc.
+│   │   ├── forum.service.ts     # Slug generation, scoring, sorting
+│   │   └── forum.mappers.ts     # toThreadListItem, toCommentTree, etc.
+│   ├── products/       # Same layered pattern
+│   ├── orders/         # Reference implementation (first extracted)
+│   ├── users/          # Same layered pattern
+│   ├── policies.ts     # Shared policy helpers
+│   ├── middleware.ts    # Auth wrappers (authenticatedQuery, adminMutation, etc.)
+│   └── errors.ts       # createError(ErrorCode, message)
 ```
+
+### Layer Responsibilities
+
+| Layer | File Pattern | Responsibility |
+|-------|-------------|----------------|
+| **Types** | `*.types.ts` | Domain type definitions |
+| **Repository** | `*.repository.ts` | All database access (reads and writes) |
+| **Policies** | `*.policies.ts` | Authorization predicates |
+| **Service** | `*.service.ts` | Pure business logic (no DB access) |
+| **Mappers** | `*.mappers.ts` | Response shaping for API consumers |
+
+Function files in `convex/functions/*.ts` are thin orchestration layers (15-30 lines per handler) that compose these modules. All exported function names are preserved — the Convex API surface is unchanged.
+
+See `docs/adr/` for decision records: ADR-002 (domain boundaries), ADR-005 (forum extraction), ADR-006 (shared enrichment).
 
 ---
 
 ## Data Flow
 
-### Read Flow (Queries)
+### Reads (Real-time Queries)
 
 ```
-┌──────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────┐
-│  Client  │────▶│  useQuery()  │────▶│ Convex Query │────▶│ Database │
-│Component │     │    Hook      │     │   Function   │     │          │
-└──────────┘     └──────────────┘     └──────────────┘     └──────────┘
-     ▲                                       │
-     │                                       │
-     └───────────────────────────────────────┘
-              Real-time Subscription
+Client Component → useQuery() → Convex Query Function → Database
+       ↑                                    │
+       └────── Real-time Subscription ──────┘
 ```
 
-### Write Flow (Mutations)
+### Writes (Mutations)
 
 ```
-┌──────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────┐
-│  Client  │────▶│ useMutation()│────▶│   Convex     │────▶│ Database │
-│  Action  │     │    Hook      │     │  Mutation    │     │          │
-└──────────┘     └──────────────┘     └──────────────┘     └──────────┘
-                                             │
-                                             ▼
-                                    ┌──────────────┐
-                                    │  Validation  │
-                                    │  & Security  │
-                                    └──────────────┘
+Client Action → useMutation() → Convex Mutation → Validation/Auth → Database
 ```
 
-### Server-Side Data Flow
+### Server-Side
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Request    │────▶│   Next.js    │────▶│   Convex     │
-│              │     │   Server     │     │   Client     │
-└──────────────┘     │  Component   │     │              │
-                     └──────────────┘     └──────────────┘
-                            │                    │
-                            ▼                    ▼
-                     ┌──────────────┐     ┌──────────────┐
-                     │     HTML     │◀────│    Data      │
-                     │   Response   │     │   Response   │
-                     └──────────────┘     └──────────────┘
-```
+Next.js server components can call Convex via `fetchQuery()` for SSR.
 
 ---
 
 ## Authentication Flow
 
-### OAuth Sign-In Flow
+1. User clicks Sign In → OAuth redirect to Google/GitHub
+2. Provider callback → Convex Auth creates user + session
+3. Session cookie set on `.createconomy.com` domain
+4. Cross-subdomain: all 4 apps share the session via domain cookie
+5. Custom `sessions` table + HTTP endpoints in `http.ts` manage session lifecycle (`createSession`, `refreshSession`, `revokeSession`)
 
-```
-┌────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
-│  User  │────▶│  Sign In   │────▶│   OAuth    │────▶│  Provider  │
-│        │     │   Button   │     │  Redirect  │     │(Google/GH) │
-└────────┘     └────────────┘     └────────────┘     └────────────┘
-                                                            │
-                                                            ▼
-┌────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
-│Session │◀────│   Create   │◀────│  Callback  │◀────│   Auth     │
-│ Cookie │     │  Session   │     │  Handler   │     │  Response  │
-└────────┘     └────────────┘     └────────────┘     └────────────┘
-```
+### Role-Based Access Control
 
-### Cross-Domain Session Sharing
+| Role | Access |
+|------|--------|
+| User | Browse, purchase, review, forum participation |
+| Seller | + product management, order fulfillment |
+| Moderator | + content moderation, user warnings |
+| Admin | + all management, analytics, role changes |
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    .createconomy.com Domain                      │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
-│  │  Marketplace │  │    Forum     │  │    Admin     │           │
-│  │              │  │              │  │              │           │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘           │
-│         │                 │                 │                    │
-│         └─────────────────┼─────────────────┘                    │
-│                           │                                      │
-│                    ┌──────┴───────┐                              │
-│                    │   Shared     │                              │
-│                    │   Session    │                              │
-│                    │   Cookie     │                              │
-│                    └──────────────┘                              │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Session Validation
-
-```typescript
-// Session validation flow
-async function validateSession(token: string) {
-  // 1. Verify JWT signature
-  const payload = await verifyJWT(token);
-  
-  // 2. Check session in database
-  const session = await ctx.db.get(payload.sessionId);
-  
-  // 3. Validate expiration
-  if (session.expiresAt < Date.now()) {
-    throw new Error("Session expired");
-  }
-  
-  // 4. Return user context
-  return { userId: session.userId, role: session.role };
-}
-```
+Auth middleware wrappers: `authenticatedQuery`, `authenticatedMutation`, `sellerMutation`, `adminMutation`, etc. in `lib/middleware.ts`.
 
 ---
 
 ## Payment Flow
 
-### Checkout Flow
-
 ```
-┌────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
-│  Cart  │────▶│  Checkout  │────▶│  Stripe    │────▶│  Payment   │
-│  Page  │     │   Page     │     │  Elements  │     │  Intent    │
-└────────┘     └────────────┘     └────────────┘     └────────────┘
-                                                            │
-                                                            ▼
-┌────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
-│Download│◀────│   Order    │◀────│  Webhook   │◀────│  Payment   │
-│  Page  │     │  Created   │     │  Handler   │     │ Confirmed  │
-└────────┘     └────────────┘     └────────────┘     └────────────┘
+Cart → Checkout → Stripe Elements → Payment Intent
+                                          │
+                                          ▼
+                   Webhook Handler → Order Created → Download Available
 ```
 
-### Stripe Connect Payout Flow
+### Stripe Connect (Seller Payouts)
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│                      Payment Processing                         │
-│                                                                 │
-│  ┌──────────┐     ┌──────────────┐     ┌──────────────┐        │
-│  │ Customer │────▶│   Platform   │────▶│   Stripe     │        │
-│  │ Payment  │     │   Account    │     │   Connect    │        │
-│  └──────────┘     └──────────────┘     └──────────────┘        │
-│                          │                    │                 │
-│                          ▼                    ▼                 │
-│                   ┌──────────────┐     ┌──────────────┐        │
-│                   │  Platform    │     │   Seller     │        │
-│                   │    Fee       │     │   Payout     │        │
-│                   │   (10%)      │     │   (90%)      │        │
-│                   └──────────────┘     └──────────────┘        │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### Webhook Processing
-
-```typescript
-// Webhook handler structure
-export const stripeWebhook = httpAction(async (ctx, request) => {
-  // 1. Verify webhook signature
-  const event = await verifyStripeSignature(request);
-  
-  // 2. Process event type
-  switch (event.type) {
-    case "payment_intent.succeeded":
-      await handlePaymentSuccess(ctx, event.data);
-      break;
-    case "payment_intent.failed":
-      await handlePaymentFailure(ctx, event.data);
-      break;
-    case "account.updated":
-      await handleAccountUpdate(ctx, event.data);
-      break;
-  }
-  
-  // 3. Return acknowledgment
-  return new Response("OK", { status: 200 });
-});
-```
+- Platform takes fee (configurable %)
+- Remainder transferred to seller's Stripe Connect account
+- Webhooks: `payment_intent.succeeded`, `payout.paid`, `charge.refunded`
 
 ---
 
-## Multi-Tenancy Design
+## Multi-Tenancy
 
-### Seller Isolation
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Platform Database                         │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                      Products Table                       │   │
-│  │  ┌─────────────────────────────────────────────────────┐ │   │
-│  │  │ id │ sellerId │ name │ price │ status │ createdAt  │ │   │
-│  │  ├────┼──────────┼──────┼───────┼────────┼────────────┤ │   │
-│  │  │ 1  │ seller_1 │ ...  │ ...   │ active │ ...        │ │   │
-│  │  │ 2  │ seller_2 │ ...  │ ...   │ active │ ...        │ │   │
-│  │  │ 3  │ seller_1 │ ...  │ ...   │ draft  │ ...        │ │   │
-│  │  └─────────────────────────────────────────────────────┘ │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                    Access Control                         │   │
-│  │                                                           │   │
-│  │  Seller A ──▶ Can only access sellerId = "seller_1"      │   │
-│  │  Seller B ──▶ Can only access sellerId = "seller_2"      │   │
-│  │  Admin    ──▶ Can access all records                      │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Data Access Patterns
-
-```typescript
-// Seller-scoped query
-export const getSellerProducts = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    
-    const seller = await getSellerByUserId(ctx, identity.subject);
-    
-    // Only return products belonging to this seller
-    return ctx.db
-      .query("products")
-      .withIndex("by_seller", (q) => q.eq("sellerId", seller._id))
-      .collect();
-  },
-});
-
-// Admin query (no seller filter)
-export const getAllProducts = query({
-  args: {},
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
-    return ctx.db.query("products").collect();
-  },
-});
-```
+- Seller data isolation via `sellerId` filtering on products/orders
+- Optional `tenantId` on most tables for future multi-tenant support
+- Admin can access all records; sellers only their own
+- Authorization enforced via `assertProductOwnership()` and similar policy functions
 
 ---
 
-## Security Architecture
+## Performance
 
-### Defense in Depth
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Security Layers                              │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Layer 1: Edge Security                                   │   │
-│  │  • Rate limiting                                          │   │
-│  │  • DDoS protection                                        │   │
-│  │  • WAF rules                                              │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              │                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Layer 2: Application Security                            │   │
-│  │  • CSRF protection                                        │   │
-│  │  • Input validation                                       │   │
-│  │  • Security headers                                       │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              │                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Layer 3: Authentication & Authorization                  │   │
-│  │  • JWT validation                                         │   │
-│  │  • Role-based access control                              │   │
-│  │  • Session management                                     │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              │                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Layer 4: Data Security                                   │   │
-│  │  • Encryption at rest                                     │   │
-│  │  • Encryption in transit                                  │   │
-│  │  • Data isolation                                         │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Security Headers
-
-```typescript
-// Next.js security headers configuration
-const securityHeaders = [
-  {
-    key: 'X-DNS-Prefetch-Control',
-    value: 'on'
-  },
-  {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=63072000; includeSubDomains; preload'
-  },
-  {
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN'
-  },
-  {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff'
-  },
-  {
-    key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin'
-  },
-  {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()'
-  }
-];
-```
+| Strategy | Implementation |
+|----------|----------------|
+| Real-time | Convex subscriptions auto-invalidate on writes |
+| Static pages | Next.js static generation where possible |
+| Edge caching | Vercel CDN for static assets |
+| Batch dedup | `enrichAuthorBatch()` deduplicates user lookups in list views |
+| Cursor pagination | `paginateWithCursor()` for all list endpoints |
 
 ---
 
-## Performance Considerations
+## Related Docs
 
-### Caching Strategy
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Caching Layers                               │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  CDN Cache (Vercel Edge)                                  │   │
-│  │  • Static assets: 1 year                                  │   │
-│  │  • ISR pages: configurable                                │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              │                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Browser Cache                                            │   │
-│  │  • Static assets: immutable                               │   │
-│  │  • API responses: no-store                                │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              │                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Convex Cache                                             │   │
-│  │  • Query results: automatic                               │   │
-│  │  • Real-time invalidation                                 │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Core Web Vitals Targets
-
-| Metric | Target | Strategy |
-|--------|--------|----------|
-| **LCP** | < 2.5s | Server components, image optimization |
-| **FID** | < 100ms | Code splitting, minimal JS |
-| **CLS** | < 0.1 | Reserved space, font loading |
-| **TTFB** | < 600ms | Edge deployment, caching |
-
----
-
-## Related Documentation
-
-- [Tech Stack](./tech-stack.md)
-- [Key Files](./key-files.md)
-- [Data Models](./data-models.md)
-- [API Reference](./api-reference.md)
-- [Security Guide](./security.md)
-- [Contributing Guide](./contributing.md)
-- [Troubleshooting](./troubleshooting.md)
+- [API Reference](./api-reference.md) | [Data Models](./data-models.md) | [Security](./security.md)
+- [Conventions](./conventions.md) | [Deployment](./deployment.md) | [Troubleshooting](./troubleshooting.md)
+- ADRs: `docs/adr/001-006`

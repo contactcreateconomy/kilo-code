@@ -51,7 +51,7 @@ export default function ContactPage() {
     message: "",
   });
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.subject || !formData.message) {

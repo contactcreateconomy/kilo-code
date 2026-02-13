@@ -85,7 +85,7 @@ export default function CheckoutSuccessPage() {
       }
     }
 
-    verifyPayment();
+    void verifyPayment();
   }, [sessionId, clearCart]);
 
   if (isLoading) {

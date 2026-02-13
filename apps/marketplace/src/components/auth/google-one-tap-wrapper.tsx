@@ -19,7 +19,7 @@ export function GoogleOneTapWrapper() {
   return (
     <GoogleOneTap
       onSuccess={() => {
-        console.debug("Successfully signed in via Google One Tap");
+        // Successfully signed in via Google One Tap
       }}
       onError={(error) => {
         console.error("Google One Tap error:", error);

@@ -42,6 +42,21 @@ export {
   type SessionSyncProps,
 } from "./session-sync";
 
+// Auth Utilities (pure functions)
+export {
+  evaluateAccess,
+  resolveRedirect,
+  type AccessDecision,
+  type AuthRole,
+} from "./auth-utils";
+
+// Auth Guard Hook
+export {
+  useAuthGuard,
+  type UseAuthGuardOptions,
+  type UseAuthGuardResult,
+} from "./use-auth-guard";
+
 // Protected Routes
 export {
   ProtectedRoute,

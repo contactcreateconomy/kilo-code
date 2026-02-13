@@ -107,6 +107,15 @@
 
 ---
 
+## SOLID Conformance
+<!-- Check all that apply to your changes -->
+- [ ] No new architecture boundary violations introduced
+- [ ] Contract/interface changes include migration notes
+- [ ] Duplication was reduced or justified (add rationale if kept)
+- [ ] Tests updated for new extension points
+
+---
+
 ## Reviewer Guidelines
 
 For reviewers, please check:

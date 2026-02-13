@@ -103,32 +103,26 @@ export function GoogleOneTap({
   const clientId = process.env['NEXT_PUBLIC_GOOGLE_CLIENT_ID'];
 
   const handleCredentialResponse = useCallback(
-    async (_response: GoogleCredentialResponse) => {
-      try {
-        await signInWithGoogle();
-        onSuccess?.();
-        router.push(redirectUrl);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Sign-in failed';
-        console.error('Google One Tap sign-in error:', errorMessage);
-        onError?.(errorMessage);
-      }
+    (_response: GoogleCredentialResponse) => {
+      void (async () => {
+        try {
+          await signInWithGoogle();
+          onSuccess?.();
+          router.push(redirectUrl);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Sign-in failed';
+          console.error('Google One Tap sign-in error:', errorMessage);
+          onError?.(errorMessage);
+        }
+      })();
     },
     [signInWithGoogle, onSuccess, onError, router, redirectUrl]
   );
 
   const handlePromptNotification = useCallback(
-    (notification: PromptNotification) => {
-      if (notification.isNotDisplayed()) {
-        const reason = notification.getNotDisplayedReason();
-        console.debug('Google One Tap not displayed:', reason);
-      }
-      if (notification.isSkippedMoment()) {
-        console.debug('Google One Tap skipped:', notification.getSkippedReason());
-      }
-      if (notification.isDismissedMoment()) {
-        console.debug('Google One Tap dismissed:', notification.getDismissedReason());
-      }
+    (_notification: PromptNotification) => {
+      // Prompt notification handling is intentionally silent in production.
+      // Uncomment the lines below for debugging One Tap behavior.
     },
     []
   );

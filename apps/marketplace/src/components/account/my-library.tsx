@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useQuery } from "convex/react";
 import { api } from "@createconomy/convex";
 import { useAuth } from "@/hooks/use-auth";
-import { centsToDollars, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import {
   Card,
   CardContent,

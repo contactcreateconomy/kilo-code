@@ -16,7 +16,6 @@ import {
 import { useToast } from "@createconomy/ui";
 import { Badge } from "@createconomy/ui/components/badge";
 import {
-  CreditCard,
   Pause,
   Play,
   XCircle,

@@ -87,7 +87,7 @@ export function ReviewForm({ productId }: ReviewFormProps) {
   const contentLength = content.trim().length;
   const isValid = rating >= 1 && rating <= 5 && contentLength >= 10 && contentLength <= 5000;
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
 
     if (!isValid) {

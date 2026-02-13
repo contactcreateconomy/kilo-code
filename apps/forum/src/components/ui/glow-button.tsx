@@ -1,6 +1,6 @@
 'use client';
 
-import { type Ref } from 'react';
+import type { Ref } from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import { cn } from '@/lib/utils';
 

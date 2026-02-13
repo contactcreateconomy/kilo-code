@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import {
   serializeCookie,
   parseCookies,
@@ -78,7 +78,14 @@ export async function GET(
         }
 
         // Validate session with Convex
-        const convexUrl = process.env['NEXT_PUBLIC_CONVEX_URL']!.replace(
+        const convexBaseUrl = process.env['NEXT_PUBLIC_CONVEX_URL'];
+        if (!convexBaseUrl) {
+          return NextResponse.json(
+            { error: "Server misconfiguration" },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+        const convexUrl = convexBaseUrl.replace(
           ".convex.cloud",
           ".convex.site"
         );
@@ -177,7 +184,14 @@ export async function POST(
         }
 
         // Refresh session with Convex
-        const convexUrl = process.env['NEXT_PUBLIC_CONVEX_URL']!.replace(
+        const convexBaseUrl = process.env['NEXT_PUBLIC_CONVEX_URL'];
+        if (!convexBaseUrl) {
+          return NextResponse.json(
+            { error: "Server misconfiguration" },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+        const convexUrl = convexBaseUrl.replace(
           ".convex.cloud",
           ".convex.site"
         );
@@ -225,21 +239,24 @@ export async function POST(
 
         if (sessionToken) {
           // Revoke session with Convex
-          const convexUrl = process.env['NEXT_PUBLIC_CONVEX_URL']!.replace(
-            ".convex.cloud",
-            ".convex.site"
-          );
+          const convexBaseUrl = process.env['NEXT_PUBLIC_CONVEX_URL'];
+          if (convexBaseUrl) {
+            const convexUrl = convexBaseUrl.replace(
+              ".convex.cloud",
+              ".convex.site"
+            );
 
-          try {
-            await fetch(`${convexUrl}/auth/logout`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${sessionToken}`,
-                "Content-Type": "application/json",
-              },
-            });
-          } catch (error) {
-            console.error("Failed to revoke session:", error);
+            try {
+              await fetch(`${convexUrl}/auth/logout`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${sessionToken}`,
+                  "Content-Type": "application/json",
+                },
+              });
+            } catch (error) {
+              console.error("Failed to revoke session:", error);
+            }
           }
         }
 
@@ -300,21 +317,24 @@ export async function DELETE(
       const sessionToken = cookies[COOKIE_NAMES.SESSION_TOKEN];
 
       if (sessionToken) {
-        const convexUrl = process.env['NEXT_PUBLIC_CONVEX_URL']!.replace(
-          ".convex.cloud",
-          ".convex.site"
-        );
+        const convexBaseUrl = process.env['NEXT_PUBLIC_CONVEX_URL'];
+        if (convexBaseUrl) {
+          const convexUrl = convexBaseUrl.replace(
+            ".convex.cloud",
+            ".convex.site"
+          );
 
-        try {
-          await fetch(`${convexUrl}/auth/logout`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${sessionToken}`,
-              "Content-Type": "application/json",
-            },
-          });
-        } catch (error) {
-          console.error("Failed to revoke session:", error);
+          try {
+            await fetch(`${convexUrl}/auth/logout`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sessionToken}`,
+                "Content-Type": "application/json",
+              },
+            });
+          } catch (error) {
+            console.error("Failed to revoke session:", error);
+          }
         }
       }
 

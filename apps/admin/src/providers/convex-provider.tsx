@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { ReactNode } from 'react';
 import { ConvexProvider as ConvexProviderBase, ConvexReactClient } from 'convex/react';
 import { ConvexAuthProvider } from '@convex-dev/auth/react';
 import {

@@ -1,193 +1,201 @@
 "use client";
 
-import { useCallback } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@createconomy/convex";
+import type { Id } from "@createconomy/convex/dataModel";
+import type { QueryEnvelope, MutationEnvelope } from "@createconomy/ui/types/envelope";
+import {
+  forumCategoryQueryArgs,
+  forumPostCommentsQueryArgs,
+  forumThreadQueryArgs,
+  forumThreadsQueryArgs,
+} from "./forum-id-helpers";
+import { useThreadMutations } from "./use-thread-mutations";
+import { usePostMutations } from "./use-post-mutations";
+
+type ForumCategoriesData = FunctionReturnType<
+  typeof api.functions.forum.listForumCategories
+>;
+type ForumCategoryData = FunctionReturnType<
+  typeof api.functions.forum.getForumCategory
+>;
+type ForumThreadsData = FunctionReturnType<typeof api.functions.forum.listThreads>;
+type ForumThreadData = FunctionReturnType<typeof api.functions.forum.getThread>;
+type ForumPostCommentsData = FunctionReturnType<
+  typeof api.functions.forum.getPostComments
+>;
+type ForumSearchThreadsData = FunctionReturnType<
+  typeof api.functions.forum.searchThreads
+>;
+
+type CreateThreadInput = {
+  title: string;
+  content: string;
+  categoryId: string;
+};
+
+type UpdateThreadInput = {
+  title?: string;
+  isPinned?: boolean;
+  isLocked?: boolean;
+};
+
+type ForumMutationHandlers = {
+  createThread: (data: CreateThreadInput) => Promise<Id<"forumThreads">>;
+  updateThread: (threadId: string, data: UpdateThreadInput) => Promise<boolean>;
+  deleteThread: (threadId: string) => Promise<boolean>;
+  viewThread: (threadId: string) => Promise<null>;
+  createPost: (data: { threadId: string; content: string }) => Promise<Id<"forumPosts">>;
+  updatePost: (postId: string, content: string) => Promise<boolean>;
+  deletePost: (postId: string) => Promise<boolean>;
+};
+
+type UseForumResult = MutationEnvelope<ForumMutationHandlers> & ForumMutationHandlers;
+
+type UseCategoriesResult = QueryEnvelope<ForumCategoriesData> & {
+  categories: ForumCategoriesData;
+};
+
+type UseCategoryResult = QueryEnvelope<ForumCategoryData | null> & {
+  category: ForumCategoryData | null;
+};
+
+type UseThreadsResult = QueryEnvelope<ForumThreadsData> & {
+  threads: ForumThreadsData["threads"];
+  pinnedThreads: ForumThreadsData["pinned"];
+  hasMore: boolean;
+};
+
+type UseThreadResult = QueryEnvelope<ForumThreadData | null> & {
+  thread: ForumThreadData | null;
+};
+
+type UsePostCommentsResult = QueryEnvelope<ForumPostCommentsData> & {
+  comments: ForumPostCommentsData;
+};
+
+type UseSearchThreadsResult = QueryEnvelope<ForumSearchThreadsData> & {
+  results: ForumSearchThreadsData;
+};
 
 /**
- * Hook for forum mutations (create, update, delete threads and posts)
+ * Hook for forum mutations (create, update, delete threads and posts).
+ *
+ * @deprecated Prefer `useThreadMutations()` and `usePostMutations()` for
+ * better Interface Segregation. This hook remains for backward compatibility
+ * and composes both hooks internally.
  */
-export function useForum() {
-  // Mutations
-  const createThread = useMutation(api.functions.forum.createThread);
-  const updateThread = useMutation(api.functions.forum.updateThread);
-  const deleteThread = useMutation(api.functions.forum.deleteThread);
-  const createPost = useMutation(api.functions.forum.createPost);
-  const updatePost = useMutation(api.functions.forum.updatePost);
-  const deletePost = useMutation(api.functions.forum.deletePost);
-  const incrementViewCount = useMutation(api.functions.forum.incrementThreadViewCount);
+export function useForum(): UseForumResult {
+  const threadMutations = useThreadMutations();
+  const postMutations = usePostMutations();
 
-  // Create a new thread
-  const handleCreateThread = useCallback(
-    async (data: {
-      title: string;
-      content: string;
-      categoryId: string;
-    }) => {
-      // categoryId must be a valid Id<"forumCategories"> at runtime
-      return await createThread({
-        title: data.title,
-        content: data.content,
-        categoryId: data.categoryId as never,
-      });
-    },
-    [createThread]
-  );
-
-  // Update a thread
-  const handleUpdateThread = useCallback(
-    async (
-      threadId: string,
-      data: {
-        title?: string;
-        isPinned?: boolean;
-        isLocked?: boolean;
-      }
-    ) => {
-      return await updateThread({ threadId: threadId as never, ...data });
-    },
-    [updateThread]
-  );
-
-  // Delete a thread
-  const handleDeleteThread = useCallback(
-    async (threadId: string) => {
-      return await deleteThread({ threadId: threadId as never });
-    },
-    [deleteThread]
-  );
-
-  // Create a post/reply
-  const handleCreatePost = useCallback(
-    async (data: { threadId: string; content: string }) => {
-      return await createPost({
-        threadId: data.threadId as never,
-        content: data.content,
-      });
-    },
-    [createPost]
-  );
-
-  // Update a post
-  const handleUpdatePost = useCallback(
-    async (postId: string, content: string) => {
-      return await updatePost({ postId: postId as never, content });
-    },
-    [updatePost]
-  );
-
-  // Delete a post
-  const handleDeletePost = useCallback(
-    async (postId: string) => {
-      return await deletePost({ postId: postId as never });
-    },
-    [deletePost]
-  );
-
-  // Track thread view
-  const handleViewThread = useCallback(
-    async (threadId: string) => {
-      return await incrementViewCount({ threadId: threadId as never });
-    },
-    [incrementViewCount]
-  );
+  const data: ForumMutationHandlers = {
+    createThread: threadMutations.createThread,
+    updateThread: threadMutations.updateThread,
+    deleteThread: threadMutations.deleteThread,
+    viewThread: threadMutations.viewThread,
+    createPost: postMutations.createPost,
+    updatePost: postMutations.updatePost,
+    deletePost: postMutations.deletePost,
+  };
 
   return {
-    // Thread operations
-    createThread: handleCreateThread,
-    updateThread: handleUpdateThread,
-    deleteThread: handleDeleteThread,
-    viewThread: handleViewThread,
-
-    // Post operations
-    createPost: handleCreatePost,
-    updatePost: handleUpdatePost,
-    deletePost: handleDeletePost,
+    ...data,
+    data,
+    isLoading: false,
+    error: null,
   };
 }
 
 /**
  * Hook to get categories
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useCategories(): { categories: any[]; isLoading: boolean } {
+export function useCategories(): UseCategoriesResult {
   const categories = useQuery(api.functions.forum.listForumCategories, {});
+  const data = categories ?? [];
+
   return {
-    categories: (categories ?? []) as unknown[],
+    categories: data,
+    data,
     isLoading: categories === undefined,
+    error: null,
   };
 }
 
 /**
  * Hook to get a single category by ID
  */
-export function useCategory(categoryId: string | undefined) {
-  const category = useQuery(
-    api.functions.forum.getForumCategory,
-    categoryId ? { categoryId: categoryId as never } : "skip"
-  );
+export function useCategory(categoryId: string | undefined): UseCategoryResult {
+  const category = useQuery(api.functions.forum.getForumCategory, forumCategoryQueryArgs(categoryId));
+  const data = category ?? null;
+
   return {
-    category: category ?? null,
-    isLoading: category === undefined,
+    category: data,
+    data,
+    isLoading: !!categoryId && category === undefined,
+    error: null,
   };
 }
 
 /**
  * Hook to get threads in a category
  */
-export function useThreads(categoryId: string | undefined) {
-  const result = useQuery(
-    api.functions.forum.listThreads,
-    categoryId ? { categoryId: categoryId as never } : "skip"
-  );
+export function useThreads(categoryId: string | undefined): UseThreadsResult {
+  const result = useQuery(api.functions.forum.listThreads, forumThreadsQueryArgs(categoryId));
+  const data: ForumThreadsData = result ?? { pinned: [], threads: [], hasMore: false, nextCursor: null };
+
   return {
-    threads: result?.threads ?? [],
-    pinnedThreads: result?.pinned ?? [],
-    hasMore: result?.hasMore ?? false,
-    isLoading: result === undefined,
+    threads: data.threads,
+    pinnedThreads: data.pinned,
+    hasMore: data.hasMore,
+    data,
+    isLoading: !!categoryId && result === undefined,
+    error: null,
   };
 }
 
 /**
  * Hook to get a single thread
  */
-export function useThread(threadId: string | undefined) {
-  const thread = useQuery(
-    api.functions.forum.getThread,
-    threadId ? { threadId: threadId as never } : "skip"
-  );
+export function useThread(threadId: string | undefined): UseThreadResult {
+  const thread = useQuery(api.functions.forum.getThread, forumThreadQueryArgs(threadId));
+  const data = thread ?? null;
+
   return {
-    thread: thread ?? null,
-    isLoading: thread === undefined,
+    thread: data,
+    data,
+    isLoading: !!threadId && thread === undefined,
+    error: null,
   };
 }
 
 /**
  * Hook to get comments for a post
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function usePostComments(postId: string | undefined): { comments: any[]; isLoading: boolean } {
-  const comments = useQuery(
-    api.functions.forum.getPostComments,
-    postId ? { postId: postId as never } : "skip"
-  );
+export function usePostComments(postId: string | undefined): UsePostCommentsResult {
+  const comments = useQuery(api.functions.forum.getPostComments, forumPostCommentsQueryArgs(postId));
+  const data = comments ?? [];
+
   return {
-    comments: (comments ?? []) as unknown[],
-    isLoading: comments === undefined,
+    comments: data,
+    data,
+    isLoading: !!postId && comments === undefined,
+    error: null,
   };
 }
 
 /**
  * Hook to search threads
  */
-export function useSearchThreads(query: string) {
-  const results = useQuery(
-    api.functions.forum.searchThreads,
-    query ? { query } : "skip"
-  );
+export function useSearchThreads(query: string): UseSearchThreadsResult {
+  const results = useQuery(api.functions.forum.searchThreads, query ? { query } : "skip");
+  const data = results ?? [];
 
   return {
-    results: results ?? [],
+    results: data,
+    data,
     isLoading: results === undefined,
+    error: null,
   };
 }

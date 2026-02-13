@@ -53,7 +53,7 @@ export default function ReportsPage() {
 
   // Mutations
   const dismissReport = useMutation(api.functions.moderation.dismissReport);
-  const reviewReport = useMutation(api.functions.moderation.reviewReport);
+  const _reviewReport = useMutation(api.functions.moderation.reviewReport);
   const removeContent = useMutation(api.functions.moderation.removeContent);
   const warnUser = useMutation(api.functions.moderation.warnUser);
   const banUser = useMutation(api.functions.moderation.banUser);

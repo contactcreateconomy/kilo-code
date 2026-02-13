@@ -146,5 +146,8 @@ export {
   type ValidationResult,
 } from "./hooks/use-auth-validation";
 
+// Types — Shared contracts
+export type { QueryEnvelope, MutationEnvelope } from "./types/envelope";
+
 // Auth form components available via "@createconomy/ui/components/auth"
 // See packages/ui/src/components/auth/index.ts for full list
