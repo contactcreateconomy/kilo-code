@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Turborepo cache
+.turbo/
+
+# Lock file
+pnpm-lock.yaml
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Convex generated (schema.ts is the source of truth)
+packages/convex/convex/_generated/
+.convex/
+
+# Environment secrets (keep .env.example)
+.env
+.env.local
+.env*.local
+
+# Vercel
+.vercel/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Other AI tool configs
+.cursor/
+.kilocode/
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Screenshots
+screenshots/
+
+# Certificates
+*.pem
+
+# Stray artifacts
+nul
+-p

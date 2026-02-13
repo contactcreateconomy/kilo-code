@@ -15,7 +15,7 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment files
+# Environment files (keep .env.example)
 .env
 .env.local
 .env.development.local
@@ -51,16 +51,11 @@ lerna-debug.log*
 coverage/
 .nyc_output/
 
-# Misc
+# Certificates
 *.pem
-*.local
 
-# Debug
-.pnpm-debug.log
-
-# Convex
+# Convex generated
 .convex/
-convex/_generated/
 
 # Cache
 .cache/
@@ -69,4 +64,10 @@ convex/_generated/
 # Screenshots
 screenshots/
 
+# Other AI tool configs
+.cursor/
+.kilocode/
 
+# Stray artifacts (Windows NUL device / bad mkdir -p)
+nul
+-p

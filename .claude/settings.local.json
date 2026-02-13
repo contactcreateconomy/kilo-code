@@ -68,7 +68,9 @@
       "Bash(git reset HEAD .github/workflows/ci.yml)",
       "Bash(git add -A -- . \":!nul\" \":!.github/workflows/ci.yml\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: SOLID refactor — domain extraction, auth consolidation, lint/type/build fixes\n\n- Extract Convex backend into layered domain modules \\(orders, forum, products, users\\)\n- Add shared authorization policies and cross-cutting utilities\n- Consolidate auth components into @createconomy/ui with shared hooks\n- Fix ESLint, TypeScript, and build errors across all 4 apps\n- Add ESLint configs per app, PR template\n- Remove obsolete plans/ directory\n- Update docs \\(architecture, api-reference\\) to reflect new structure\n- Add ADRs documenting architectural decisions\n- Add branch naming convention to CLAUDE.md\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git push -u origin 014-refactor/solid-cleanup)"
+      "Bash(git push -u origin 014-refactor/solid-cleanup)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: consolidate and simplify all documentation\n\n- Delete redundant docs \\(AGENTS.md, CHANGELOG.md, SECURITY.md, tech-stack.md,\n  commands.md, local-development.md, package READMEs\\)\n- Move DESIGN-SYSTEM.md from packages/ui/ into docs/\n- Trim all docs under 500 lines \\(security 560→82, troubleshooting 596→165,\n  contributing 512→95, README 371→130\\)\n- Update CLAUDE.md with doc index refs and branch naming convention\n- Ensure no docs exist outside docs/ folder \\(except CLAUDE.md, README.md\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)"
     ]
   }
 }
