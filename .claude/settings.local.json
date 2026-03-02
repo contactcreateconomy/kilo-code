@@ -1,5 +1,4 @@
 {
-  "model": "opusplan[1m]",
   "env": {
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-6",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-6"
@@ -79,7 +78,10 @@
       "Bash(powershell -Command \"Get-Service | Where-Object {$_Status -eq ''Running''} | Sort-Object DisplayName | Select-Object Name, DisplayName, StartType | Format-Table -AutoSize\")",
       "Bash(powershell -Command \"$os = Get-CimInstance Win32_OperatingSystem; [PSCustomObject]@{TotalGB=[math]::Round\\($os.TotalVisibleMemorySize/1MB,1\\); FreeGB=[math]::Round\\($os.FreePhysicalMemory/1MB,1\\); UsedGB=[math]::Round\\(\\($os.TotalVisibleMemorySize - $os.FreePhysicalMemory\\)/1MB,1\\); UsedPct=[math]::Round\\(\\($os.TotalVisibleMemorySize - $os.FreePhysicalMemory\\)/$os.TotalVisibleMemorySize*100,1\\)} | Format-List\")",
       "Bash(powershell -Command \"Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 50 Name, @{N=''MemMB'';E={[math]::Round\\($_WorkingSet64/1MB,1\\)}}, Id, Description | Format-Table -AutoSize\")",
-      "Bash(powershell -ExecutionPolicy Bypass -File C:UsersSurentemp_services.ps1)"
+      "Bash(powershell -ExecutionPolicy Bypass -File C:UsersSurentemp_services.ps1)",
+      "Bash(git checkout:*)",
+      "Bash(pnpm:*)"
     ]
-  }
+  },
+  "model": "opusplan[1m]"
 }
