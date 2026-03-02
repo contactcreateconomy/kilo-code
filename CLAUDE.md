@@ -166,6 +166,12 @@ Branches use a sequential numeric prefix: `NNN-type/description`. The next branc
 - `014-refactor/solid-cleanup`
 - `015-<next-feature>`
 
+When implementing a new approved plan, always create and switch to a new branch using this naming format before making code changes.
+
+## Plan storage
+
+Store implementation plans in the repo root `plan/` folder as Markdown files.
+
 ## Documentation index
 
 All docs live in [`docs/`](docs/). Key references:

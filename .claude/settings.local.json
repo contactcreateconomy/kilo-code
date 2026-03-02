@@ -1,4 +1,9 @@
 {
+  "model": "opusplan[1m]",
+  "env": {
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-6",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-6"
+  },
   "permissions": {
     "allow": [
       "Bash(git -C \"/e/Github/kilo-code\" diff -- \"apps/forum/src/hooks/forum-id-helpers.ts\" \"apps/forum/src/hooks/use-auth-action.ts\" \"apps/forum/src/hooks/use-comments.ts\" \"apps/forum/src/hooks/use-flairs.ts\" \"apps/forum/src/hooks/use-follow.ts\" \"apps/forum/src/hooks/use-forum.ts\" \"apps/forum/src/hooks/use-notifications.ts\" \"apps/forum/src/hooks/use-reactions.ts\" \"apps/forum/src/hooks/use-tags.ts\" \"plans/solid-refactor-monorepo/overview.md\" \"plans/solid-refactor-monorepo/phase-01-baseline-and-inventory.md\" \"plans/solid-refactor-monorepo/phase-02-convex-authz-consolidation.md\" \"plans/solid-refactor-monorepo/phase-03-orders-domain-extraction.md\" \"plans/solid-refactor-monorepo/phase-04-frontend-typing-and-contracts.md\" \"plans/solid-refactor-monorepo/phase-05-ui-component-decomposition.md\" \"plans/solid-refactor-monorepo/phase-06-ci-guardrails-and-governance.md\")",
