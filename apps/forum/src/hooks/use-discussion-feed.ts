@@ -5,16 +5,17 @@ import { useQuery } from "convex/react";
 import { api } from "@createconomy/convex";
 import type { Discussion, FeedTabType, PostType } from "@/types/forum";
 
-/**
- * Maps a Convex listDiscussions result item to the frontend Discussion type.
- */
-type DiscussionItem = NonNullable<
+type ListDiscussionsResult = NonNullable<
   ReturnType<typeof useQuery<typeof api.functions.forum.listDiscussions>>
->["discussions"][number];
+>;
 
-function mapDiscussion(
-  item: DiscussionItem
-): Discussion {
+type DiscussionItem = ListDiscussionsResult["discussions"][number];
+
+type BookmarkedItem = NonNullable<
+  NonNullable<ReturnType<typeof useQuery<typeof api.functions.forum.getBookmarkedThreads>>>[number]
+>;
+
+function mapDiscussion(item: DiscussionItem): Discussion {
   return {
     id: item._id,
     title: item.title,
@@ -41,7 +42,6 @@ function mapDiscussion(
     createdAt: new Date(item.createdAt),
     imageUrl: item.imageUrl ?? undefined,
     isPinned: item.isPinned,
-    // Phase 3: Post type fields
     postType: (item.postType ?? "text") as PostType,
     linkUrl: item.linkUrl,
     linkDomain: item.linkDomain,
@@ -51,15 +51,40 @@ function mapDiscussion(
     images: item.images,
     pollOptions: item.pollOptions,
     pollEndsAt: item.pollEndsAt,
-    // Phase 10: Tags & Flairs
     tags: item.tags ?? undefined,
     flair: item.flair ?? undefined,
   };
 }
 
-/**
- * Maps FeedTabType to backend sortBy. "fav" and "following" fall back to "top".
- */
+function mapBookmarkedDiscussion(item: BookmarkedItem): Discussion {
+  return {
+    id: item.thread.id,
+    title: item.thread.title,
+    aiSummary: "",
+    author: {
+      id: item.thread.author?.id ?? "",
+      name: item.thread.author?.name ?? "Anonymous",
+      username: item.thread.author?.username ?? "anonymous",
+      avatarUrl: item.thread.author?.avatarUrl ?? "",
+    },
+    category: {
+      id: "",
+      name: item.thread.category?.name ?? "General",
+      slug: item.thread.category?.slug ?? "general",
+      icon: item.thread.category?.icon ?? "💬",
+      color: "bg-gray-500",
+      count: 0,
+    },
+    upvotes: item.thread.upvoteCount,
+    downvotes: 0,
+    score: item.thread.upvoteCount,
+    comments: item.thread.postCount,
+    createdAt: new Date(item.thread.createdAt),
+    isPinned: item.thread.isPinned,
+    postType: "text",
+  };
+}
+
 function tabToSort(
   tab: FeedTabType
 ): "top" | "hot" | "new" | "controversial" {
@@ -67,30 +92,15 @@ function tabToSort(
   return tab;
 }
 
-/**
- * useDiscussionFeed — Fetches homepage discussion feed from Convex with
- * infinite scroll support via cursor-based pagination.
- *
- * When activeTab is "following", uses the getFollowingFeed query instead
- * of listDiscussions.
- *
- * Sorting is done server-side via listDiscussions.
- * Returns typed Discussion[] compatible with existing UI components.
- *
- * @param activeTab - Current feed tab ("top" | "hot" | "new" | "fav" | "controversial" | "following")
- * @param limit - Max discussions per page (default 20)
- */
-export function useDiscussionFeed(
-  activeTab: FeedTabType = "top",
-  limit = 20
-) {
+export function useDiscussionFeed(activeTab: FeedTabType = "top", limit = 20) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [accumulated, setAccumulated] = useState<Discussion[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const prevTabRef = useRef(activeTab);
-  const isFollowing = activeTab === "following";
 
-  // Reset when tab changes
+  const isFollowing = activeTab === "following";
+  const isFavorites = activeTab === "fav";
+
   useEffect(() => {
     if (prevTabRef.current !== activeTab) {
       setCursor(undefined);
@@ -100,10 +110,9 @@ export function useDiscussionFeed(
     }
   }, [activeTab]);
 
-  // Standard feed query — skip when tab is "following"
   const standardResult = useQuery(
     api.functions.forum.listDiscussions,
-    !isFollowing
+    !isFollowing && !isFavorites
       ? {
           sortBy: tabToSort(activeTab),
           limit,
@@ -112,7 +121,6 @@ export function useDiscussionFeed(
       : "skip"
   );
 
-  // Following feed query — skip when tab is NOT "following"
   const followingResult = useQuery(
     api.functions.social.getFollowingFeed,
     isFollowing
@@ -123,40 +131,60 @@ export function useDiscussionFeed(
       : "skip"
   );
 
-  // Pick the active result
+  const favoritesResult = useQuery(
+    api.functions.forum.getBookmarkedThreads,
+    isFavorites
+      ? {
+          limit,
+        }
+      : "skip"
+  );
+
   const result = isFollowing ? followingResult : standardResult;
 
-  // Accumulate results when data arrives
   useEffect(() => {
-    if (!result) return;
+    if (!result || isFavorites) return;
 
     const mapped = (result.discussions as DiscussionItem[]).map(mapDiscussion);
     setHasMore(result.hasMore);
 
     if (!cursor) {
-      // Initial load — replace
       setAccumulated(mapped);
     } else {
-      // Load more — append (deduplicate by id)
       setAccumulated((prev) => {
         const existingIds = new Set(prev.map((d) => d.id));
         const newItems = mapped.filter((d) => !existingIds.has(d.id));
         return [...prev, ...newItems];
       });
     }
-  }, [result, cursor]);
+  }, [result, cursor, isFavorites]);
+
+  useEffect(() => {
+    if (!isFavorites || favoritesResult === undefined) return;
+
+    const mapped = favoritesResult
+      .filter((item): item is BookmarkedItem => Boolean(item))
+      .map(mapBookmarkedDiscussion);
+    setAccumulated(mapped);
+    setHasMore(false);
+  }, [favoritesResult, isFavorites]);
 
   const loadMore = useCallback(async () => {
+    if (isFavorites) return;
     if (result?.nextCursor) {
       setCursor(result.nextCursor);
     }
-  }, [result?.nextCursor]);
+  }, [result?.nextCursor, isFavorites]);
+
+  const isInitialLoading = isFavorites
+    ? favoritesResult === undefined
+    : result === undefined && !cursor;
 
   return {
     discussions: accumulated,
     hasMore,
-    isLoading: result === undefined && !cursor,
-    isLoadingMore: cursor !== undefined && result === undefined,
+    isLoading: isInitialLoading,
+    isLoadingMore: !isFavorites && cursor !== undefined && result === undefined,
     loadMore,
   };
 }

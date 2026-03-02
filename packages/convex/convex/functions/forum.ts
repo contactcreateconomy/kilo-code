@@ -1,7 +1,7 @@
 import { query, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import type { Doc } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import {
   insertNotification,
   parseMentions,
@@ -808,23 +808,36 @@ export const listDiscussions = query({
     cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
     const limit = args.limit ?? 20;
     const sortBy = args.sortBy ?? "new";
+
+    const hiddenThreadIds = new Set<string>();
+    if (userId) {
+      const hiddenRows = await ctx.db
+        .query("forumHiddenThreads")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
+      for (const row of hiddenRows) {
+        hiddenThreadIds.add(row.threadId);
+      }
+    }
 
     let threads: Doc<"forumThreads">[];
     if (args.cursor) {
       const cursorDoc = await ctx.db.get(args.cursor as never);
       if (cursorDoc) {
         const cursorCreatedAt = (cursorDoc as { createdAt: number }).createdAt;
-        threads = await getThreadsBeforeCursor(ctx, cursorCreatedAt, limit * 2);
+        threads = await getThreadsBeforeCursor(ctx, cursorCreatedAt, limit * 3);
       } else {
         threads = [];
       }
     } else {
-      threads = await getRecentThreads(ctx, limit * 2);
+      threads = await getRecentThreads(ctx, limit * 3);
     }
 
-    const sorted = sortThreads([...threads], sortBy);
+    const visibleThreads = threads.filter((thread) => !hiddenThreadIds.has(thread._id));
+    const sorted = sortThreads([...visibleThreads], sortBy);
     const result = sorted.slice(0, limit);
 
     const enriched = await Promise.all(
@@ -833,7 +846,7 @@ export const listDiscussions = query({
 
     return {
       discussions: enriched,
-      hasMore: threads.length > limit,
+      hasMore: visibleThreads.length > limit,
       nextCursor:
         enriched.length > 0
           ? enriched[enriched.length - 1]?._id ?? null
@@ -1336,5 +1349,109 @@ export const getBookmarkedThreads = query({
     );
 
     return threads.filter(Boolean);
+  },
+});
+
+export const getHiddenThreadIds = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const rows = await ctx.db
+      .query("forumHiddenThreads")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    return rows.map((row) => row.threadId);
+  },
+});
+
+export const hideThread = authenticatedMutation({
+  args: {
+    threadId: v.string(),
+    reason: v.union(v.literal("hidden"), v.literal("reported")),
+  },
+  handler: async (ctx, args) => {
+    const thread = (await ctx.db.get(args.threadId as Id<"forumThreads">)) as Doc<"forumThreads"> | null;
+    if (!thread || thread.isDeleted) {
+      throw createError(ErrorCode.NOT_FOUND, "Thread not found");
+    }
+
+    const existing = await ctx.db
+      .query("forumHiddenThreads")
+      .withIndex("by_user_thread", (q) =>
+        q.eq("userId", ctx.userId).eq("threadId", thread._id)
+      )
+      .first();
+
+    if (existing) {
+      return { success: true };
+    }
+
+    await ctx.db.insert("forumHiddenThreads", {
+      userId: ctx.userId,
+      threadId: thread._id,
+      reason: args.reason,
+      createdAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const unhideThread = authenticatedMutation({
+  args: {
+    threadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("forumHiddenThreads")
+      .withIndex("by_user_thread", (q) =>
+        q.eq("userId", ctx.userId).eq("threadId", args.threadId as Id<"forumThreads">)
+      )
+      .first();
+
+    if (!existing) {
+      return { success: true };
+    }
+
+    await ctx.db.delete(existing._id);
+    return { success: true };
+  },
+});
+
+export const getDiscussionCommentPreviews = query({
+  args: {
+    threadIds: v.array(v.string()),
+    limitPerThread: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limitPerThread = args.limitPerThread ?? 4;
+    const previewEntries = await Promise.all(
+      args.threadIds.map(async (threadId) => {
+        const comments = await ctx.db
+          .query("comments")
+          .withIndex("by_thread", (q) => q.eq("threadId", threadId as Id<"forumThreads">))
+          .filter((q) => q.eq(q.field("isDeleted"), false))
+          .order("desc")
+          .take(limitPerThread);
+
+        const previews = await Promise.all(
+          comments.map(async (comment) => {
+            const author = await enrichAuthor(ctx, comment.authorId);
+            return {
+              id: comment._id,
+              body: comment.content,
+              handle: author?.username ?? "unknown",
+            };
+          })
+        );
+
+        return [threadId, previews] as const;
+      })
+    );
+
+    return Object.fromEntries(previewEntries);
   },
 });

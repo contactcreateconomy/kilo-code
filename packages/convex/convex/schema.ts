@@ -709,6 +709,20 @@ export default defineSchema({
     .index("by_tenant", ["tenantId"]),
 
   /**
+   * Hidden forum threads per user.
+   * Used by feed hide/report undo flows.
+   */
+  forumHiddenThreads: defineTable({
+    userId: v.id("users"),
+    threadId: v.id("forumThreads"),
+    reason: v.union(v.literal("hidden"), v.literal("reported")),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId", "createdAt"])
+    .index("by_user_thread", ["userId", "threadId"])
+    .index("by_thread", ["threadId", "createdAt"]),
+
+  /**
    * Forum tags
    * Tags for categorizing threads
    */

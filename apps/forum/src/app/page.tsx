@@ -24,9 +24,7 @@ export default function ForumHomePage() {
       {/* Google One Tap - Only show when not authenticated */}
       {!isAuthenticated && !isLoading && (
         <GoogleOneTap
-          onSuccess={() => {
-            console.debug('Successfully signed in via Google One Tap');
-          }}
+          onSuccess={() => undefined}
           onError={(error) => {
             console.error('Google One Tap error:', error);
           }}
@@ -42,8 +40,8 @@ export default function ForumHomePage() {
       />
 
       {/* Main Content */}
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="flex gap-6">
+      <div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-6 lg:px-8">
+        <div className="flex gap-4 lg:gap-8">
           {/* Left Sidebar - Desktop */}
           <div className="hidden w-[250px] shrink-0 lg:block">
             <div className="sticky top-24">
